@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../config/theme.dart';
+import '../services/auth_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -37,6 +38,8 @@ class _SplashScreenState extends State<SplashScreen>
         if (user == null) {
           context.go('/auth');
         } else {
+          final authService = AuthService();
+          await authService.ensureUserDoc();
           final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
           if (!mounted) return;
           if (doc.exists && doc.data()?['handle'] != null && doc.data()?['handle'] != '') {

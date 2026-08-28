@@ -6,7 +6,9 @@ import 'dart:async';
 import '../screens/auth_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/splash_screen.dart';
-import '../screens/onboarding_welcome_screen.dart';
+import '../screens/onboarding/onboarding_welcome_screen.dart';
+import '../screens/onboarding/onboarding_handle_screen.dart';
+import '../screens/onboarding/onboarding_affiliations_screen.dart';
 
 class GoRouterRefreshStream extends ChangeNotifier {
   late final StreamSubscription _subscription;
@@ -48,6 +50,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/onboarding/1',
         builder: (context, state) => const OnboardingWelcomeScreen(),
+      ),
+      GoRoute(
+        path: '/onboarding/2',
+        builder: (context, state) => const OnboardingHandleScreen(),
+      ),
+      GoRoute(
+        path: '/onboarding/3',
+        builder: (context, state) => const OnboardingAffiliationsScreen(),
       ),
       GoRoute(
         path: '/home',

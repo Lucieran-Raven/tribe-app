@@ -67,4 +67,14 @@ class AuthService {
       print('Error signing out: $e');
     }
   }
+
+  Future<void> ensureUserDoc() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    final docRef = _firestore.collection('users').doc(user.uid);
+    final doc = await docRef.get();
+    if (!doc.exists) {
+      await docRef.set(UserModel(userId: user.uid, email: user.email ?? '', displayName: user.displayName ?? 'User', avatarUrl: user.photoURL, createdAt: DateTime.now()).toJson());
+    }
+  }
 }
