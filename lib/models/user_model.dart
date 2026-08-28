@@ -1,3 +1,5 @@
+import 'affiliation_model.dart';
+
 class UserModel {
   final String userId;
   final String email;
@@ -5,6 +7,7 @@ class UserModel {
   final String displayName;
   final String? avatarUrl;
   final DateTime createdAt;
+  final List<AffiliationModel> affiliations;
 
   UserModel({
     required this.userId,
@@ -13,6 +16,7 @@ class UserModel {
     required this.displayName,
     this.avatarUrl,
     required this.createdAt,
+    this.affiliations = const [],
   });
 
   bool get hasCompletedOnboarding => handle != null;
@@ -25,6 +29,9 @@ class UserModel {
       displayName: json['displayName'] as String,
       avatarUrl: json['avatarUrl'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
+      affiliations: (json['affiliations'] as List<dynamic>?)
+          ?.map((item) => AffiliationModel.fromJson(item as Map<String, dynamic>))
+          .toList() ?? [],
     );
   }
 
@@ -36,6 +43,7 @@ class UserModel {
       'displayName': displayName,
       'avatarUrl': avatarUrl,
       'createdAt': createdAt.toIso8601String(),
+      'affiliations': affiliations.map((a) => a.toMap()).toList(),
     };
   }
 
@@ -46,6 +54,7 @@ class UserModel {
     String? displayName,
     String? avatarUrl,
     DateTime? createdAt,
+    List<AffiliationModel>? affiliations,
   }) {
     return UserModel(
       userId: userId ?? this.userId,
@@ -54,6 +63,7 @@ class UserModel {
       displayName: displayName ?? this.displayName,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       createdAt: createdAt ?? this.createdAt,
+      affiliations: affiliations ?? this.affiliations,
     );
   }
 }

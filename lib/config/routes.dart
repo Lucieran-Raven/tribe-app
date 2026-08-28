@@ -9,6 +9,7 @@ import '../screens/splash_screen.dart';
 import '../screens/onboarding/onboarding_welcome_screen.dart';
 import '../screens/onboarding/onboarding_handle_screen.dart';
 import '../screens/onboarding/onboarding_affiliations_screen.dart';
+import '../screens/main_scaffold.dart';
 
 class GoRouterRefreshStream extends ChangeNotifier {
   late final StreamSubscription _subscription;
@@ -61,7 +62,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/home',
-        builder: (context, state) => const HomeScreen(),
+        builder: (context, state) => const MainScaffold(),
       ),
     ],
   );
