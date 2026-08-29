@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../config/theme.dart';
 
@@ -104,6 +105,9 @@ class ProfileScreen extends ConsumerWidget {
               child: OutlinedButton.icon(
                 onPressed: () async {
                   await ref.read(authProvider.notifier).signOut();
+                  if (context.mounted) {
+                    GoRouter.of(context).go('/auth');
+                  }
                 },
                 icon: const Icon(Icons.logout),
                 label: const Text('Sign Out'),

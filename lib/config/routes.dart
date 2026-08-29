@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'dart:async';
 import '../screens/auth_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/splash_screen.dart';
@@ -12,22 +11,9 @@ import '../screens/onboarding/onboarding_affiliations_screen.dart';
 import '../screens/main_scaffold.dart';
 import '../screens/rant_detail/rant_detail_screen.dart';
 
-class GoRouterRefreshStream extends ChangeNotifier {
-  late final StreamSubscription _subscription;
-  GoRouterRefreshStream(Stream stream) {
-    _subscription = stream.listen((_) => notifyListeners());
-  }
-  @override
-  void dispose() {
-    _subscription.cancel();
-    super.dispose();
-  }
-}
-
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/splash',
-    refreshListenable: GoRouterRefreshStream(FirebaseAuth.instance.authStateChanges()),
     redirect: (context, state) async {
       final isSplash = state.matchedLocation == '/splash';
       if (isSplash) return null; // Never intercept splash

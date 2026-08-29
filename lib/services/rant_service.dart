@@ -55,4 +55,78 @@ class RantService {
       'replyCount': FieldValue.increment(1),
     });
   }
+
+  Stream<bool> streamUserVote(String rantId, String userId) {
+    return _firestore
+        .collection('rants')
+        .doc(rantId)
+        .collection('votes')
+        .doc(userId)
+        .snapshots()
+        .map((doc) => doc.exists);
+  }
+
+  Future<void> toggleVote(String rantId, String userId) async {
+    await _firestore.runTransaction((transaction) async {
+      final voteDocRef = _firestore
+          .collection('rants')
+          .doc(rantId)
+          .collection('votes')
+          .doc(userId);
+      final rantDocRef = _firestore.collection('rants').doc(rantId);
+      final voteDoc = await transaction.get(voteDocRef);
+
+      if (voteDoc.exists) {
+        transaction.delete(voteDocRef);
+        transaction.update(rantDocRef, {'karma': FieldValue.increment(-1)});
+      } else {
+        transaction.set(voteDocRef, {
+          'userId': userId,
+          'timestamp': DateTime.now().toIso8601String(),
+        });
+        transaction.update(rantDocRef, {'karma': FieldValue.increment(1)});
+      }
+    });
+  }
+
+  Stream<bool> streamUserReplyVote(String rantId, String replyId, String userId) {
+    return _firestore
+        .collection('rants')
+        .doc(rantId)
+        .collection('replies')
+        .doc(replyId)
+        .collection('votes')
+        .doc(userId)
+        .snapshots()
+        .map((doc) => doc.exists);
+  }
+
+  Future<void> toggleReplyVote(String rantId, String replyId, String userId) async {
+    await _firestore.runTransaction((transaction) async {
+      final voteDocRef = _firestore
+          .collection('rants')
+          .doc(rantId)
+          .collection('replies')
+          .doc(replyId)
+          .collection('votes')
+          .doc(userId);
+      final replyDocRef = _firestore
+          .collection('rants')
+          .doc(rantId)
+          .collection('replies')
+          .doc(replyId);
+      final voteDoc = await transaction.get(voteDocRef);
+
+      if (voteDoc.exists) {
+        transaction.delete(voteDocRef);
+        transaction.update(replyDocRef, {'karma': FieldValue.increment(-1)});
+      } else {
+        transaction.set(voteDocRef, {
+          'userId': userId,
+          'timestamp': DateTime.now().toIso8601String(),
+        });
+        transaction.update(replyDocRef, {'karma': FieldValue.increment(1)});
+      }
+    });
+  }
 }
