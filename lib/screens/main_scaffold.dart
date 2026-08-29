@@ -5,6 +5,9 @@ import 'search_screen.dart';
 import 'inbox_screen.dart';
 import 'profile_screen.dart';
 import 'compose/compose_screen.dart';
+import '../providers/notification_provider.dart';
+import '../services/notification_service.dart';
+import '../providers/auth_provider.dart';
 
 class MainScaffold extends ConsumerStatefulWidget {
   const MainScaffold({super.key});
@@ -22,6 +25,9 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
     // Stack: 0=Home, 1=Search, 2=Inbox, 3=Profile
     // Nav: 0=Home, 1=Search, 2=Create, 3=Inbox, 4=Profile
     final navIndex = _currentIndex < 2 ? _currentIndex : _currentIndex + 1;
+
+    final inboxAsync = ref.watch(inboxProvider);
+    final unreadCount = inboxAsync.value?.where((n) => !n.isRead).length ?? 0;
 
     return Scaffold(
       body: IndexedStack(
@@ -51,6 +57,14 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
             );
             return;
           }
+
+          // Index 3 is Inbox - mark all as read
+          if (index == 3) {
+            final authState = ref.read(authProvider);
+            if (authState is AuthAuthenticated) {
+              NotificationService().markAllAsRead(authState.user.userId);
+            }
+          }
           
           // Map NavigationBar indices to IndexedStack indices
           // Nav: 0=Home, 1=Search, 2=Create(skip), 3=Inbox, 4=Profile
@@ -64,28 +78,36 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
           
           setState(() => _currentIndex = stackIndex);
         },
-        destinations: const [
-          NavigationDestination(
+        destinations: [
+          const NavigationDestination(
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home),
             label: 'Home',
           ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.search),
             selectedIcon: Icon(Icons.search),
             label: 'Search',
           ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.add_circle_outline, size: 32),
             selectedIcon: Icon(Icons.add_circle, size: 32),
             label: '',
           ),
           NavigationDestination(
-            icon: Icon(Icons.inbox_outlined),
-            selectedIcon: Icon(Icons.inbox),
+            icon: Badge(
+              isLabelVisible: unreadCount > 0 && navIndex != 3,
+              label: Text(unreadCount > 99 ? '99+' : '$unreadCount', style: const TextStyle(fontSize: 10)),
+              child: const Icon(Icons.inbox_outlined),
+            ),
+            selectedIcon: Badge(
+              isLabelVisible: unreadCount > 0 && navIndex != 3,
+              label: Text(unreadCount > 99 ? '99+' : '$unreadCount', style: const TextStyle(fontSize: 10)),
+              child: const Icon(Icons.inbox),
+            ),
             label: 'Inbox',
           ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.person_outline),
             selectedIcon: Icon(Icons.person),
             label: 'Profile',

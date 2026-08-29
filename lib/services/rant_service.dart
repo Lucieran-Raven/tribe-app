@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/rant_model.dart';
 import '../models/reply_model.dart';
+import '../models/notification_model.dart';
+import '../services/notification_service.dart';
 
 class RantService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -54,6 +56,34 @@ class RantService {
     await _firestore.collection('rants').doc(reply.rantId).update({
       'replyCount': FieldValue.increment(1),
     });
+
+    // Create notification for rant owner
+    try {
+      final rantDoc = await _firestore.collection('rants').doc(reply.rantId).get();
+      final ownerUserId = rantDoc.data()?['userId'];
+      if (ownerUserId != null && reply.userId != ownerUserId) {
+        // Fetch replier's user info
+        final replierDoc = await _firestore.collection('users').doc(reply.userId).get();
+        final replierHandle = replierDoc.data()?['handle'] ?? 'anonymous';
+        final replierAvatarUrl = replierDoc.data()?['avatarUrl'];
+
+        await NotificationService().createNotification(
+          ownerUserId,
+          NotificationModel(
+            type: NotificationType.reply,
+            fromUserId: reply.userId,
+            fromHandle: replierHandle,
+            fromAvatarUrl: replierAvatarUrl,
+            targetRantId: reply.rantId,
+            targetSnippet: reply.content,
+            timestamp: DateTime.now(),
+          ),
+        );
+      }
+    } catch (e) {
+      // Notification failure should not break the reply
+      print('Failed to create notification: $e');
+    }
   }
 
   Stream<bool> streamUserVote(String rantId, String userId) {
@@ -67,6 +97,7 @@ class RantService {
   }
 
   Future<void> toggleVote(String rantId, String userId) async {
+    bool wasVoted = false;
     await _firestore.runTransaction((transaction) async {
       final voteDocRef = _firestore
           .collection('rants')
@@ -77,9 +108,11 @@ class RantService {
       final voteDoc = await transaction.get(voteDocRef);
 
       if (voteDoc.exists) {
+        wasVoted = true;
         transaction.delete(voteDocRef);
         transaction.update(rantDocRef, {'karma': FieldValue.increment(-1)});
       } else {
+        wasVoted = false;
         transaction.set(voteDocRef, {
           'userId': userId,
           'timestamp': DateTime.now().toIso8601String(),
@@ -87,6 +120,47 @@ class RantService {
         transaction.update(rantDocRef, {'karma': FieldValue.increment(1)});
       }
     });
+
+    // Handle notifications
+    try {
+      final rantDoc = await _firestore.collection('rants').doc(rantId).get();
+      final ownerUserId = rantDoc.data()?['userId'];
+      final rantContent = rantDoc.data()?['content'] ?? '';
+
+      if (ownerUserId != null && userId != ownerUserId) {
+        // Fetch voter's user info
+        final voterDoc = await _firestore.collection('users').doc(userId).get();
+        final voterHandle = voterDoc.data()?['handle'] ?? 'anonymous';
+        final voterAvatarUrl = voterDoc.data()?['avatarUrl'];
+
+        if (!wasVoted) {
+          // Added vote - create notification
+          await NotificationService().createNotification(
+            ownerUserId,
+            NotificationModel(
+              type: NotificationType.karma,
+              fromUserId: userId,
+              fromHandle: voterHandle,
+              fromAvatarUrl: voterAvatarUrl,
+              targetRantId: rantId,
+              targetSnippet: rantContent,
+              timestamp: DateTime.now(),
+            ),
+          );
+        } else {
+          // Removed vote - delete notification
+          await NotificationService().deleteNotificationBySource(
+            ownerUserId,
+            NotificationType.karma,
+            userId,
+            rantId,
+          );
+        }
+      }
+    } catch (e) {
+      // Notification failure should not break the vote
+      print('Failed to handle notification: $e');
+    }
   }
 
   Stream<bool> streamUserReplyVote(String rantId, String replyId, String userId) {
@@ -102,6 +176,7 @@ class RantService {
   }
 
   Future<void> toggleReplyVote(String rantId, String replyId, String userId) async {
+    bool wasVoted = false;
     await _firestore.runTransaction((transaction) async {
       final voteDocRef = _firestore
           .collection('rants')
@@ -118,9 +193,11 @@ class RantService {
       final voteDoc = await transaction.get(voteDocRef);
 
       if (voteDoc.exists) {
+        wasVoted = true;
         transaction.delete(voteDocRef);
         transaction.update(replyDocRef, {'karma': FieldValue.increment(-1)});
       } else {
+        wasVoted = false;
         transaction.set(voteDocRef, {
           'userId': userId,
           'timestamp': DateTime.now().toIso8601String(),
@@ -128,5 +205,52 @@ class RantService {
         transaction.update(replyDocRef, {'karma': FieldValue.increment(1)});
       }
     });
+
+    // Handle notifications
+    try {
+      final replyDoc = await _firestore
+          .collection('rants')
+          .doc(rantId)
+          .collection('replies')
+          .doc(replyId)
+          .get();
+      final replyOwnerId = replyDoc.data()?['userId'];
+      final replyContent = replyDoc.data()?['content'] ?? '';
+
+      if (replyOwnerId != null && userId != replyOwnerId) {
+        // Fetch voter's user info
+        final voterDoc = await _firestore.collection('users').doc(userId).get();
+        final voterHandle = voterDoc.data()?['handle'] ?? 'anonymous';
+        final voterAvatarUrl = voterDoc.data()?['avatarUrl'];
+
+        if (!wasVoted) {
+          // Added vote - create notification
+          await NotificationService().createNotification(
+            replyOwnerId,
+            NotificationModel(
+              type: NotificationType.replyKarma,
+              fromUserId: userId,
+              fromHandle: voterHandle,
+              fromAvatarUrl: voterAvatarUrl,
+              targetRantId: rantId,
+              targetReplyId: replyId,
+              targetSnippet: replyContent,
+              timestamp: DateTime.now(),
+            ),
+          );
+        } else {
+          // Removed vote - delete notification
+          await NotificationService().deleteNotificationBySource(
+            replyOwnerId,
+            NotificationType.replyKarma,
+            userId,
+            rantId,
+          );
+        }
+      }
+    } catch (e) {
+      // Notification failure should not break the vote
+      print('Failed to handle notification: $e');
+    }
   }
 }
