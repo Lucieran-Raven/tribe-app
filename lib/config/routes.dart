@@ -10,6 +10,7 @@ import '../screens/onboarding/onboarding_welcome_screen.dart';
 import '../screens/onboarding/onboarding_handle_screen.dart';
 import '../screens/onboarding/onboarding_affiliations_screen.dart';
 import '../screens/main_scaffold.dart';
+import '../screens/rant_detail/rant_detail_screen.dart';
 
 class GoRouterRefreshStream extends ChangeNotifier {
   late final StreamSubscription _subscription;
@@ -63,6 +64,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/home',
         builder: (context, state) => const MainScaffold(),
+      ),
+      GoRoute(
+        path: '/rant/:id',
+        builder: (context, state) {
+          final rantId = state.pathParameters['id']!;
+          return RantDetailScreen(rantId: rantId);
+        },
       ),
     ],
   );
