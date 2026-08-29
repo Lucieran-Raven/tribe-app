@@ -4,6 +4,7 @@ import 'home_screen.dart';
 import 'search_screen.dart';
 import 'inbox_screen.dart';
 import 'profile_screen.dart';
+import 'compose/compose_screen.dart';
 
 class MainScaffold extends ConsumerStatefulWidget {
   const MainScaffold({super.key});
@@ -17,6 +18,11 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
 
   @override
   Widget build(BuildContext context) {
+    // Compute nav highlight index from stack index
+    // Stack: 0=Home, 1=Search, 2=Inbox, 3=Profile
+    // Nav: 0=Home, 1=Search, 2=Create, 3=Inbox, 4=Profile
+    final navIndex = _currentIndex < 2 ? _currentIndex : _currentIndex + 1;
+
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
@@ -28,12 +34,20 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
         ],
       ),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
+        selectedIndex: navIndex,
         onDestinationSelected: (index) {
-          // Index 2 is Create (+) - shows SnackBar, does NOT change tab
+          // Index 2 is Create (+) - shows compose sheet
           if (index == 2) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Compose coming in Block 6')),
+            showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              useSafeArea: true,
+              builder: (context) => Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                ),
+                child: const ComposeScreen(),
+              ),
             );
             return;
           }
