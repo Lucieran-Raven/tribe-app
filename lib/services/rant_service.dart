@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/rant_model.dart';
 import '../models/reply_model.dart';
 import '../models/notification_model.dart';
+import '../models/user_model.dart';
 import '../services/notification_service.dart';
 
 class RantService {
@@ -97,6 +98,17 @@ class RantService {
   }
 
   Future<void> toggleVote(String rantId, String userId) async {
+    // Fetch rant document to check ownership
+    final rantDoc = await _firestore.collection('rants').doc(rantId).get();
+    if (!rantDoc.exists) {
+      throw Exception('Rant not found');
+    }
+    final rantOwnerId = rantDoc.data()?['userId'];
+    if (rantOwnerId == userId) {
+      // Silently reject self-like
+      return;
+    }
+
     bool wasVoted = false;
     await _firestore.runTransaction((transaction) async {
       final voteDocRef = _firestore
@@ -123,11 +135,9 @@ class RantService {
 
     // Handle notifications
     try {
-      final rantDoc = await _firestore.collection('rants').doc(rantId).get();
-      final ownerUserId = rantDoc.data()?['userId'];
       final rantContent = rantDoc.data()?['content'] ?? '';
 
-      if (ownerUserId != null && userId != ownerUserId) {
+      if (rantOwnerId != null && userId != rantOwnerId) {
         // Fetch voter's user info
         final voterDoc = await _firestore.collection('users').doc(userId).get();
         final voterHandle = voterDoc.data()?['handle'] ?? 'anonymous';
@@ -136,7 +146,7 @@ class RantService {
         if (!wasVoted) {
           // Added vote - create notification
           await NotificationService().createNotification(
-            ownerUserId,
+            rantOwnerId,
             NotificationModel(
               type: NotificationType.karma,
               fromUserId: userId,
@@ -150,7 +160,7 @@ class RantService {
         } else {
           // Removed vote - delete notification
           await NotificationService().deleteNotificationBySource(
-            ownerUserId,
+            rantOwnerId,
             NotificationType.karma,
             userId,
             rantId,
@@ -176,6 +186,22 @@ class RantService {
   }
 
   Future<void> toggleReplyVote(String rantId, String replyId, String userId) async {
+    // Fetch reply document to check ownership
+    final replyDoc = await _firestore
+        .collection('rants')
+        .doc(rantId)
+        .collection('replies')
+        .doc(replyId)
+        .get();
+    if (!replyDoc.exists) {
+      throw Exception('Reply not found');
+    }
+    final replyOwnerId = replyDoc.data()?['userId'];
+    if (replyOwnerId == userId) {
+      // Silently reject self-like
+      return;
+    }
+
     bool wasVoted = false;
     await _firestore.runTransaction((transaction) async {
       final voteDocRef = _firestore
@@ -208,13 +234,6 @@ class RantService {
 
     // Handle notifications
     try {
-      final replyDoc = await _firestore
-          .collection('rants')
-          .doc(rantId)
-          .collection('replies')
-          .doc(replyId)
-          .get();
-      final replyOwnerId = replyDoc.data()?['userId'];
       final replyContent = replyDoc.data()?['content'] ?? '';
 
       if (replyOwnerId != null && userId != replyOwnerId) {
@@ -252,5 +271,38 @@ class RantService {
       // Notification failure should not break the vote
       print('Failed to handle notification: $e');
     }
+  }
+
+  Future<UserModel> getUser(String userId) async {
+    final doc = await _firestore.collection('users').doc(userId).get();
+    if (!doc.exists) {
+      throw Exception('User not found');
+    }
+    return UserModel.fromJson(doc.data()!);
+  }
+
+  Stream<List<RantModel>> streamUserRants(String userId) {
+    return _firestore
+        .collection('rants')
+        .where('userId', isEqualTo: userId)
+        .snapshots()
+        .map((snapshot) {
+          final rants = snapshot.docs
+              .map((doc) => RantModel.fromJson(doc.data(), rantId: doc.id))
+              .where((rant) => rant.isVisible)
+              .toList();
+          rants.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+          return rants;
+        });
+  }
+
+  Stream<List<ReplyModel>> streamUserReplies(String userId) {
+    return _firestore
+        .collectionGroup('replies')
+        .where('userId', isEqualTo: userId)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => ReplyModel.fromJson(doc.data(), replyId: doc.id))
+            .toList());
   }
 }

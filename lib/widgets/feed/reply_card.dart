@@ -22,6 +22,8 @@ class _ReplyCardState extends ConsumerState<ReplyCard> {
   Widget build(BuildContext context) {
     final hasVotedAsync = ref.watch(replyVoteProvider((widget.reply.rantId, widget.reply.replyId)));
     final hasVoted = hasVotedAsync.value ?? false;
+    final authState = ref.watch(authProvider);
+    final isOwnReply = authState is AuthAuthenticated && authState.user.userId == widget.reply.userId;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
@@ -68,13 +70,13 @@ class _ReplyCardState extends ConsumerState<ReplyCard> {
                   children: [
                     const SizedBox(width: 4),
                     GestureDetector(
-                      onTap: _isVoting
+                      onTap: isOwnReply || _isVoting
                           ? null
                           : () async {
                               final authState = ref.read(authProvider);
                               if (authState is! AuthAuthenticated) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Sign in to vote')),
+                                  const SnackBar(content: Text('Sign in to like')),
                                 );
                                 return;
                               }
@@ -87,7 +89,7 @@ class _ReplyCardState extends ConsumerState<ReplyCard> {
                               } catch (e) {
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Failed to vote: $e')),
+                                    SnackBar(content: Text('Failed to like: $e')),
                                   );
                                 }
                               } finally {
@@ -97,11 +99,13 @@ class _ReplyCardState extends ConsumerState<ReplyCard> {
                               }
                             },
                       child: Icon(
-                        hasVoted ? Icons.arrow_upward : Icons.arrow_upward_outlined,
+                        hasVoted ? Icons.thumb_up : Icons.thumb_up_outlined,
                         size: 16,
-                        color: hasVoted
-                            ? Theme.of(context).colorScheme.primary
-                            : Colors.grey,
+                        color: isOwnReply
+                            ? Colors.grey
+                            : (hasVoted
+                                ? Theme.of(context).colorScheme.primary
+                                : Colors.grey),
                       ),
                     ),
                     const SizedBox(width: 4),

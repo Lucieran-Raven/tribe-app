@@ -18,13 +18,13 @@ class NotificationCard extends ConsumerWidget {
     String actionText;
     switch (notification.type) {
       case NotificationType.reply:
-        actionText = 'replied to your rant';
+        actionText = 'replied to your post';
         break;
       case NotificationType.karma:
-        actionText = 'upvoted your rant';
+        actionText = 'liked your post';
         break;
       case NotificationType.replyKarma:
-        actionText = 'upvoted your reply';
+        actionText = 'liked your reply';
         break;
     }
 

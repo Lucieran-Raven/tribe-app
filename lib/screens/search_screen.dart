@@ -74,7 +74,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             child: TextField(
               controller: _controller,
               decoration: InputDecoration(
-                hintText: 'Search rants or users...',
+                hintText: 'Search posts or users...',
                 prefixIcon: const Icon(Icons.search),
                 border: const OutlineInputBorder(),
               ),
@@ -103,10 +103,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                             ..._users.map((user) => UserSearchCard(
                                   user: user,
                                   onTap: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                          content: Text('Public profiles coming soon')),
-                                    );
+                                    GoRouter.of(context).push('/user/${user.userId}');
                                   },
                                 )),
                           ],
@@ -114,7 +111,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                             const Padding(
                               padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
                               child: Text(
-                                'Rants',
+                                'Posts',
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,

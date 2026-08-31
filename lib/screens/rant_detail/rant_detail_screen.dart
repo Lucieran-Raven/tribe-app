@@ -83,7 +83,7 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Rant'),
+        title: const Text('Post'),
       ),
       body: Column(
         children: [

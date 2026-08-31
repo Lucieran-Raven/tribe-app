@@ -77,7 +77,7 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Compose Rant',
+            'Create Post',
             style: Theme.of(context).textTheme.headlineSmall,
           ),
           const SizedBox(height: 16),

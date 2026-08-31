@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
+import '../providers/user_profile_provider.dart';
 import '../config/theme.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -18,6 +19,15 @@ class ProfileScreen extends ConsumerWidget {
     }
 
     final user = authState.user;
+    final userId = user.userId;
+    final userRantsAsync = ref.watch(userRantsProvider(userId));
+    final userRepliesAsync = ref.watch(userRepliesProvider(userId));
+    final userRants = userRantsAsync.value ?? [];
+    final userReplies = userRepliesAsync.value ?? [];
+    final rantCount = userRants.length;
+    final replyCount = userReplies.length;
+    final totalKarma = userRants.fold<int>(0, (sum, r) => sum + r.karma) +
+        userReplies.fold<int>(0, (sum, r) => sum + r.karma);
 
     return Scaffold(
       appBar: AppBar(
@@ -56,13 +66,13 @@ class ProfileScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
             
-            // Stats Row (placeholder)
+            // Stats Row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _StatItem(label: 'Rants', value: '0'),
-                _StatItem(label: 'Replies', value: '0'),
-                _StatItem(label: 'Karma', value: '0'),
+                _StatItem(label: 'Posts', value: '$rantCount'),
+                _StatItem(label: 'Replies', value: '$replyCount'),
+                _StatItem(label: 'Likes', value: '$totalKarma'),
               ],
             ),
             const SizedBox(height: 24),

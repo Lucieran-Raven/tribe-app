@@ -32,7 +32,7 @@ class HomeScreen extends ConsumerWidget {
         data: (rants) {
           if (rants.isEmpty) {
             return const Center(
-              child: Text('No rants yet. Be the first to vent.'),
+              child: Text('No posts yet. Be the first to share.'),
             );
           }
 
