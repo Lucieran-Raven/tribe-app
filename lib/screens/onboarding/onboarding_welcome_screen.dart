@@ -1,11 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/theme.dart';
 import '../../widgets/onboarding/onboarding_page_indicator.dart';
+import '../../providers/onboarding_provider.dart';
 
-class OnboardingWelcomeScreen extends StatelessWidget {
+class OnboardingWelcomeScreen extends ConsumerStatefulWidget {
   const OnboardingWelcomeScreen({super.key});
+
+  @override
+  ConsumerState<OnboardingWelcomeScreen> createState() => _OnboardingWelcomeScreenState();
+}
+
+class _OnboardingWelcomeScreenState extends ConsumerState<OnboardingWelcomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(onboardingProvider.notifier).reset();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

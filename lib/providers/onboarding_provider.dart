@@ -277,6 +277,47 @@ class OnboardingProvider extends StateNotifier<OnboardingState> {
     await finish(ref, []);
   }
 
+  void reset() {
+    state = OnboardingState();
+  }
+
+  Future<void> updateProfile(WidgetRef ref, String? bio, List<AffiliationModel> affiliations) async {
+    state = state.copyWith(saving: true);
+
+    try {
+      final uid = _auth.currentUser?.uid;
+      if (uid == null) {
+        state = state.copyWith(
+          saving: false,
+          errorMsg: 'Not signed in. Restart the app.',
+        );
+        return;
+      }
+
+      await _firestore.runTransaction((transaction) async {
+        final docRef = _firestore.collection('users').doc(uid);
+        transaction.set(docRef, {
+          'bio': bio,
+          'affiliations': affiliations.map((a) => a.toMap()).toList(),
+        }, SetOptions(merge: true));
+      });
+
+      // Refresh auth provider user
+      final userDoc = await _firestore.collection('users').doc(uid).get();
+      if (userDoc.exists) {
+        final userModel = UserModel.fromJson(userDoc.data() as Map<String, dynamic>);
+        ref.read(authProvider.notifier).updateUser(userModel);
+      }
+
+      state = state.copyWith(saving: false);
+    } catch (e) {
+      state = state.copyWith(
+        saving: false,
+        errorMsg: e.toString(),
+      );
+    }
+  }
+
   @override
   void dispose() {
     _debounceTimer?.cancel();

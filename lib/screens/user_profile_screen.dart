@@ -59,6 +59,15 @@ class UserProfileScreen extends ConsumerWidget {
                   ),
                 ),
               ),
+              const SizedBox(height: 8),
+              if (user.bio != null && user.bio!.isNotEmpty)
+                Center(
+                  child: Text(
+                    user.bio!,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
               const SizedBox(height: 24),
               // Stats row
               Row(

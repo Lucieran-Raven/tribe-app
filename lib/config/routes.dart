@@ -11,6 +11,7 @@ import '../screens/onboarding/onboarding_affiliations_screen.dart';
 import '../screens/main_scaffold.dart';
 import '../screens/rant_detail/rant_detail_screen.dart';
 import '../screens/user_profile_screen.dart';
+import '../screens/edit_profile_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -65,6 +66,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           final userId = state.pathParameters['id']!;
           return UserProfileScreen(userId: userId);
         },
+      ),
+      GoRoute(
+        path: '/edit-profile',
+        builder: (context, state) => const EditProfileScreen(),
       ),
     ],
   );

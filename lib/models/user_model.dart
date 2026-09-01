@@ -8,6 +8,7 @@ class UserModel {
   final String? avatarUrl;
   final DateTime createdAt;
   final List<AffiliationModel> affiliations;
+  final String? bio;
 
   UserModel({
     required this.userId,
@@ -17,6 +18,7 @@ class UserModel {
     this.avatarUrl,
     required this.createdAt,
     this.affiliations = const [],
+    this.bio,
   });
 
   bool get hasCompletedOnboarding => handle != null;
@@ -32,6 +34,7 @@ class UserModel {
       affiliations: (json['affiliations'] as List<dynamic>?)
           ?.map((item) => AffiliationModel.fromJson(item as Map<String, dynamic>))
           .toList() ?? [],
+      bio: json['bio'] as String?,
     );
   }
 
@@ -44,6 +47,7 @@ class UserModel {
       'avatarUrl': avatarUrl,
       'createdAt': createdAt.toIso8601String(),
       'affiliations': affiliations.map((a) => a.toMap()).toList(),
+      'bio': bio,
     };
   }
 
@@ -55,6 +59,7 @@ class UserModel {
     String? avatarUrl,
     DateTime? createdAt,
     List<AffiliationModel>? affiliations,
+    String? bio,
   }) {
     return UserModel(
       userId: userId ?? this.userId,
@@ -64,6 +69,7 @@ class UserModel {
       avatarUrl: avatarUrl ?? this.avatarUrl,
       createdAt: createdAt ?? this.createdAt,
       affiliations: affiliations ?? this.affiliations,
+      bio: bio ?? this.bio,
     );
   }
 }

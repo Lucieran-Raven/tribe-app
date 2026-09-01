@@ -64,6 +64,14 @@ class ProfileScreen extends ConsumerWidget {
                 color: Colors.grey,
               ),
             ),
+            const SizedBox(height: 8),
+            // Bio
+            if (user.bio != null && user.bio!.isNotEmpty)
+              Text(
+                user.bio!,
+                style: Theme.of(context).textTheme.bodyMedium,
+                textAlign: TextAlign.center,
+              ),
             const SizedBox(height: 24),
             
             // Stats Row
@@ -108,6 +116,20 @@ class ProfileScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 24),
             ],
+            
+            // Edit Profile Button
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => GoRouter.of(context).push('/edit-profile'),
+                icon: const Icon(Icons.edit),
+                label: const Text('Edit Profile'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             
             // Sign Out Button
             SizedBox(
