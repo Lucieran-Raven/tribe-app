@@ -1,24 +1,104 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/user_profile_provider.dart';
+import '../providers/auth_provider.dart';
 import '../models/user_model.dart';
 import '../models/affiliation_model.dart';
 import '../models/reply_model.dart';
 import '../widgets/feed/rant_card.dart';
+import '../services/report_service.dart';
 
 class UserProfileScreen extends ConsumerWidget {
   final String userId;
 
   const UserProfileScreen({super.key, required this.userId});
 
+  void _showReportDialog(BuildContext context, WidgetRef ref) {
+    String? selectedReason;
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return AlertDialog(
+            title: const Text('Report User'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: ['Spam', 'Harassment', 'Hate speech', 'Nudity', 'Other'].map((reason) {
+                return RadioListTile<String>(
+                  title: Text(reason),
+                  value: reason,
+                  groupValue: selectedReason,
+                  onChanged: (val) => setDialogState(() => selectedReason = val),
+                );
+              }).toList(),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: selectedReason == null
+                    ? null
+                    : () async {
+                        Navigator.pop(ctx);
+                        final authState = ref.read(authProvider);
+                        if (authState is AuthAuthenticated) {
+                          await ReportService().reportContent(
+                            targetType: 'user',
+                            targetId: userId,
+                            reporterId: authState.user.userId,
+                            reason: selectedReason!,
+                          );
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Report submitted. Thank you.')),
+                            );
+                          }
+                        }
+                      },
+                child: const Text('Submit'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(userProfileProvider(userId));
     final rantsAsync = ref.watch(userRantsProvider(userId));
     final repliesAsync = ref.watch(userRepliesProvider(userId));
+    final authState = ref.watch(authProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
+      appBar: AppBar(
+        title: const Text('Profile'),
+        actions: [
+          if (authState is AuthAuthenticated && authState.user.userId != userId)
+            PopupMenuButton<String>(
+              onSelected: (value) async {
+                if (value == 'report') {
+                  _showReportDialog(context, ref);
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'report',
+                  child: Row(
+                    children: [
+                      Icon(Icons.flag),
+                      SizedBox(width: 8),
+                      Text('Report User'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
       body: userAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => const Center(child: Text('Failed to load profile')),

@@ -293,4 +293,57 @@ class RantService {
             .map((doc) => ReplyModel.fromJson(doc.data(), replyId: doc.id))
             .toList());
   }
+
+  Future<void> deletePost(String rantId) async {
+    final rantDoc = await _firestore.collection('rants').doc(rantId).get();
+    if (!rantDoc.exists) return;
+    final ownerId = rantDoc.data()?['userId'] as String?;
+
+    // 1. Delete all replies under this post
+    final repliesQuery = await _firestore.collection('rants').doc(rantId).collection('replies').get();
+    for (var i = 0; i < repliesQuery.docs.length; i += 500) {
+      final batch = _firestore.batch();
+      final end = (i + 500 < repliesQuery.docs.length) ? i + 500 : repliesQuery.docs.length;
+      for (var j = i; j < end; j++) {
+        batch.delete(repliesQuery.docs[j].reference);
+      }
+      await batch.commit();
+    }
+
+    // 2. Delete all votes on this post
+    final votesQuery = await _firestore.collection('rants').doc(rantId).collection('votes').get();
+    for (var i = 0; i < votesQuery.docs.length; i += 500) {
+      final batch = _firestore.batch();
+      final end = (i + 500 < votesQuery.docs.length) ? i + 500 : votesQuery.docs.length;
+      for (var j = i; j < end; j++) {
+        batch.delete(votesQuery.docs[j].reference);
+      }
+      await batch.commit();
+    }
+
+    // 3. Delete all notifications targeting this post in the owner's inbox
+    if (ownerId != null) {
+      final notifsQuery = await _firestore.collection('users').doc(ownerId).collection('notifications').where('targetRantId', isEqualTo: rantId).get();
+      for (var i = 0; i < notifsQuery.docs.length; i += 500) {
+        final batch = _firestore.batch();
+        final end = (i + 500 < notifsQuery.docs.length) ? i + 500 : notifsQuery.docs.length;
+        for (var j = i; j < end; j++) {
+          batch.delete(notifsQuery.docs[j].reference);
+        }
+        await batch.commit();
+      }
+    }
+
+    // 4. Finally, delete the post itself
+    await _firestore.collection('rants').doc(rantId).delete();
+  }
+
+  Future<void> deleteReply(String rantId, String replyId) async {
+    final replyRef = _firestore.collection('rants').doc(rantId).collection('replies').doc(replyId);
+    final rantRef = _firestore.collection('rants').doc(rantId);
+    final batch = _firestore.batch();
+    batch.update(rantRef, {'replyCount': FieldValue.increment(-1)});
+    batch.delete(replyRef);
+    await batch.commit();
+  }
 }

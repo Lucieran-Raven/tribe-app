@@ -50,13 +50,18 @@ class InboxScreen extends ConsumerWidget {
               final notification = notifications[index];
               return NotificationCard(
                 notification: notification,
-                onTap: () async {
-                  await NotificationService().markAsRead(
-                    authState.user.userId,
-                    notification.notificationId,
-                  );
-                  if (context.mounted) {
+                onTap: () {
+                  // 1. Navigate IMMEDIATELY so the tap isn't swallowed by a UI rebuild
+                  if (notification.targetRantId != null) {
                     GoRouter.of(context).push('/rant/${notification.targetRantId}');
+                  }
+                  
+                  // 2. Mark as read AFTER navigation is queued (do not await before navigating)
+                  if (!notification.isRead) {
+                    NotificationService().markAsRead(
+                      authState.user.userId,
+                      notification.notificationId,
+                    );
                   }
                 },
               );

@@ -21,6 +21,7 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
   final TextEditingController _replyController = TextEditingController();
   String _replyText = '';
   bool _isSending = false;
+  bool _isPostAvailable = true;
 
   @override
   void initState() {
@@ -81,10 +82,36 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_isPostAvailable) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Post')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 64, color: Colors.grey.shade400),
+                const SizedBox(height: 16),
+                Text('Post Unavailable', style: Theme.of(context).textTheme.headlineSmall),
+                const SizedBox(height: 8),
+                Text('This post has been deleted or is no longer available.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade600)),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.arrow_back),
+                  label: const Text('Go Back'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // If available, return the normal Scaffold with the FutureBuilder, Divider, Replies, and BottomNavBar
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Post'),
-      ),
+      appBar: AppBar(title: const Text('Post')),
       body: Column(
         children: [
           // Original rant at top
@@ -92,16 +119,16 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
             future: RantService().getRant(widget.rantId),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Center(child: CircularProgressIndicator()),
-                );
+                return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()));
               }
-              if (snapshot.hasError) {
-                return Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Center(child: Text('Failed to load rant')),
-                );
+              if (snapshot.hasError || (snapshot.connectionState == ConnectionState.done && !snapshot.hasData)) {
+                // Use a post-frame callback to avoid calling setState during build
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && _isPostAvailable) {
+                    setState(() => _isPostAvailable = false);
+                  }
+                });
+                return const Center(child: CircularProgressIndicator()); // Fallback while state updates
               }
               final rant = snapshot.data!;
               return Card(

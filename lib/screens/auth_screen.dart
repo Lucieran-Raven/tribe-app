@@ -5,6 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../config/theme.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/auth/google_sign_in_button.dart';
+import 'legal/terms_screen.dart';
+import 'legal/privacy_screen.dart';
 
 class AuthScreen extends ConsumerWidget {
   const AuthScreen({super.key});
@@ -71,13 +73,28 @@ class AuthScreen extends ConsumerWidget {
                 ),
               const SizedBox(height: 24),
               // Bottom: Terms and Privacy text
-              Text(
-                'By continuing, you agree to our Terms and Privacy Policy',
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  color: Colors.grey,
-                ),
-                textAlign: TextAlign.center,
+              Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text('By continuing, you agree to our ', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
+                  InkWell(
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => TermsScreen())),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
+                      child: Text('Terms of Service', style: GoogleFonts.poppins(fontSize: 12, color: AppTheme.brandPrimary, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  Text(' and ', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
+                  InkWell(
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => PrivacyScreen())),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
+                      child: Text('Privacy Policy', style: GoogleFonts.poppins(fontSize: 12, color: AppTheme.brandPrimary, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  Text('.', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
+                ],
               ),
               const SizedBox(height: 24),
             ],

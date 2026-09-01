@@ -13,6 +13,8 @@ import '../screens/main_scaffold.dart';
 import '../screens/rant_detail/rant_detail_screen.dart';
 import '../screens/user_profile_screen.dart';
 import '../screens/edit_profile_screen.dart';
+import '../screens/legal/terms_screen.dart';
+import '../screens/legal/privacy_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -75,6 +77,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/edit-profile',
         builder: (context, state) => const EditProfileScreen(),
+      ),
+      GoRoute(
+        path: '/terms',
+        builder: (context, state) => const TermsScreen(),
+      ),
+      GoRoute(
+        path: '/privacy',
+        builder: (context, state) => const PrivacyScreen(),
       ),
     ],
   );

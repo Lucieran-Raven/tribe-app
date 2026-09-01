@@ -5,6 +5,7 @@ import '../../utils/time_utils.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/vote_provider.dart';
 import '../../services/rant_service.dart';
+import '../../services/report_service.dart';
 
 class ReplyCard extends ConsumerStatefulWidget {
   final ReplyModel reply;
@@ -58,6 +59,40 @@ class _ReplyCardState extends ConsumerState<ReplyCard> {
                         color: Colors.grey,
                       ),
                     ),
+                  ],
+                ),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert),
+                  onSelected: (value) async {
+                    if (value == 'delete') {
+                      _confirmDelete(context);
+                    } else if (value == 'report') {
+                      _showReportDialog(context);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    if (isOwnReply)
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete, color: Colors.red),
+                            SizedBox(width: 8),
+                            Text('Delete Reply', style: TextStyle(color: Colors.red)),
+                          ],
+                        ),
+                      )
+                    else
+                      const PopupMenuItem(
+                        value: 'report',
+                        child: Row(
+                          children: [
+                            Icon(Icons.flag),
+                            SizedBox(width: 8),
+                            Text('Report Reply'),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 4),
@@ -122,6 +157,92 @@ class _ReplyCardState extends ConsumerState<ReplyCard> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Reply?'),
+        content: const Text('This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                await RantService().deleteReply(widget.reply.rantId, widget.reply.replyId);
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to delete: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showReportDialog(BuildContext context) {
+    String? selectedReason;
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return AlertDialog(
+            title: const Text('Report Reply'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: ['Spam', 'Harassment', 'Hate speech', 'Nudity', 'Other'].map((reason) {
+                return RadioListTile<String>(
+                  title: Text(reason),
+                  value: reason,
+                  groupValue: selectedReason,
+                  onChanged: (val) => setDialogState(() => selectedReason = val),
+                );
+              }).toList(),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: selectedReason == null
+                    ? null
+                    : () async {
+                        Navigator.pop(ctx);
+                        final authState = ref.read(authProvider);
+                        if (authState is AuthAuthenticated) {
+                          await ReportService().reportContent(
+                            targetType: 'reply',
+                            targetId: widget.reply.replyId,
+                            reporterId: authState.user.userId,
+                            reason: selectedReason!,
+                            snippet: widget.reply.content,
+                          );
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Report submitted. Thank you.')),
+                            );
+                          }
+                        }
+                      },
+                child: const Text('Submit'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
