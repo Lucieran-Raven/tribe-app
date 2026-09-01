@@ -10,6 +10,7 @@ class UserModel {
   final List<AffiliationModel> affiliations;
   final String? bio;
   final String? country;
+  final List<String> blockedUsers;
 
   UserModel({
     required this.userId,
@@ -21,6 +22,7 @@ class UserModel {
     this.affiliations = const [],
     this.bio,
     this.country,
+    this.blockedUsers = const [],
   });
 
   bool get hasCompletedOnboarding => handle != null;
@@ -38,6 +40,7 @@ class UserModel {
           .toList() ?? [],
       bio: json['bio'] as String?,
       country: json['country'] as String?,
+      blockedUsers: (json['blockedUsers'] as List<dynamic>?)?.map((e) => e as String).toList() ?? [],
     );
   }
 
@@ -52,6 +55,7 @@ class UserModel {
       'affiliations': affiliations.map((a) => a.toMap()).toList(),
       'bio': bio,
       'country': country,
+      'blockedUsers': blockedUsers,
     };
   }
 
@@ -65,6 +69,7 @@ class UserModel {
     List<AffiliationModel>? affiliations,
     String? bio,
     String? country,
+    List<String>? blockedUsers,
   }) {
     return UserModel(
       userId: userId ?? this.userId,
@@ -76,6 +81,7 @@ class UserModel {
       affiliations: affiliations ?? this.affiliations,
       bio: bio ?? this.bio,
       country: country ?? this.country,
+      blockedUsers: blockedUsers ?? this.blockedUsers,
     );
   }
 }

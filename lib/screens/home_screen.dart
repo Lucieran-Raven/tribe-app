@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/feed_provider.dart';
+import '../providers/auth_provider.dart';
 import '../widgets/feed/rant_card.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -9,6 +10,8 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final feedAsync = ref.watch(feedProvider);
+    final authState = ref.watch(authProvider);
+    final blocked = authState is AuthAuthenticated ? authState.user.blockedUsers : const <String>[];
 
     return Scaffold(
       appBar: AppBar(
@@ -30,7 +33,8 @@ class HomeScreen extends ConsumerWidget {
           ),
         ),
         data: (rants) {
-          if (rants.isEmpty) {
+          final visibleRants = rants.where((r) => !blocked.contains(r.userId)).toList();
+          if (visibleRants.isEmpty) {
             return const Center(
               child: Text('No posts yet. Be the first to share.'),
             );
@@ -42,9 +46,9 @@ class HomeScreen extends ConsumerWidget {
             },
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: rants.length,
+              itemCount: visibleRants.length,
               itemBuilder: (context, index) {
-                return RantCard(rant: rants[index]);
+                return RantCard(rant: visibleRants[index]);
               },
             ),
           );

@@ -149,6 +149,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
             const SizedBox(height: 16),
             
+            // Blocked Accounts Button
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => GoRouter.of(context).push('/blocked-accounts'),
+                icon: const Icon(Icons.block),
+                label: const Text('Blocked Accounts'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            
             // Sign Out Button
             SizedBox(
               width: double.infinity,

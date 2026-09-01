@@ -15,6 +15,7 @@ import '../screens/user_profile_screen.dart';
 import '../screens/edit_profile_screen.dart';
 import '../screens/legal/terms_screen.dart';
 import '../screens/legal/privacy_screen.dart';
+import '../screens/blocked_accounts_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -77,6 +78,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/edit-profile',
         builder: (context, state) => const EditProfileScreen(),
+      ),
+      GoRoute(
+        path: '/blocked-accounts',
+        builder: (context, state) => const BlockedAccountsScreen(),
       ),
       GoRoute(
         path: '/terms',

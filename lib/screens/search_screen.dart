@@ -5,6 +5,7 @@ import 'dart:async';
 import '../services/search_service.dart';
 import '../models/rant_model.dart';
 import '../models/user_model.dart';
+import '../providers/auth_provider.dart';
 import '../widgets/search/user_search_card.dart';
 import '../widgets/feed/rant_card.dart';
 
@@ -65,6 +66,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authProvider);
+    final blocked = authState is AuthAuthenticated ? authState.user.blockedUsers : const <String>[];
+    final visibleUsers = _users.where((u) => !blocked.contains(u.userId)).toList();
+    final visibleRants = _rants.where((r) => !blocked.contains(r.userId)).toList();
+
     return Scaffold(
       appBar: AppBar(title: const Text('Search')),
       body: Column(
@@ -84,11 +90,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : _users.isEmpty && _rants.isEmpty && _controller.text.isNotEmpty
+                : visibleUsers.isEmpty && visibleRants.isEmpty && _controller.text.isNotEmpty
                     ? const Center(child: Text('No results found.'))
                     : ListView(
                         children: [
-                          if (_users.isNotEmpty) ...[
+                          if (visibleUsers.isNotEmpty) ...[
                             const Padding(
                               padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
                               child: Text(
@@ -100,14 +106,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                 ),
                               ),
                             ),
-                            ..._users.map((user) => UserSearchCard(
+                            ...visibleUsers.map((user) => UserSearchCard(
                                   user: user,
                                   onTap: () {
                                     GoRouter.of(context).push('/user/${user.userId}');
                                   },
                                 )),
                           ],
-                          if (_rants.isNotEmpty) ...[
+                          if (visibleRants.isNotEmpty) ...[
                             const Padding(
                               padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
                               child: Text(
@@ -119,7 +125,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                 ),
                               ),
                             ),
-                            ..._rants.map((rant) => RantCard(rant: rant)),
+                            ...visibleRants.map((rant) => RantCard(rant: rant)),
                           ],
                         ],
                       ),

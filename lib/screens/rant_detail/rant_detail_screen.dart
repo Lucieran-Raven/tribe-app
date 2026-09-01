@@ -82,6 +82,9 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authProvider);
+    final blocked = authState is AuthAuthenticated ? authState.user.blockedUsers : const <String>[];
+
     if (!_isPostAvailable) {
       return Scaffold(
         appBar: AppBar(title: const Text('Post')),
@@ -217,16 +220,17 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
                 ),
               ),
               data: (replies) {
-                if (replies.isEmpty) {
+                final visibleReplies = replies.where((r) => !blocked.contains(r.userId)).toList();
+                if (visibleReplies.isEmpty) {
                   return const Center(
                     child: Text('Be the first to reply'),
                   );
                 }
                 return ListView.builder(
                   padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: replies.length,
+                  itemCount: visibleReplies.length,
                   itemBuilder: (context, index) {
-                    return ReplyCard(reply: replies[index]);
+                    return ReplyCard(reply: visibleReplies[index]);
                   },
                 );
               },

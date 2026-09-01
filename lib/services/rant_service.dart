@@ -294,6 +294,22 @@ class RantService {
             .toList());
   }
 
+  Future<UserModel> blockUser(String blockerId, String blockedId) async {
+    await _firestore.collection('users').doc(blockerId).update({
+      'blockedUsers': FieldValue.arrayUnion([blockedId]),
+    });
+    final doc = await _firestore.collection('users').doc(blockerId).get();
+    return UserModel.fromJson(doc.data() as Map<String, dynamic>);
+  }
+
+  Future<UserModel> unblockUser(String blockerId, String blockedId) async {
+    await _firestore.collection('users').doc(blockerId).update({
+      'blockedUsers': FieldValue.arrayRemove([blockedId]),
+    });
+    final doc = await _firestore.collection('users').doc(blockerId).get();
+    return UserModel.fromJson(doc.data() as Map<String, dynamic>);
+  }
+
   Future<void> deletePost(String rantId) async {
     final rantDoc = await _firestore.collection('rants').doc(rantId).get();
     if (!rantDoc.exists) return;

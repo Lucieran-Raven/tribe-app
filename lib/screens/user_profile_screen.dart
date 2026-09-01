@@ -7,6 +7,7 @@ import '../models/affiliation_model.dart';
 import '../models/reply_model.dart';
 import '../widgets/feed/rant_card.dart';
 import '../services/report_service.dart';
+import '../services/rant_service.dart';
 
 class UserProfileScreen extends ConsumerWidget {
   final String userId;
@@ -66,12 +67,86 @@ class UserProfileScreen extends ConsumerWidget {
     );
   }
 
+  Future<void> _toggleBlock(BuildContext context, WidgetRef ref, String userId, bool block) async {
+    final auth = ref.read(authProvider);
+    if (auth is! AuthAuthenticated) return;
+    try {
+      final freshUser = block
+          ? await RantService().blockUser(auth.user.userId, userId)
+          : await RantService().unblockUser(auth.user.userId, userId);
+      ref.read(authProvider.notifier).updateUser(freshUser);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(block ? 'User blocked' : 'User unblocked')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(userProfileProvider(userId));
     final rantsAsync = ref.watch(userRantsProvider(userId));
     final repliesAsync = ref.watch(userRepliesProvider(userId));
     final authState = ref.watch(authProvider);
+    final isBlocked = authState is AuthAuthenticated && authState.user.blockedUsers.contains(userId);
+    final blockedList = authState is AuthAuthenticated ? authState.user.blockedUsers : const <String>[];
+
+    if (isBlocked) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Profile'),
+          actions: [
+            PopupMenuButton<String>(
+              onSelected: (value) async {
+                if (value == 'unblock') {
+                  await _toggleBlock(context, ref, userId, false);
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'unblock',
+                  child: Row(
+                    children: [
+                      Icon(Icons.lock_open),
+                      SizedBox(width: 8),
+                      Text('Unblock User'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.block, size: 64, color: Colors.grey.shade400),
+                const SizedBox(height: 16),
+                Text('You blocked this user', style: Theme.of(context).textTheme.headlineSmall),
+                const SizedBox(height: 8),
+                Text("You won't see their posts or replies.", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade600)),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () => _toggleBlock(context, ref, userId, false),
+                  icon: const Icon(Icons.lock_open),
+                  label: const Text('Unblock'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -82,6 +157,8 @@ class UserProfileScreen extends ConsumerWidget {
               onSelected: (value) async {
                 if (value == 'report') {
                   _showReportDialog(context, ref);
+                } else if (value == 'block' || value == 'unblock') {
+                  await _toggleBlock(context, ref, userId, value == 'block');
                 }
               },
               itemBuilder: (context) => [
@@ -92,6 +169,16 @@ class UserProfileScreen extends ConsumerWidget {
                       Icon(Icons.flag),
                       SizedBox(width: 8),
                       Text('Report User'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: isBlocked ? 'unblock' : 'block',
+                  child: Row(
+                    children: [
+                      Icon(isBlocked ? Icons.lock_open : Icons.block, color: isBlocked ? null : Colors.red),
+                      const SizedBox(width: 8),
+                      Text(isBlocked ? 'Unblock User' : 'Block User', style: TextStyle(color: isBlocked ? null : Colors.red)),
                     ],
                   ),
                 ),
