@@ -8,6 +8,7 @@ import '../../models/affiliation_model.dart';
 import '../../providers/onboarding_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/onboarding/onboarding_page_indicator.dart';
+import '../../widgets/onboarding/onboarding_page_indicator.dart';
 
 class OnboardingAffiliationsScreen extends ConsumerStatefulWidget {
   const OnboardingAffiliationsScreen({super.key});
@@ -82,7 +83,7 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/onboarding/2'),
+          onPressed: () => context.go('/onboarding/3'),
         ),
       ),
       body: SafeArea(
@@ -291,6 +292,9 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
                   ),
                 ),
               ),
+              const SizedBox(height: 4),
+              const OnboardingPageIndicator(activeIndex: 3),
+              const SizedBox(height: 16),
             ],
           ),
         ),

@@ -72,6 +72,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 color: Colors.grey,
               ),
             ),
+            if (user.country != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                user.country!,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey.shade700,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
             const SizedBox(height: 8),
             // Bio
             if (user.bio != null && user.bio!.isNotEmpty)

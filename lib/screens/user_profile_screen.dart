@@ -59,6 +59,18 @@ class UserProfileScreen extends ConsumerWidget {
                   ),
                 ),
               ),
+              if (user.country != null) ...[
+                const SizedBox(height: 4),
+                Center(
+                  child: Text(
+                    user.country!,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey.shade700,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 8),
               if (user.bio != null && user.bio!.isNotEmpty)
                 Center(

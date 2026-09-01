@@ -23,6 +23,7 @@ class OnboardingState {
   final List<AffiliationModel> selectedAffiliations;
   final bool saving;
   final String? errorMsg;
+  final String? selectedCountry;
 
   OnboardingState({
     this.handleText = '',
@@ -31,6 +32,7 @@ class OnboardingState {
     this.selectedAffiliations = const [],
     this.saving = false,
     this.errorMsg,
+    this.selectedCountry,
   });
 
   OnboardingState copyWith({
@@ -40,6 +42,7 @@ class OnboardingState {
     List<AffiliationModel>? selectedAffiliations,
     bool? saving,
     String? errorMsg,
+    String? selectedCountry,
   }) {
     return OnboardingState(
       handleText: handleText ?? this.handleText,
@@ -48,6 +51,7 @@ class OnboardingState {
       selectedAffiliations: selectedAffiliations ?? this.selectedAffiliations,
       saving: saving ?? this.saving,
       errorMsg: errorMsg ?? this.errorMsg,
+      selectedCountry: selectedCountry ?? this.selectedCountry,
     );
   }
 }
@@ -56,6 +60,7 @@ class OnboardingProvider extends StateNotifier<OnboardingState> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   Timer? _debounceTimer;
+  String? selectedCountry;
 
   OnboardingProvider() : super(OnboardingState());
 
@@ -249,11 +254,18 @@ class OnboardingProvider extends StateNotifier<OnboardingState> {
         final doc = await transaction.get(docRef);
 
         if (doc.exists) {
-          // DOC EXISTS: ONLY write affiliations. DO NOT spread _baseUserMap.
-          transaction.set(docRef, {'affiliations': affiliations.map((a) => a.toMap()).toList()}, SetOptions(merge: true));
+          // DOC EXISTS: ONLY write affiliations and country. DO NOT spread _baseUserMap.
+          transaction.set(docRef, {
+            'affiliations': affiliations.map((a) => a.toMap()).toList(),
+            if (selectedCountry != null) 'country': selectedCountry,
+          }, SetOptions(merge: true));
         } else {
-          // DOC MISSING: Recreate doc with base map + affiliations.
-          transaction.set(docRef, {..._baseUserMap(uid), 'affiliations': affiliations.map((a) => a.toMap()).toList()}, SetOptions(merge: true));
+          // DOC MISSING: Recreate doc with base map + affiliations + country.
+          transaction.set(docRef, {
+            ..._baseUserMap(uid),
+            'affiliations': affiliations.map((a) => a.toMap()).toList(),
+            if (selectedCountry != null) 'country': selectedCountry,
+          }, SetOptions(merge: true));
         }
       });
 
