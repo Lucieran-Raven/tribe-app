@@ -104,10 +104,6 @@ class RantService {
       throw Exception('Rant not found');
     }
     final rantOwnerId = rantDoc.data()?['userId'];
-    if (rantOwnerId == userId) {
-      // Silently reject self-like
-      return;
-    }
 
     bool wasVoted = false;
     await _firestore.runTransaction((transaction) async {
@@ -145,7 +141,8 @@ class RantService {
 
         if (!wasVoted) {
           // Added vote - create notification
-          await NotificationService().createNotification(
+          final deterministicId = 'karma_${rantId}_${userId}';
+          await NotificationService().upsertKarmaNotification(
             rantOwnerId,
             NotificationModel(
               type: NotificationType.karma,
@@ -156,15 +153,12 @@ class RantService {
               targetSnippet: rantContent,
               timestamp: DateTime.now(),
             ),
+            deterministicId,
           );
         } else {
           // Removed vote - delete notification
-          await NotificationService().deleteNotificationBySource(
-            rantOwnerId,
-            NotificationType.karma,
-            userId,
-            rantId,
-          );
+          final deterministicId = 'karma_${rantId}_${userId}';
+          await NotificationService().deleteKarmaNotification(rantOwnerId, deterministicId);
         }
       }
     } catch (e) {
@@ -197,10 +191,6 @@ class RantService {
       throw Exception('Reply not found');
     }
     final replyOwnerId = replyDoc.data()?['userId'];
-    if (replyOwnerId == userId) {
-      // Silently reject self-like
-      return;
-    }
 
     bool wasVoted = false;
     await _firestore.runTransaction((transaction) async {
@@ -244,7 +234,8 @@ class RantService {
 
         if (!wasVoted) {
           // Added vote - create notification
-          await NotificationService().createNotification(
+          final deterministicId = 'replyKarma_${replyId}_${userId}';
+          await NotificationService().upsertKarmaNotification(
             replyOwnerId,
             NotificationModel(
               type: NotificationType.replyKarma,
@@ -256,15 +247,12 @@ class RantService {
               targetSnippet: replyContent,
               timestamp: DateTime.now(),
             ),
+            deterministicId,
           );
         } else {
           // Removed vote - delete notification
-          await NotificationService().deleteNotificationBySource(
-            replyOwnerId,
-            NotificationType.replyKarma,
-            userId,
-            rantId,
-          );
+          final deterministicId = 'replyKarma_${replyId}_${userId}';
+          await NotificationService().deleteKarmaNotification(replyOwnerId, deterministicId);
         }
       }
     } catch (e) {

@@ -4,12 +4,20 @@ import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../providers/user_profile_provider.dart';
 import '../config/theme.dart';
+import '../services/auth_service.dart';
 
-class ProfileScreen extends ConsumerWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  bool _isDeleting = false;
+
+  @override
+  Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
 
     if (authState is! AuthAuthenticated) {
@@ -150,8 +158,75 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ),
             ),
+            const SizedBox(height: 16),
+            // Delete Account Button
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _isDeleting ? null : _confirmDeleteAccount,
+                icon: const Icon(Icons.delete_forever),
+                label: const Text('Delete Account'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.red,
+                  side: const BorderSide(color: Colors.red),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _confirmDeleteAccount() {
+    final rootContext = context; // Capture parent context
+    showDialog(
+      context: rootContext,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete Account?'),
+        content: const Text(
+          'This will permanently delete your account, your posts, and your replies. This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(dialogContext).pop(); // Close dialog using dialogContext
+              setState(() => _isDeleting = true);
+              
+              try {
+                await AuthService().deleteAccount();
+                
+                // Navigate FIRST using rootContext before resetting state
+                if (rootContext.mounted) {
+                  GoRouter.of(rootContext).go('/auth');
+                }
+                
+                // Try to sign out, but don't block or crash if it fails
+                try {
+                  await ref.read(authProvider.notifier).signOut();
+                } catch (_) {}
+              } catch (e) {
+                if (rootContext.mounted) {
+                  ScaffoldMessenger.of(rootContext).showSnackBar(
+                    SnackBar(content: Text('Failed to delete account: $e. Please sign in again and retry.')),
+                  );
+                }
+              } finally {
+                // Only setState if the screen is still mounted
+                if (mounted) {
+                  setState(() => _isDeleting = false);
+                }
+              }
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete Forever'),
+          ),
+        ],
       ),
     );
   }

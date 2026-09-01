@@ -36,6 +36,7 @@ class NotificationService {
         .update({'isRead': true});
   }
 
+
   Future<void> deleteNotificationBySource(
     String userId,
     NotificationType type,
@@ -73,4 +74,26 @@ class NotificationService {
       await batch.commit();
     }
   }
+
+  Future<void> upsertKarmaNotification(String userId, NotificationModel notification, String deterministicId) async {
+    final docRef = _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('notifications')
+        .doc(deterministicId);
+    final notificationWithId = notification.copyWith(notificationId: docRef.id);
+    await docRef.set(notificationWithId.toJson());
+  }
+
+  Future<void> deleteKarmaNotification(String userId, String deterministicId) async {
+    await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('notifications')
+        .doc(deterministicId)
+        .delete();
+  }
 }
+
+
+

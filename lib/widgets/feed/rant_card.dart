@@ -95,21 +95,25 @@ class _RantCardState extends ConsumerState<RantCard> {
                       ? const Icon(Icons.thumb_up)
                       : const Icon(Icons.thumb_up_outlined),
                   color: isOwnPost ? Colors.grey : (hasVoted ? Theme.of(context).colorScheme.primary : null),
-                  onPressed: isOwnPost || _isVoting
+                  onPressed: _isVoting
                       ? null
                       : () async {
+                          if (isOwnPost) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("You can't like your own post")),
+                            );
+                            return;
+                          }
                           final authState = ref.read(authProvider);
                           if (authState is! AuthAuthenticated) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text('Please sign in to like')),
+                              const SnackBar(content: Text('Please sign in to like')),
                             );
                             return;
                           }
                           setState(() => _isVoting = true);
                           try {
-                            await RantService().toggleVote(
-                                widget.rant.rantId, authState.user.userId);
+                            await RantService().toggleVote(widget.rant.rantId, authState.user.userId);
                           } catch (e) {
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(

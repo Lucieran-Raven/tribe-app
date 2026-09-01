@@ -77,4 +77,79 @@ class AuthService {
       await docRef.set(UserModel(userId: user.uid, email: user.email ?? '', displayName: user.displayName ?? 'User', avatarUrl: user.photoURL, createdAt: DateTime.now()).toJson());
     }
   }
+
+  Future<void> deleteAccount() async {
+    final uid = _auth.currentUser!.uid;
+
+    // 1. VOTES ON OTHERS' CONTENT (decrement parent karma)
+    final votesQuery = await _firestore.collectionGroup('votes').where('userId', isEqualTo: uid).get();
+    for (var i = 0; i < votesQuery.docs.length; i += 500) {
+      final batch = _firestore.batch();
+      final end = (i + 500 < votesQuery.docs.length) ? i + 500 : votesQuery.docs.length;
+      for (var j = i; j < end; j++) {
+        final voteRef = votesQuery.docs[j].reference;
+        final parentRef = voteRef.parent.parent;
+        if (parentRef != null) {
+          batch.update(_firestore.doc(parentRef.path), {'karma': FieldValue.increment(-1)});
+        }
+        batch.delete(voteRef);
+      }
+      await batch.commit();
+    }
+
+    // 2. REPLIES (decrement parent replyCount)
+    final repliesQuery = await _firestore.collectionGroup('replies').where('userId', isEqualTo: uid).get();
+    for (var i = 0; i < repliesQuery.docs.length; i += 500) {
+      final batch = _firestore.batch();
+      final end = (i + 500 < repliesQuery.docs.length) ? i + 500 : repliesQuery.docs.length;
+      for (var j = i; j < end; j++) {
+        final replyRef = repliesQuery.docs[j].reference;
+        final parentRef = replyRef.parent.parent;
+        if (parentRef != null) {
+          batch.update(_firestore.doc(parentRef.path), {'replyCount': FieldValue.increment(-1)});
+        }
+        batch.delete(replyRef);
+      }
+      await batch.commit();
+    }
+
+    // 3. NOTIFICATIONS TRIGGERED BY USER (in others' inboxes)
+    final trigNotifsQuery = await _firestore.collectionGroup('notifications').where('fromUserId', isEqualTo: uid).get();
+    for (var i = 0; i < trigNotifsQuery.docs.length; i += 500) {
+      final batch = _firestore.batch();
+      final end = (i + 500 < trigNotifsQuery.docs.length) ? i + 500 : trigNotifsQuery.docs.length;
+      for (var j = i; j < end; j++) {
+        batch.delete(trigNotifsQuery.docs[j].reference);
+      }
+      await batch.commit();
+    }
+
+    // 4. USER'S OWN POSTS
+    final postsQuery = await _firestore.collection('rants').where('userId', isEqualTo: uid).get();
+    for (var i = 0; i < postsQuery.docs.length; i += 500) {
+      final batch = _firestore.batch();
+      final end = (i + 500 < postsQuery.docs.length) ? i + 500 : postsQuery.docs.length;
+      for (var j = i; j < end; j++) {
+        batch.delete(postsQuery.docs[j].reference);
+      }
+      await batch.commit();
+    }
+
+    // 5. USER'S OWN NOTIFICATIONS
+    final userNotifsQuery = await _firestore.collection('users').doc(uid).collection('notifications').get();
+    for (var i = 0; i < userNotifsQuery.docs.length; i += 500) {
+      final batch = _firestore.batch();
+      final end = (i + 500 < userNotifsQuery.docs.length) ? i + 500 : userNotifsQuery.docs.length;
+      for (var j = i; j < end; j++) {
+        batch.delete(userNotifsQuery.docs[j].reference);
+      }
+      await batch.commit();
+    }
+
+    // 6. USER DOC
+    await _firestore.collection('users').doc(uid).delete();
+
+    // 7. AUTH ACCOUNT (LAST)
+    await _auth.currentUser!.delete();
+  }
 }

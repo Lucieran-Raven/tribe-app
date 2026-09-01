@@ -70,9 +70,15 @@ class _ReplyCardState extends ConsumerState<ReplyCard> {
                   children: [
                     const SizedBox(width: 4),
                     GestureDetector(
-                      onTap: isOwnReply || _isVoting
+                      onTap: _isVoting
                           ? null
                           : () async {
+                              if (isOwnReply) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text("You can't like your own reply")),
+                                );
+                                return;
+                              }
                               final authState = ref.read(authProvider);
                               if (authState is! AuthAuthenticated) {
                                 ScaffoldMessenger.of(context).showSnackBar(
@@ -82,10 +88,7 @@ class _ReplyCardState extends ConsumerState<ReplyCard> {
                               }
                               setState(() => _isVoting = true);
                               try {
-                                await RantService().toggleReplyVote(
-                                    widget.reply.rantId,
-                                    widget.reply.replyId,
-                                    authState.user.userId);
+                                await RantService().toggleReplyVote(widget.reply.rantId, widget.reply.replyId, authState.user.userId);
                               } catch (e) {
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
