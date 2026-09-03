@@ -15,16 +15,19 @@ class OnboardingHandleScreen extends ConsumerStatefulWidget {
 
 class _OnboardingHandleScreenState extends ConsumerState<OnboardingHandleScreen> {
   late final TextEditingController _controller;
+  late final TextEditingController _nameController;
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController();
+    _nameController = TextEditingController();
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _nameController.dispose();
     super.dispose();
   }
 
@@ -83,6 +86,34 @@ class _OnboardingHandleScreenState extends ConsumerState<OnboardingHandleScreen>
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 40),
+                // Display Name TextField
+                Consumer(
+                  builder: (context, ref, child) {
+                    final state = ref.watch(onboardingProvider);
+                    return TextField(
+                      controller: _nameController,
+                      onChanged: (value) {
+                        ref.read(onboardingProvider.notifier).setDisplayName(value);
+                      },
+                      maxLength: 30,
+                      decoration: InputDecoration(
+                        labelText: 'Display Name',
+                        hintText: 'Your real name or nickname',
+                        counterText: '${_nameController.text.length}/30',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: state.displayNameText.trim().isNotEmpty ? Colors.green : Colors.grey),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: state.displayNameText.trim().isNotEmpty ? Colors.green : AppTheme.brandPrimary),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 24),
                 // TextField - wrapped in Consumer for decoration only
                 Consumer(
                   builder: (context, ref, child) {
@@ -109,17 +140,17 @@ class _OnboardingHandleScreenState extends ConsumerState<OnboardingHandleScreen>
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(
-                            color: state.handleError == null && state.availability == HandleAvailability.available
-                                ? Colors.green
-                                : AppTheme.brandPrimary,
+                            color: (state.handleError != null || state.availability == HandleAvailability.taken || state.availability == HandleAvailability.invalid)
+                                ? Colors.red
+                                : (state.availability == HandleAvailability.available ? Colors.green : AppTheme.brandPrimary),
                           ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(
-                            color: state.handleError == null && state.availability == HandleAvailability.available
-                                ? Colors.green
-                                : Colors.grey,
+                            color: (state.handleError != null || state.availability == HandleAvailability.taken || state.availability == HandleAvailability.invalid)
+                                ? Colors.red
+                                : (state.availability == HandleAvailability.available ? Colors.green : Colors.grey),
                           ),
                         ),
                       ),
@@ -154,11 +185,11 @@ class _OnboardingHandleScreenState extends ConsumerState<OnboardingHandleScreen>
                     final state = ref.watch(onboardingProvider);
                     
                     return ElevatedButton(
-                      onPressed: state.availability == HandleAvailability.available && !state.saving
+                      onPressed: state.availability == HandleAvailability.available && state.displayNameText.trim().isNotEmpty && !state.saving
                           ? () async {
                               await ref.read(onboardingProvider.notifier).saveHandle(ref);
                               if (context.mounted) {
-                                context.go('/onboarding/3');
+                                context.go('/onboarding/4');
                               }
                             }
                           : null,
@@ -184,7 +215,7 @@ class _OnboardingHandleScreenState extends ConsumerState<OnboardingHandleScreen>
                 ),
                 const SizedBox(height: 20),
                 // Page indicator
-                const OnboardingPageIndicator(activeIndex: 1),
+                const OnboardingPageIndicator(activeIndex: 2),
                 const SizedBox(height: 24),
               ],
             ),
