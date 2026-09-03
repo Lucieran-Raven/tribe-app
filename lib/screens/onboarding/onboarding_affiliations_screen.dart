@@ -74,6 +74,8 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
       if (next is AuthAuthenticated &&
           next.user.handle != null &&
           next.user.handle!.isNotEmpty &&
+          next.user.displayName != null &&
+          next.user.displayName!.isNotEmpty &&
           context.mounted) {
         context.go('/home');
       }
@@ -83,7 +85,7 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/onboarding/3'),
+          onPressed: () => context.go('/onboarding/4'),
         ),
       ),
       body: SafeArea(
@@ -293,7 +295,7 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
                 ),
               ),
               const SizedBox(height: 4),
-              const OnboardingPageIndicator(activeIndex: 3),
+              const OnboardingPageIndicator(activeIndex: 4),
               const SizedBox(height: 16),
             ],
           ),

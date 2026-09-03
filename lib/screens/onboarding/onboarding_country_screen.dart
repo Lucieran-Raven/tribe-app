@@ -60,7 +60,7 @@ class _OnboardingCountryScreenState extends ConsumerState<OnboardingCountryScree
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/onboarding/2'),
+          onPressed: () => context.go('/onboarding/3'),
         ),
       ),
       body: Column(
@@ -183,9 +183,9 @@ class _OnboardingCountryScreenState extends ConsumerState<OnboardingCountryScree
                   onPressed: (_selectedCountry == null || state.saving)
                       ? null
                       : () async {
-                          ref.read(onboardingProvider.notifier).selectedCountry = _selectedCountry;
+                          ref.read(onboardingProvider.notifier).setCountry(_selectedCountry!);
                           if (context.mounted) {
-                            context.go('/onboarding/4');
+                            context.go('/onboarding/5');
                           }
                         },
                   style: ElevatedButton.styleFrom(
@@ -207,7 +207,7 @@ class _OnboardingCountryScreenState extends ConsumerState<OnboardingCountryScree
                 ),
               ),
               const SizedBox(height: 24),
-              const OnboardingPageIndicator(activeIndex: 2),
+              const OnboardingPageIndicator(activeIndex: 3),
               const SizedBox(height: 16),
             ],
           ),

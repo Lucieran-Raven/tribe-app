@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:flutter/painting.dart';
 import '../../config/affiliations_seed.dart';
 import '../../config/theme.dart';
 import '../../models/affiliation_model.dart';
+import '../../models/user_model.dart';
 import '../../providers/onboarding_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/storage_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -17,9 +23,11 @@ class EditProfileScreen extends ConsumerStatefulWidget {
 class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final TextEditingController _bioController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _displayNameController = TextEditingController();
   List<AffiliationModel> _selectedAffiliations = [];
   String _searchQuery = '';
   String _selectedCategory = 'All';
+  File? _pickedAvatar;
 
   List<AffiliationModel> get _filteredAffiliations {
     var filtered = AffiliationsSeed.affiliations;
@@ -42,6 +50,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final authState = ref.read(authProvider);
     if (authState is AuthAuthenticated) {
       _bioController.text = authState.user.bio ?? '';
+      _displayNameController.text = authState.user.displayName;
       _selectedAffiliations = List.from(authState.user.affiliations);
     }
     _searchController.addListener(() {
@@ -55,6 +64,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   void dispose() {
     _bioController.dispose();
     _searchController.dispose();
+    _displayNameController.dispose();
     super.dispose();
   }
 
@@ -120,6 +130,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(onboardingProvider);
+    final authState = ref.watch(authProvider);
+    final user = authState is AuthAuthenticated ? authState.user : null;
 
     ref.listen<OnboardingState>(onboardingProvider, (previous, next) {
       if (next.errorMsg != null && next.errorMsg != previous?.errorMsg) {
@@ -144,10 +156,28 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             onPressed: state.saving
                 ? null
                 : () async {
+                    // Upload avatar if picked
+                    if (_pickedAvatar != null && user != null) {
+                      try {
+                        final newAvatarUrl = await StorageService().uploadAvatar(_pickedAvatar!, user.userId);
+                        await FirebaseFirestore.instance.collection('users').doc(user.userId).update({'avatarUrl': newAvatarUrl});
+                        PaintingBinding.instance.imageCache.clear();
+                        final freshUserDoc = await FirebaseFirestore.instance.collection('users').doc(user.userId).get();
+                        final freshUser = UserModel.fromJson(freshUserDoc.data() as Map<String, dynamic>);
+                        ref.read(authProvider.notifier).updateUser(freshUser);
+                      } catch (e) {
+                        print('AVATAR UPLOAD FAILED: $e');
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Avatar upload failed: $e')));
+                        }
+                        return; // Stop saving profile if upload fails
+                      }
+                    }
                     await ref.read(onboardingProvider.notifier).updateProfile(
                           ref,
                           _bioController.text.trim().isEmpty ? null : _bioController.text.trim(),
                           _selectedAffiliations,
+                          displayName: _displayNameController.text.trim().isEmpty ? null : _displayNameController.text.trim(),
                         );
                     final currentState = ref.read(onboardingProvider);
                     if (currentState.errorMsg == null && context.mounted) {
@@ -162,6 +192,52 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Avatar Section
+            Center(
+              child: Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 60,
+                    backgroundImage: _pickedAvatar != null 
+                        ? FileImage(_pickedAvatar!) 
+                        : (user?.avatarUrl != null ? NetworkImage(user!.avatarUrl!) : null),
+                    child: _pickedAvatar == null && user?.avatarUrl == null 
+                        ? const Icon(Icons.person, size: 60) 
+                        : null,
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: GestureDetector(
+                      onTap: () async {
+                        final picker = ImagePicker();
+                        final pickedFile = await picker.pickImage(source: ImageSource.gallery, maxWidth: 512, maxHeight: 512, imageQuality: 80);
+                        if (pickedFile != null) {
+                          setState(() => _pickedAvatar = File(pickedFile.path));
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(color: AppTheme.brandPrimary, shape: BoxShape.circle),
+                        child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Display Name Section
+            TextField(
+              controller: _displayNameController,
+              maxLength: 30,
+              decoration: InputDecoration(
+                labelText: 'Display Name',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                counterText: '',
+              ),
+            ),
+            const SizedBox(height: 24),
             // Bio Section
             Text(
               'Bio',

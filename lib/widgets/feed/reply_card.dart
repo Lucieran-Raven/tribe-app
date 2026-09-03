@@ -31,6 +31,7 @@ class _ReplyCardState extends ConsumerState<ReplyCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CircleAvatar(
+            key: ValueKey(widget.reply.avatarUrl),
             radius: 16,
             backgroundImage: widget.reply.avatarUrl != null
                 ? NetworkImage(widget.reply.avatarUrl!)

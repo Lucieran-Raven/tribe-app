@@ -49,143 +49,145 @@ class _OnboardingHandleScreenState extends ConsumerState<OnboardingHandleScreen>
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 20),
-              // Icon
-              Icon(
-                Icons.alternate_email,
-                size: 120,
-                color: AppTheme.brandPrimary,
-              ),
-              const SizedBox(height: 40),
-              // Headline
-              Text(
-                'Pick a handle',
-                style: GoogleFonts.poppins(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 20),
+                // Icon
+                Icon(
+                  Icons.alternate_email,
+                  size: 120,
+                  color: AppTheme.brandPrimary,
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              // Body
-              Text(
-                'This is how people will know you in comments. Your rants stay anonymous.',
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  color: Colors.grey.shade600,
-                  height: 1.5,
+                const SizedBox(height: 40),
+                // Headline
+                Text(
+                  'Pick a handle',
+                  style: GoogleFonts.poppins(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 40),
-              // TextField - wrapped in Consumer for decoration only
-              Consumer(
-                builder: (context, ref, child) {
-                  final state = ref.watch(onboardingProvider);
-                  
-                  return TextField(
-                    controller: _controller,
-                    onChanged: (value) {
-                      ref.read(onboardingProvider.notifier).setHandle(value);
-                    },
-                    maxLength: 20,
-                    decoration: InputDecoration(
-                      prefixText: '@',
-                      suffixIcon: _buildStatusIcon(state.availability),
-                      counterText: '${_controller.text.length}/20',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      errorText: state.handleError ?? (state.availability == HandleAvailability.taken ? '@handle is taken' : null),
-                      errorBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Colors.red),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(
-                          color: state.handleError == null && state.availability == HandleAvailability.available
-                              ? Colors.green
-                              : AppTheme.brandPrimary,
+                const SizedBox(height: 16),
+                // Body
+                Text(
+                  'This is how people will know you in comments. Your rants stay anonymous.',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    color: Colors.grey.shade600,
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 40),
+                // TextField - wrapped in Consumer for decoration only
+                Consumer(
+                  builder: (context, ref, child) {
+                    final state = ref.watch(onboardingProvider);
+                    
+                    return TextField(
+                      controller: _controller,
+                      onChanged: (value) {
+                        ref.read(onboardingProvider.notifier).setHandle(value);
+                      },
+                      maxLength: 20,
+                      decoration: InputDecoration(
+                        prefixText: '@',
+                        suffixIcon: _buildStatusIcon(state.availability),
+                        counterText: '${_controller.text.length}/20',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(
-                          color: state.handleError == null && state.availability == HandleAvailability.available
-                              ? Colors.green
-                              : Colors.grey,
+                        errorText: state.handleError ?? (state.availability == HandleAvailability.taken ? '@handle is taken' : null),
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Colors.red),
                         ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-              // Consumer for "Available" text
-              Consumer(
-                builder: (context, ref, child) {
-                  final state = ref.watch(onboardingProvider);
-                  
-                  if (state.handleError == null && state.availability == HandleAvailability.available) {
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(
-                        'Available',
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          color: Colors.green,
-                          fontWeight: FontWeight.w500,
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: state.handleError == null && state.availability == HandleAvailability.available
+                                ? Colors.green
+                                : AppTheme.brandPrimary,
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: state.handleError == null && state.availability == HandleAvailability.available
+                                ? Colors.green
+                                : Colors.grey,
+                          ),
                         ),
                       ),
                     );
-                  }
-                  return const SizedBox.shrink();
-                },
-              ),
-              const SizedBox(height: 20),
-              // Consumer for Next button
-              Consumer(
-                builder: (context, ref, child) {
-                  final state = ref.watch(onboardingProvider);
-                  
-                  return ElevatedButton(
-                    onPressed: state.availability == HandleAvailability.available && !state.saving
-                        ? () async {
-                            await ref.read(onboardingProvider.notifier).saveHandle(ref);
-                            if (context.mounted) {
-                              context.go('/onboarding/3');
-                            }
-                          }
-                        : null,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: AppTheme.brandPrimary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: state.saving
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : Text(
-                            'Next',
-                            style: GoogleFonts.poppins(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                            ),
+                  },
+                ),
+                // Consumer for "Available" text
+                Consumer(
+                  builder: (context, ref, child) {
+                    final state = ref.watch(onboardingProvider);
+                    
+                    if (state.handleError == null && state.availability == HandleAvailability.available) {
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          'Available',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: Colors.green,
+                            fontWeight: FontWeight.w500,
                           ),
-                  );
-                },
-              ),
-              const Spacer(),
-              // Page indicator
-              const OnboardingPageIndicator(activeIndex: 1),
-              const SizedBox(height: 24),
-            ],
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+                const SizedBox(height: 20),
+                // Consumer for Next button
+                Consumer(
+                  builder: (context, ref, child) {
+                    final state = ref.watch(onboardingProvider);
+                    
+                    return ElevatedButton(
+                      onPressed: state.availability == HandleAvailability.available && !state.saving
+                          ? () async {
+                              await ref.read(onboardingProvider.notifier).saveHandle(ref);
+                              if (context.mounted) {
+                                context.go('/onboarding/3');
+                              }
+                            }
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: AppTheme.brandPrimary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: state.saving
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : Text(
+                              'Next',
+                              style: GoogleFonts.poppins(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 20),
+                // Page indicator
+                const OnboardingPageIndicator(activeIndex: 1),
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
         ),
       ),

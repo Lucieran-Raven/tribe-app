@@ -49,7 +49,7 @@ class AuthProvider extends StateNotifier<AuthState> {
         final userModel = UserModel.fromJson(userDoc.data() as Map<String, dynamic>);
         state = AuthAuthenticated(userModel);
       } else {
-        // Create minimal user document
+        // Create minimal user document - use Google credentials as defaults
         final userModel = UserModel(
           userId: currentUser.uid,
           email: currentUser.email ?? '',

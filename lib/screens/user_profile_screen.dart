@@ -201,6 +201,7 @@ class UserProfileScreen extends ConsumerWidget {
               // Header
               Center(
                 child: CircleAvatar(
+                  key: ValueKey(user.avatarUrl),
                   radius: 50,
                   backgroundImage: user.avatarUrl != null
                       ? NetworkImage(user.avatarUrl!)

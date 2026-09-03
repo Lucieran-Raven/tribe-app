@@ -8,7 +8,7 @@ class OnboardingPageIndicator extends StatelessWidget {
   const OnboardingPageIndicator({
     super.key,
     required this.activeIndex,
-    this.totalPages = 3,
+    this.totalPages = 5,
   });
 
   @override

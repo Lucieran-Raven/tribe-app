@@ -4,6 +4,7 @@ class RantModel {
   final String handle;
   final String? avatarUrl;
   final String content;
+  final String? imageUrl;
   final DateTime timestamp;
   final int replyCount;
   final int karma;
@@ -15,6 +16,7 @@ class RantModel {
     required this.handle,
     this.avatarUrl,
     required this.content,
+    this.imageUrl,
     required this.timestamp,
     this.replyCount = 0,
     this.karma = 0,
@@ -28,6 +30,7 @@ class RantModel {
       handle: json['handle'] as String,
       avatarUrl: json['avatarUrl'] as String?,
       content: json['content'] as String,
+      imageUrl: json['imageUrl'] as String?,
       timestamp: DateTime.parse(json['timestamp'] as String),
       replyCount: json['replyCount'] as int? ?? 0,
       karma: json['karma'] as int? ?? 0,
@@ -42,6 +45,7 @@ class RantModel {
       'handle': handle,
       'avatarUrl': avatarUrl,
       'content': content,
+      'imageUrl': imageUrl,
       'timestamp': timestamp.toIso8601String(),
       'replyCount': replyCount,
       'karma': karma,
@@ -55,6 +59,7 @@ class RantModel {
     String? handle,
     String? avatarUrl,
     String? content,
+    String? imageUrl,
     DateTime? timestamp,
     int? replyCount,
     int? karma,
@@ -66,6 +71,7 @@ class RantModel {
       handle: handle ?? this.handle,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       content: content ?? this.content,
+      imageUrl: imageUrl ?? this.imageUrl,
       timestamp: timestamp ?? this.timestamp,
       replyCount: replyCount ?? this.replyCount,
       karma: karma ?? this.karma,

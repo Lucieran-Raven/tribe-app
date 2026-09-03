@@ -6,6 +6,7 @@ import '../screens/auth_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/splash_screen.dart';
 import '../screens/onboarding/onboarding_welcome_screen.dart';
+import '../screens/onboarding/onboarding_avatar_screen.dart';
 import '../screens/onboarding/onboarding_handle_screen.dart';
 import '../screens/onboarding/onboarding_affiliations_screen.dart';
 import '../screens/onboarding/onboarding_country_screen.dart';
@@ -47,14 +48,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/onboarding/2',
-        builder: (context, state) => const OnboardingHandleScreen(),
+        builder: (context, state) => const OnboardingAvatarScreen(),
       ),
       GoRoute(
         path: '/onboarding/3',
-        builder: (context, state) => const OnboardingCountryScreen(),
+        builder: (context, state) => const OnboardingHandleScreen(),
       ),
       GoRoute(
         path: '/onboarding/4',
+        builder: (context, state) => const OnboardingCountryScreen(),
+      ),
+      GoRoute(
+        path: '/onboarding/5',
         builder: (context, state) => const OnboardingAffiliationsScreen(),
       ),
       GoRoute(

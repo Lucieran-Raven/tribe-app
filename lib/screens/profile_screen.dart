@@ -48,6 +48,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           children: [
             // Avatar
             CircleAvatar(
+              key: ValueKey(user.avatarUrl),
               radius: 50,
               backgroundImage: user.avatarUrl != null
                   ? NetworkImage(user.avatarUrl!)

@@ -48,8 +48,15 @@ class AuthService {
 
         await _firestore.collection('users').doc(user.uid).set(userModel.toJson());
       } else {
-        // Parse existing user document
-        userModel = UserModel.fromJson(userDoc.data() as Map<String, dynamic>);
+        // Parse existing user document - preserve existing avatarUrl and displayName
+        final existingData = userDoc.data() as Map<String, dynamic>;
+        userModel = UserModel.fromJson(existingData);
+        
+        // Only update email if it changed, but never overwrite avatarUrl or displayName
+        if (user.email != null && userModel.email != user.email) {
+          await _firestore.collection('users').doc(user.uid).update({'email': user.email});
+          userModel = userModel.copyWith(email: user.email);
+        }
       }
 
       return userModel;

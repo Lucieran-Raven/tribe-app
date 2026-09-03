@@ -32,6 +32,7 @@ class NotificationCard extends ConsumerWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: ListTile(
         leading: CircleAvatar(
+          key: ValueKey(notification.fromAvatarUrl),
           radius: 20,
           backgroundImage: notification.fromAvatarUrl != null
               ? NetworkImage(notification.fromAvatarUrl!)

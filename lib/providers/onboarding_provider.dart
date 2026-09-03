@@ -24,6 +24,7 @@ class OnboardingState {
   final bool saving;
   final String? errorMsg;
   final String? selectedCountry;
+  final String displayNameText;
 
   OnboardingState({
     this.handleText = '',
@@ -33,6 +34,7 @@ class OnboardingState {
     this.saving = false,
     this.errorMsg,
     this.selectedCountry,
+    this.displayNameText = '',
   });
 
   OnboardingState copyWith({
@@ -43,6 +45,7 @@ class OnboardingState {
     bool? saving,
     String? errorMsg,
     String? selectedCountry,
+    String? displayNameText,
   }) {
     return OnboardingState(
       handleText: handleText ?? this.handleText,
@@ -52,6 +55,7 @@ class OnboardingState {
       saving: saving ?? this.saving,
       errorMsg: errorMsg ?? this.errorMsg,
       selectedCountry: selectedCountry ?? this.selectedCountry,
+      displayNameText: displayNameText ?? this.displayNameText,
     );
   }
 }
@@ -82,30 +86,30 @@ class OnboardingProvider extends StateNotifier<OnboardingState> {
     // Validate
     final validationError = Validators.validateHandle(cleanHandle);
     if (validationError != null) {
-      state = OnboardingState(
+      state = state.copyWith(
         handleText: cleanHandle,
         handleError: validationError,
         availability: HandleAvailability.invalid,
-        selectedAffiliations: state.selectedAffiliations,
-        saving: state.saving,
         errorMsg: null,
       );
       return;
     }
 
     // If valid, start debounced availability check with explicit null error
-    state = OnboardingState(
+    state = state.copyWith(
       handleText: cleanHandle,
       handleError: null,
       availability: HandleAvailability.checking,
-      selectedAffiliations: state.selectedAffiliations,
-      saving: state.saving,
       errorMsg: null,
     );
 
     _debounceTimer = Timer(const Duration(milliseconds: 500), () {
       _checkHandleAvailability(cleanHandle);
     });
+  }
+
+  void setDisplayName(String name) {
+    state = state.copyWith(displayNameText: name, errorMsg: null);
   }
 
   Future<void> _checkHandleAvailability(String handle) async {
@@ -117,22 +121,14 @@ class OnboardingProvider extends StateNotifier<OnboardingState> {
           .get();
 
       if (query.docs.isEmpty) {
-        state = OnboardingState(
-          handleText: state.handleText,
+        state = state.copyWith(
           handleError: null,
           availability: HandleAvailability.available,
-          selectedAffiliations: state.selectedAffiliations,
-          saving: state.saving,
-          errorMsg: null,
         );
       } else {
-        state = OnboardingState(
-          handleText: state.handleText,
+        state = state.copyWith(
           handleError: null,
           availability: HandleAvailability.taken,
-          selectedAffiliations: state.selectedAffiliations,
-          saving: state.saving,
-          errorMsg: null,
         );
       }
     } catch (e) {
@@ -185,6 +181,11 @@ class OnboardingProvider extends StateNotifier<OnboardingState> {
     }
   }
 
+  void setCountry(String country) {
+    selectedCountry = country;
+    state = state.copyWith(selectedCountry: country, errorMsg: null);
+  }
+
   Future<void> saveHandle(WidgetRef ref) async {
     if (state.availability != HandleAvailability.available) {
       return;
@@ -206,17 +207,25 @@ class OnboardingProvider extends StateNotifier<OnboardingState> {
         final docRef = _firestore.collection('users').doc(uid);
         final doc = await transaction.get(docRef);
         final cleanHandle = state.handleText.toLowerCase();
+        final displayName = state.displayNameText.trim().isEmpty ? 'User' : state.displayNameText.trim();
 
         if (doc.exists) {
           final existingHandle = doc.data()?['handle'];
           if (existingHandle != null && existingHandle != cleanHandle) {
             throw Exception('Handle already set to a different value');
           }
-          // DOC EXISTS: ONLY write the handle. DO NOT spread _baseUserMap.
-          transaction.set(docRef, {'handle': cleanHandle}, SetOptions(merge: true));
+          // DOC EXISTS: ONLY write the handle and displayName. DO NOT spread _baseUserMap.
+          transaction.set(docRef, {
+            'handle': cleanHandle,
+            'displayName': displayName,
+          }, SetOptions(merge: true));
         } else {
-          // DOC MISSING: Recreate doc with base map + handle.
-          transaction.set(docRef, {..._baseUserMap(uid), 'handle': cleanHandle}, SetOptions(merge: true));
+          // DOC MISSING: Recreate doc with base map + handle + displayName.
+          transaction.set(docRef, {
+            ..._baseUserMap(uid),
+            'handle': cleanHandle,
+            'displayName': displayName,
+          }, SetOptions(merge: true));
         }
       });
 
@@ -290,10 +299,10 @@ class OnboardingProvider extends StateNotifier<OnboardingState> {
   }
 
   void reset() {
-    state = OnboardingState();
+    state = OnboardingState(displayNameText: '');
   }
 
-  Future<void> updateProfile(WidgetRef ref, String? bio, List<AffiliationModel> affiliations) async {
+  Future<void> updateProfile(WidgetRef ref, String? bio, List<AffiliationModel> affiliations, {String? displayName}) async {
     state = state.copyWith(saving: true);
 
     try {
@@ -308,10 +317,14 @@ class OnboardingProvider extends StateNotifier<OnboardingState> {
 
       await _firestore.runTransaction((transaction) async {
         final docRef = _firestore.collection('users').doc(uid);
-        transaction.set(docRef, {
+        final updateMap = {
           'bio': bio,
           'affiliations': affiliations.map((a) => a.toMap()).toList(),
-        }, SetOptions(merge: true));
+        };
+        if (displayName != null) {
+          updateMap['displayName'] = displayName;
+        }
+        transaction.set(docRef, updateMap, SetOptions(merge: true));
       });
 
       // Refresh auth provider user
