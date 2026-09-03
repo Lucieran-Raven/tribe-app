@@ -40,7 +40,7 @@ class RantService {
         .collection('rants')
         .doc(rantId)
         .collection('replies')
-        .orderBy('timestamp', descending: false)
+        .orderBy('timestamp', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => ReplyModel.fromJson(doc.data(), replyId: doc.id))
@@ -314,6 +314,27 @@ class RantService {
         .map((snapshot) => snapshot.docs
             .map((doc) => ReplyModel.fromJson(doc.data(), replyId: doc.id))
             .toList());
+  }
+
+  Stream<List<RantModel>> streamUserLikes(String userId) {
+    return _firestore
+        .collectionGroup('votes')
+        .where('userId', isEqualTo: userId)
+        .snapshots()
+        .asyncMap((snapshot) async {
+          final rantIds = snapshot.docs.map((doc) => doc.reference.parent.parent!.id).toSet();
+          if (rantIds.isEmpty) return <RantModel>[];
+          final rants = <RantModel>[];
+          for (final rantId in rantIds) {
+            final rantDoc = await _firestore.collection('rants').doc(rantId).get();
+            if (rantDoc.exists) {
+              final rant = RantModel.fromJson(rantDoc.data()!, rantId: rantDoc.id);
+              if (rant.isVisible) rants.add(rant);
+            }
+          }
+          rants.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+          return rants;
+        });
   }
 
   Future<UserModel> blockUser(String blockerId, String blockedId) async {

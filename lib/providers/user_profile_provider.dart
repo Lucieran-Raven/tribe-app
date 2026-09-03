@@ -15,3 +15,7 @@ final userRantsProvider = StreamProvider.family<List<RantModel>, String>((ref, u
 final userRepliesProvider = StreamProvider.family<List<ReplyModel>, String>((ref, userId) {
   return RantService().streamUserReplies(userId);
 });
+
+final userLikesProvider = StreamProvider.family<List<RantModel>, String>((ref, userId) {
+  return RantService().streamUserLikes(userId);
+});

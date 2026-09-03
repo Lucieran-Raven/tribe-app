@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import '../services/search_service.dart';
 import '../models/rant_model.dart';
@@ -22,12 +23,26 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   List<UserModel> _users = [];
   List<RantModel> _rants = [];
   bool _isLoading = false;
+  List<String> _searchHistory = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHistory();
+  }
 
   @override
   void dispose() {
     _controller.dispose();
     _debounce?.cancel();
     super.dispose();
+  }
+
+  Future<void> _loadHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _searchHistory = prefs.getStringList('search_history') ?? [];
+    });
   }
 
   void _onSearchChanged(String query) {
@@ -59,6 +74,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         _rants = rants;
         _isLoading = false;
       });
+
+      if (query.isNotEmpty) {
+        _searchHistory.remove(query);
+        _searchHistory.insert(0, query);
+        if (_searchHistory.length > 10) _searchHistory = _searchHistory.sublist(0, 10);
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setStringList('search_history', _searchHistory);
+        setState(() {});
+      }
     } catch (e) {
       setState(() => _isLoading = false);
     }
@@ -94,6 +118,41 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     ? const Center(child: Text('No results found.'))
                     : ListView(
                         children: [
+                          if (_controller.text.isEmpty && _searchHistory.isNotEmpty) ...[
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('Recent Searches', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                                  TextButton(
+                                    onPressed: () async {
+                                      final prefs = await SharedPreferences.getInstance();
+                                      await prefs.remove('search_history');
+                                      setState(() => _searchHistory = []);
+                                    },
+                                    child: const Text('Clear All'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            ..._searchHistory.map((term) => ListTile(
+                              leading: const Icon(Icons.history, color: Colors.grey),
+                              title: Text(term),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.close, size: 18),
+                                onPressed: () async {
+                                  setState(() => _searchHistory.remove(term));
+                                  final prefs = await SharedPreferences.getInstance();
+                                  await prefs.setStringList('search_history', _searchHistory);
+                                },
+                              ),
+                              onTap: () {
+                                _controller.text = term;
+                                _performSearch(term);
+                              },
+                            )),
+                          ],
                           if (visibleUsers.isNotEmpty) ...[
                             const Padding(
                               padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
