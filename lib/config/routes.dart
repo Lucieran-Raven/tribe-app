@@ -17,9 +17,11 @@ import '../screens/edit_profile_screen.dart';
 import '../screens/legal/terms_screen.dart';
 import '../screens/legal/privacy_screen.dart';
 import '../screens/blocked_accounts_screen.dart';
+import '../main.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
+    navigatorKey: navigatorKey,
     initialLocation: '/splash',
     redirect: (context, state) async {
       final isSplash = state.matchedLocation == '/splash';

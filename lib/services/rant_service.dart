@@ -4,6 +4,7 @@ import '../models/reply_model.dart';
 import '../models/notification_model.dart';
 import '../models/user_model.dart';
 import '../services/notification_service.dart';
+import 'push_service.dart';
 
 class RantService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -80,6 +81,13 @@ class RantService {
             timestamp: DateTime.now(),
           ),
         );
+        // Send push notification
+        await PushService().sendPush(
+          targetUserId: ownerUserId,
+          title: 'New Reply',
+          body: '@$replierHandle replied to your post',
+          targetRantId: reply.rantId,
+        );
       }
     } catch (e) {
       // Notification failure should not break the reply
@@ -154,6 +162,13 @@ class RantService {
               timestamp: DateTime.now(),
             ),
             deterministicId,
+          );
+          // Send push notification
+          await PushService().sendPush(
+            targetUserId: rantOwnerId,
+            title: 'New Like',
+            body: '@$voterHandle liked your post',
+            targetRantId: rantId,
           );
         } else {
           // Removed vote - delete notification
@@ -248,6 +263,13 @@ class RantService {
               timestamp: DateTime.now(),
             ),
             deterministicId,
+          );
+          // Send push notification
+          await PushService().sendPush(
+            targetUserId: replyOwnerId,
+            title: 'New Like',
+            body: '@$voterHandle liked your reply',
+            targetRantId: rantId,
           );
         } else {
           // Removed vote - delete notification

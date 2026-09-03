@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 
@@ -47,6 +48,8 @@ class AuthProvider extends StateNotifier<AuthState> {
 
       if (userDoc.exists) {
         final userModel = UserModel.fromJson(userDoc.data() as Map<String, dynamic>);
+        // Re-link OneSignal identity to the current valid subscription on every app start
+        OneSignal.login(userModel.userId);
         state = AuthAuthenticated(userModel);
       } else {
         // Create minimal user document - use Google credentials as defaults
