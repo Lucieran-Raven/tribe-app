@@ -13,12 +13,14 @@ class MascotAvatar extends StatelessWidget {
     return h.abs();
   }
 
+  static Color ringColorFor(String handle) => ObsidianTokens.mascotPalette[_hashOf(handle) % ObsidianTokens.mascotPalette.length];
+
   static Color _colorFor(String str) => ObsidianTokens.mascotPalette[_hashOf(str) % ObsidianTokens.mascotPalette.length];
 
   @override
   Widget build(BuildContext context) {
     final h = _hashOf(handle);
-    final ringColor = _colorFor(handle);
+    final ringColor = ringColorFor(handle);
     final bodyIdx = h % 3;
     final faceIdx = (h ~/ 3) % 3;
     final topperIdx = (h ~/ 7) % 3;

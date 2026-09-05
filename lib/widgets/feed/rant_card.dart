@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../models/rant_model.dart';
 import '../../utils/time_utils.dart';
 import '../../providers/vote_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/rant_service.dart';
 import '../../services/report_service.dart';
+import '../../config/obsidian_tokens.dart';
+import '../obsidian/tribe_avatar.dart';
+import '../obsidian/action_pill.dart';
 
 class RantCard extends ConsumerStatefulWidget {
   final RantModel rant;
@@ -26,170 +30,177 @@ class _RantCardState extends ConsumerState<RantCard> {
     final hasVoted = voteAsync.value ?? false;
     final authState = ref.watch(authProvider);
     final isOwnPost = authState is AuthAuthenticated && authState.user.userId == widget.rant.userId;
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header with avatar and info
-            GestureDetector(
-              onTap: () => GoRouter.of(context).push('/user/${widget.rant.userId}'),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    key: ValueKey(widget.rant.avatarUrl),
-                    radius: 20,
-                    backgroundImage: widget.rant.avatarUrl != null
-                        ? NetworkImage(widget.rant.avatarUrl!)
-                        : null,
-                    child: widget.rant.avatarUrl == null
-                        ? const Icon(Icons.person, size: 20)
-                        : null,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '@${widget.rant.handle}',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: ObsidianTokens.bg1,
+        borderRadius: BorderRadius.circular(17),
+        border: Border.all(color: ObsidianTokens.line(false)),
+        boxShadow: ObsidianTokens.clayOutDark,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          GestureDetector(
+            onTap: () => GoRouter.of(context).push('/user/${widget.rant.userId}'),
+            child: Row(
+              children: [
+                TribeAvatar(handle: widget.rant.handle, avatarUrl: widget.rant.avatarUrl, size: 38),
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '@${widget.rant.handle}',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: ObsidianTokens.ink,
                         ),
-                        Text(
-                          TimeUtils.formatRelativeTime(widget.rant.timestamp),
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey,
-                          ),
+                      ),
+                      Text(
+                        TimeUtils.formatRelativeTime(widget.rant.timestamp),
+                        style: GoogleFonts.inter(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: ObsidianTokens.inkFaint,
                         ),
-                      ],
-                    ),
-                  ),
-                  PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_vert),
-                    onSelected: (value) async {
-                      if (value == 'delete') {
-                        _confirmDelete(context);
-                      } else if (value == 'report') {
-                        _showReportDialog(context);
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      if (isOwnPost)
-                        const PopupMenuItem(
-                          value: 'delete',
-                          child: Row(
-                            children: [
-                              Icon(Icons.delete, color: Colors.red),
-                              SizedBox(width: 8),
-                              Text('Delete Post', style: TextStyle(color: Colors.red)),
-                            ],
-                          ),
-                        )
-                      else
-                        const PopupMenuItem(
-                          value: 'report',
-                          child: Row(
-                            children: [
-                              Icon(Icons.flag),
-                              SizedBox(width: 8),
-                              Text('Report Post'),
-                            ],
-                          ),
-                        ),
+                      ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            // Content
-            GestureDetector(
-              onTap: () => GoRouter.of(context).push('/rant/${widget.rant.rantId}'),
-              child: Text(
-                widget.rant.content,
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-            ),
-            if (widget.rant.imageUrl != null) ...[
-              const SizedBox(height: 12),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 300),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    widget.rant.imageUrl!,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return AspectRatio(
-                        aspectRatio: 16/9,
-                        child: Container(color: Colors.grey.shade200, child: const Center(child: CircularProgressIndicator(strokeWidth: 2))),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
-                  ),
                 ),
-              ),
-            ],
-            const SizedBox(height: 12),
-            // Action row
-            Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.chat_bubble_outline),
-                  onPressed: () {
-                    GoRouter.of(context).push('/rant/${widget.rant.rantId}');
+                PopupMenuButton<String>(
+                  icon: Icon(Icons.more_vert, color: ObsidianTokens.inkDim, size: 20),
+                  onSelected: (value) async {
+                    if (value == 'delete') {
+                      _confirmDelete(context);
+                    } else if (value == 'report') {
+                      _showReportDialog(context);
+                    }
                   },
+                  itemBuilder: (context) => [
+                    if (isOwnPost)
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete, color: Colors.red),
+                            SizedBox(width: 8),
+                            Text('Delete Post', style: TextStyle(color: Colors.red)),
+                          ],
+                        ),
+                      )
+                    else
+                      const PopupMenuItem(
+                        value: 'report',
+                        child: Row(
+                          children: [
+                            Icon(Icons.flag),
+                            SizedBox(width: 8),
+                            Text('Report Post'),
+                          ],
+                        ),
+                      ),
+                  ],
                 ),
-                Text('${widget.rant.replyCount}'),
-                const SizedBox(width: 24),
-                IconButton(
-                  icon: hasVoted
-                      ? const Icon(Icons.thumb_up)
-                      : const Icon(Icons.thumb_up_outlined),
-                  color: isOwnPost ? Colors.grey : (hasVoted ? Theme.of(context).colorScheme.primary : null),
-                  onPressed: _isVoting
-                      ? null
-                      : () async {
-                          if (isOwnPost) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("You can't like your own post")),
-                            );
-                            return;
-                          }
-                          final authState = ref.read(authProvider);
-                          if (authState is! AuthAuthenticated) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Please sign in to like')),
-                            );
-                            return;
-                          }
-                          setState(() => _isVoting = true);
-                          try {
-                            await RantService().toggleVote(widget.rant.rantId, authState.user.userId);
-                          } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Failed to like: $e')),
-                              );
-                            }
-                          } finally {
-                            if (mounted) {
-                              setState(() => _isVoting = false);
-                            }
-                          }
-                        },
-                ),
-                Text('${widget.rant.karma}'),
               ],
             ),
+          ),
+          const SizedBox(height: 11),
+          GestureDetector(
+            onTap: () => GoRouter.of(context).push('/rant/${widget.rant.rantId}'),
+            child: Text(
+              widget.rant.content,
+              style: GoogleFonts.inter(
+                fontSize: 14.5,
+                fontWeight: FontWeight.w600,
+                color: ObsidianTokens.ink,
+                height: 1.4,
+              ),
+            ),
+          ),
+          if (widget.rant.imageUrl != null) ...[
+            const SizedBox(height: 11),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Image.network(
+                widget.rant.imageUrl!,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return AspectRatio(
+                    aspectRatio: 16/9,
+                    child: Container(color: ObsidianTokens.bg2, child: const Center(child: CircularProgressIndicator(strokeWidth: 2))),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+              ),
+            ),
           ],
-        ),
+          const SizedBox(height: 11),
+          Row(
+            children: [
+              GestureDetector(
+                onTap: () => GoRouter.of(context).push('/rant/${widget.rant.rantId}'),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.chat_bubble_outline, size: 17, color: ObsidianTokens.inkDim),
+                    const SizedBox(width: 5),
+                    Text(
+                      '${widget.rant.replyCount}',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: ObsidianTokens.inkDim,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 20),
+              ActionPill(
+                icon: Icons.thumb_up,
+                count: widget.rant.karma,
+                liked: hasVoted,
+                onTap: _isVoting
+                    ? null
+                    : () async {
+                        if (isOwnPost) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("You can't like your own post")),
+                          );
+                          return;
+                        }
+                        final authState = ref.read(authProvider);
+                        if (authState is! AuthAuthenticated) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Please sign in to like')),
+                          );
+                          return;
+                        }
+                        setState(() => _isVoting = true);
+                        try {
+                          await RantService().toggleVote(widget.rant.rantId, authState.user.userId);
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Failed to like: $e')),
+                            );
+                          }
+                        } finally {
+                          if (mounted) {
+                            setState(() => _isVoting = false);
+                          }
+                        }
+                      },
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

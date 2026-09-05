@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../models/reply_model.dart';
 import '../../utils/time_utils.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/vote_provider.dart';
 import '../../services/rant_service.dart';
 import '../../services/report_service.dart';
+import '../../config/obsidian_tokens.dart';
+import '../obsidian/tribe_avatar.dart';
+import '../obsidian/action_pill.dart';
 
 class ReplyCard extends ConsumerStatefulWidget {
   final ReplyModel reply;
@@ -26,21 +30,12 @@ class _ReplyCardState extends ConsumerState<ReplyCard> {
     final authState = ref.watch(authProvider);
     final isOwnReply = authState is AuthAuthenticated && authState.user.userId == widget.reply.userId;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            key: ValueKey(widget.reply.avatarUrl),
-            radius: 16,
-            backgroundImage: widget.reply.avatarUrl != null
-                ? NetworkImage(widget.reply.avatarUrl!)
-                : null,
-            child: widget.reply.avatarUrl == null
-                ? const Icon(Icons.person, size: 16)
-                : null,
-          ),
-          const SizedBox(width: 12),
+          TribeAvatar(handle: widget.reply.handle, avatarUrl: widget.reply.avatarUrl, size: 32),
+          const SizedBox(width: 11),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -49,110 +44,105 @@ class _ReplyCardState extends ConsumerState<ReplyCard> {
                   children: [
                     Text(
                       '@${widget.reply.handle}',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: ObsidianTokens.ink,
                       ),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       TimeUtils.formatRelativeTime(widget.reply.timestamp),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: ObsidianTokens.inkFaint,
                       ),
+                    ),
+                    const Spacer(),
+                    PopupMenuButton<String>(
+                      icon: Icon(Icons.more_vert, color: ObsidianTokens.inkDim, size: 18),
+                      onSelected: (value) async {
+                        if (value == 'delete') {
+                          _confirmDelete(context);
+                        } else if (value == 'report') {
+                          _showReportDialog(context);
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        if (isOwnReply)
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(Icons.delete, color: Colors.red),
+                                SizedBox(width: 8),
+                                Text('Delete Reply', style: TextStyle(color: Colors.red)),
+                              ],
+                            ),
+                          )
+                        else
+                          const PopupMenuItem(
+                            value: 'report',
+                            child: Row(
+                              children: [
+                                Icon(Icons.flag),
+                                SizedBox(width: 8),
+                                Text('Report Reply'),
+                              ],
+                            ),
+                          ),
+                      ],
                     ),
                   ],
                 ),
-                PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert),
-                  onSelected: (value) async {
-                    if (value == 'delete') {
-                      _confirmDelete(context);
-                    } else if (value == 'report') {
-                      _showReportDialog(context);
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    if (isOwnReply)
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(Icons.delete, color: Colors.red),
-                            SizedBox(width: 8),
-                            Text('Delete Reply', style: TextStyle(color: Colors.red)),
-                          ],
-                        ),
-                      )
-                    else
-                      const PopupMenuItem(
-                        value: 'report',
-                        child: Row(
-                          children: [
-                            Icon(Icons.flag),
-                            SizedBox(width: 8),
-                            Text('Report Reply'),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 5),
                 Text(
                   widget.reply.content,
-                  style: Theme.of(context).textTheme.bodyMedium,
+                  style: GoogleFonts.inter(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    color: ObsidianTokens.ink,
+                    height: 1.4,
+                  ),
                 ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const SizedBox(width: 4),
-                    GestureDetector(
-                      onTap: _isVoting
-                          ? null
-                          : () async {
-                              if (isOwnReply) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text("You can't like your own reply")),
-                                );
-                                return;
-                              }
-                              final authState = ref.read(authProvider);
-                              if (authState is! AuthAuthenticated) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Sign in to like')),
-                                );
-                                return;
-                              }
-                              setState(() => _isVoting = true);
-                              try {
-                                await RantService().toggleReplyVote(widget.reply.rantId, widget.reply.replyId, authState.user.userId);
-                              } catch (e) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Failed to like: $e')),
-                                  );
-                                }
-                              } finally {
-                                if (mounted) {
-                                  setState(() => _isVoting = false);
-                                }
-                              }
-                            },
-                      child: Icon(
-                        hasVoted ? Icons.thumb_up : Icons.thumb_up_outlined,
-                        size: 16,
-                        color: isOwnReply
-                            ? Colors.grey
-                            : (hasVoted
-                                ? Theme.of(context).colorScheme.primary
-                                : Colors.grey),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${widget.reply.karma}',
-                      style: const TextStyle(color: Colors.grey, fontSize: 12),
-                    ),
-                  ],
+                const SizedBox(height: 6),
+                ActionPill(
+                  icon: Icons.thumb_up,
+                  count: widget.reply.karma,
+                  liked: hasVoted,
+                  onTap: _isVoting
+                      ? null
+                      : () async {
+                          if (isOwnReply) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("You can't like your own reply")),
+                            );
+                            return;
+                          }
+                          final authState = ref.read(authProvider);
+                          if (authState is! AuthAuthenticated) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Sign in to like')),
+                            );
+                            return;
+                          }
+                          setState(() => _isVoting = true);
+                          try {
+                            await RantService().toggleReplyVote(widget.reply.rantId, widget.reply.replyId, authState.user.userId);
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Failed to like: $e')),
+                              );
+                            }
+                          } finally {
+                            if (mounted) {
+                              setState(() => _isVoting = false);
+                            }
+                          }
+                        },
+                  iconSize: 13,
                 ),
               ],
             ),

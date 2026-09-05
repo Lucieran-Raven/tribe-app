@@ -50,6 +50,7 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
         onCreateTap: () {
           showModalBottomSheet(
             context: context,
+            backgroundColor: Colors.transparent,
             isScrollControlled: true,
             useSafeArea: true,
             builder: (context) => Padding(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../models/rant_model.dart';
 import '../../models/reply_model.dart';
 import '../../providers/auth_provider.dart';
@@ -7,6 +8,10 @@ import '../../providers/replies_provider.dart';
 import '../../services/rant_service.dart';
 import '../../utils/time_utils.dart';
 import '../../widgets/feed/reply_card.dart';
+import '../../config/obsidian_tokens.dart';
+import '../../widgets/obsidian/tribe_avatar.dart';
+import '../../widgets/obsidian/action_pill.dart';
+import '../../widgets/obsidian/obsidian_empty_state.dart';
 
 class RantDetailScreen extends ConsumerStatefulWidget {
   final String rantId;
@@ -87,18 +92,45 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
 
     if (!_isPostAvailable) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Post')),
+        backgroundColor: ObsidianTokens.bg0,
+        appBar: AppBar(
+          backgroundColor: ObsidianTokens.bg0,
+          elevation: 0,
+          title: Text(
+            'Post',
+            style: GoogleFonts.manrope(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: ObsidianTokens.milk,
+            ),
+          ),
+        ),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(32.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.error_outline, size: 64, color: Colors.grey.shade400),
+                Icon(Icons.error_outline, size: 64, color: ObsidianTokens.grey700),
                 const SizedBox(height: 16),
-                Text('Post Unavailable', style: Theme.of(context).textTheme.headlineSmall),
+                Text(
+                  'Post Unavailable',
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: ObsidianTokens.ink,
+                  ),
+                ),
                 const SizedBox(height: 8),
-                Text('This post has been deleted or is no longer available.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade600)),
+                Text(
+                  'This post has been deleted or is no longer available.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: ObsidianTokens.inkFaint,
+                  ),
+                ),
                 const SizedBox(height: 24),
                 ElevatedButton.icon(
                   onPressed: () => Navigator.of(context).pop(),
@@ -112,12 +144,22 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
       );
     }
 
-    // If available, return the normal Scaffold with the FutureBuilder, Divider, Replies, and BottomNavBar
     return Scaffold(
-      appBar: AppBar(title: const Text('Post')),
+      backgroundColor: ObsidianTokens.bg0,
+      appBar: AppBar(
+        backgroundColor: ObsidianTokens.bg0,
+        elevation: 0,
+        title: Text(
+          'Post',
+          style: GoogleFonts.manrope(
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            color: ObsidianTokens.milk,
+          ),
+        ),
+      ),
       body: Column(
         children: [
-          // Original rant at top
           FutureBuilder<RantModel>(
             future: RantService().getRant(widget.rantId),
             builder: (context, snapshot) {
@@ -125,106 +167,116 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
                 return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()));
               }
               if (snapshot.hasError || (snapshot.connectionState == ConnectionState.done && !snapshot.hasData)) {
-                // Use a post-frame callback to avoid calling setState during build
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (mounted && _isPostAvailable) {
                     setState(() => _isPostAvailable = false);
                   }
                 });
-                return const Center(child: CircularProgressIndicator()); // Fallback while state updates
+                return const Center(child: CircularProgressIndicator());
               }
               final rant = snapshot.data!;
-              return Card(
-                margin: const EdgeInsets.all(16),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 20,
-                            backgroundImage: rant.avatarUrl != null
-                                ? NetworkImage(rant.avatarUrl!)
-                                : null,
-                            child: rant.avatarUrl == null
-                                ? const Icon(Icons.person, size: 20)
-                                : null,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '@${rant.handle}',
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
+              return Container(
+                margin: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(15),
+                decoration: BoxDecoration(
+                  color: ObsidianTokens.bg1,
+                  borderRadius: BorderRadius.circular(17),
+                  border: Border.all(color: ObsidianTokens.line(false)),
+                  boxShadow: ObsidianTokens.clayOutDark,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        TribeAvatar(handle: rant.handle, avatarUrl: rant.avatarUrl, size: 38),
+                        const SizedBox(width: 11),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '@${rant.handle}',
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: ObsidianTokens.ink,
                                 ),
-                                Text(
-                                  TimeUtils.formatRelativeTime(rant.timestamp),
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Colors.grey,
-                                  ),
+                              ),
+                              Text(
+                                TimeUtils.formatRelativeTime(rant.timestamp),
+                                style: GoogleFonts.inter(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: ObsidianTokens.inkFaint,
                                 ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        rant.content,
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
-                      if (rant.imageUrl != null) ...[
-                        const SizedBox(height: 12),
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxHeight: 300),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.network(
-                              rant.imageUrl!,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                              loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return AspectRatio(
-                                  aspectRatio: 16/9,
-                                  child: Container(color: Colors.grey.shade200, child: const Center(child: CircularProgressIndicator(strokeWidth: 2))),
-                                );
-                              },
-                              errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
-                            ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.chat_bubble_outline),
-                            onPressed: null,
-                          ),
-                          Text('${rant.replyCount}'),
-                          const SizedBox(width: 24),
-                          IconButton(
-                            icon: const Icon(Icons.arrow_upward_outlined),
-                            onPressed: null,
-                          ),
-                          Text('${rant.karma}'),
-                        ],
+                    ),
+                    const SizedBox(height: 11),
+                    Text(
+                      rant.content,
+                      style: GoogleFonts.inter(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w600,
+                        color: ObsidianTokens.ink,
+                        height: 1.4,
+                      ),
+                    ),
+                    if (rant.imageUrl != null) ...[
+                      const SizedBox(height: 11),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: Image.network(
+                          rant.imageUrl!,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return AspectRatio(
+                              aspectRatio: 16/9,
+                              child: Container(color: ObsidianTokens.bg2, child: const Center(child: CircularProgressIndicator(strokeWidth: 2))),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+                        ),
                       ),
                     ],
-                  ),
+                    const SizedBox(height: 11),
+                    Row(
+                      children: [
+                        Icon(Icons.chat_bubble_outline, size: 17, color: ObsidianTokens.inkDim),
+                        const SizedBox(width: 5),
+                        Text(
+                          '${rant.replyCount}',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: ObsidianTokens.inkDim,
+                          ),
+                        ),
+                        const SizedBox(width: 20),
+                        Icon(Icons.arrow_upward_outlined, size: 17, color: ObsidianTokens.inkDim),
+                        const SizedBox(width: 5),
+                        Text(
+                          '${rant.karma}',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: ObsidianTokens.inkDim,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               );
             },
           ),
-          const Divider(),
-          // Replies list
+          Divider(color: ObsidianTokens.line(false)),
           Expanded(
             child: ref.watch(repliesProvider(widget.rantId)).when(
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -232,7 +284,14 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text('Failed to load replies'),
+                    Text(
+                      'Failed to load replies',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: ObsidianTokens.ink,
+                      ),
+                    ),
                     const SizedBox(height: 16),
                     TextButton(
                       onPressed: () => ref.invalidate(repliesProvider(widget.rantId)),
@@ -244,8 +303,10 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
               data: (replies) {
                 final visibleReplies = replies.where((r) => !blocked.contains(r.userId)).toList();
                 if (visibleReplies.isEmpty) {
-                  return const Center(
-                    child: Text('Be the first to reply'),
+                  return const ObsidianEmptyState(
+                    icon: Icons.chat_bubble_outline,
+                    headline: 'No replies yet',
+                    sub: 'Be the first to reply.',
                   );
                 }
                 return ListView.builder(
@@ -261,32 +322,81 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
         ],
       ),
       bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(14, 11, 14, 11),
+          decoration: BoxDecoration(
+            color: ObsidianTokens.bg0,
+            border: Border(top: BorderSide(color: ObsidianTokens.line(false))),
+          ),
           child: Row(
             children: [
               Expanded(
-                child: TextField(
-                  controller: _replyController,
-                  maxLength: 300,
-                  decoration: const InputDecoration(
-                    hintText: 'Write a reply...',
-                    border: OutlineInputBorder(),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+                  decoration: BoxDecoration(
+                    color: ObsidianTokens.bg2,
+                    borderRadius: BorderRadius.circular(100),
+                    border: Border.all(color: ObsidianTokens.line(false)),
+                    boxShadow: ObsidianTokens.clayOutSmDark,
+                  ),
+                  child: TextField(
+                    controller: _replyController,
+                    maxLength: 300,
+                    onChanged: (value) => setState(() => _replyText = value),
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: ObsidianTokens.ink,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Write a reply…',
+                      hintStyle: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: ObsidianTokens.inkFaint,
+                      ),
+                      border: InputBorder.none,
+                      counterText: '',
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
-              ElevatedButton(
-                onPressed: _replyText.trim().isEmpty || _isSending
-                    ? null
-                    : _sendReply,
-                child: _isSending
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Send'),
+              const SizedBox(width: 10),
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  gradient: _replyText.trim().isEmpty || _isSending
+                      ? null
+                      : const LinearGradient(
+                          colors: [ObsidianTokens.milk, ObsidianTokens.milkDim],
+                        ),
+                  color: _replyText.trim().isEmpty || _isSending ? ObsidianTokens.bg2 : null,
+                  boxShadow: ObsidianTokens.clayOutSmDark,
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: _replyText.trim().isEmpty || _isSending ? null : _sendReply,
+                    child: Center(
+                      child: _isSending
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Icon(
+                              Icons.send,
+                              size: 18,
+                              color: _replyText.trim().isEmpty || _isSending
+                                  ? ObsidianTokens.inkFaint
+                                  : ObsidianTokens.bg0,
+                            ),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
