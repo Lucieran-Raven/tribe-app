@@ -22,12 +22,14 @@ class AuthScreen extends ConsumerWidget {
     // Listen to auth state changes and navigate accordingly
     ref.listen<AuthState>(authProvider, (previous, next) {
       if (next is AuthAuthenticated) {
-        // Manually navigate based on onboarding status
-        if (next.user.handle == null || next.user.handle!.isEmpty) {
-          context.go('/onboarding/1');
-        } else {
-          context.go('/home');
-        }
+        Future.delayed(const Duration(milliseconds: 50), () {
+          if (!context.mounted) return;
+          if (next.user.handle == null || next.user.handle!.isEmpty) {
+            context.go('/onboarding/1');
+          } else {
+            context.go('/home');
+          }
+        });
       } else if (next is AuthError) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(next.message)),
