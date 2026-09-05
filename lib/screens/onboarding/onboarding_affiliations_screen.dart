@@ -13,6 +13,7 @@ import '../../widgets/obsidian/obsidian_input.dart';
 import '../../widgets/obsidian/obsidian_button.dart';
 import '../../widgets/obsidian/obsidian_chip.dart';
 import '../../widgets/obsidian/obsidian_check_row.dart';
+import '../../widgets/obsidian/obsidian_snackbar.dart';
 
 class OnboardingAffiliationsScreen extends ConsumerStatefulWidget {
   const OnboardingAffiliationsScreen({super.key});
@@ -66,9 +67,7 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
 
     ref.listen<OnboardingState>(onboardingProvider, (previous, next) {
       if (next.errorMsg != null && next.errorMsg != previous?.errorMsg) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.errorMsg!)),
-        );
+        ObsidianSnackbar.show(context, next.errorMsg!, error: true);
       }
     });
 

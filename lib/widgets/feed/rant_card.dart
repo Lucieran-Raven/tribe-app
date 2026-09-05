@@ -11,6 +11,7 @@ import '../../services/report_service.dart';
 import '../../config/obsidian_tokens.dart';
 import '../obsidian/tribe_avatar.dart';
 import '../obsidian/action_pill.dart';
+import '../obsidian/obsidian_snackbar.dart';
 
 class RantCard extends ConsumerStatefulWidget {
   final RantModel rant;
@@ -170,16 +171,12 @@ class _RantCardState extends ConsumerState<RantCard> {
                     ? null
                     : () async {
                         if (isOwnPost) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("You can't like your own post")),
-                          );
+                          ObsidianSnackbar.show(context, "You can't like your own post", error: true);
                           return;
                         }
                         final authState = ref.read(authProvider);
                         if (authState is! AuthAuthenticated) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Please sign in to like')),
-                          );
+                          ObsidianSnackbar.show(context, 'Please sign in to like', error: true);
                           return;
                         }
                         setState(() => _isVoting = true);
@@ -187,9 +184,7 @@ class _RantCardState extends ConsumerState<RantCard> {
                           await RantService().toggleVote(widget.rant.rantId, authState.user.userId);
                         } catch (e) {
                           if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Failed to like: $e')),
-                            );
+                            ObsidianSnackbar.show(context, 'Failed to like: $e', error: true);
                           }
                         } finally {
                           if (mounted) {
@@ -224,9 +219,7 @@ class _RantCardState extends ConsumerState<RantCard> {
                 await RantService().deletePost(widget.rant.rantId);
               } catch (e) {
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to delete: $e')),
-                  );
+                  ObsidianSnackbar.show(context, 'Failed to delete: $e', error: true);
                 }
               }
             },
@@ -276,9 +269,7 @@ class _RantCardState extends ConsumerState<RantCard> {
                             snippet: widget.rant.content,
                           );
                           if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Report submitted. Thank you.')),
-                            );
+                            ObsidianSnackbar.show(context, 'Report submitted. Thank you.');
                           }
                         }
                       },

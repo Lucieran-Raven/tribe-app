@@ -12,6 +12,7 @@ import '../../providers/onboarding_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/storage_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../widgets/obsidian/obsidian_snackbar.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -77,9 +78,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       });
     } else {
       if (_selectedAffiliations.length >= 5) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Max 5 affiliations')),
-        );
+        ObsidianSnackbar.show(context, 'Max 5 affiliations', error: true);
         return;
       }
 
@@ -88,23 +87,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       final interestCount = _selectedAffiliations.where((a) => a.type == 'interest').length;
 
       if (affiliation.type == 'university' && universityCount >= 1) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('You can only add 1 university')),
-        );
+        ObsidianSnackbar.show(context, 'You can only add 1 university', error: true);
         return;
       }
 
       if (affiliation.type == 'city' && cityCount >= 1) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('You can only add 1 city')),
-        );
+        ObsidianSnackbar.show(context, 'You can only add 1 city', error: true);
         return;
       }
 
       if (affiliation.type == 'interest' && interestCount >= 3) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Max 3 interests')),
-        );
+        ObsidianSnackbar.show(context, 'Max 3 interests', error: true);
         return;
       }
 
@@ -135,9 +128,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
     ref.listen<OnboardingState>(onboardingProvider, (previous, next) {
       if (next.errorMsg != null && next.errorMsg != previous?.errorMsg) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.errorMsg!)),
-        );
+        ObsidianSnackbar.show(context, next.errorMsg!, error: true);
       }
     });
 
@@ -168,7 +159,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       } catch (e) {
                         print('AVATAR UPLOAD FAILED: $e');
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Avatar upload failed: $e')));
+                          ObsidianSnackbar.show(context, 'Avatar upload failed: $e', error: true);
                         }
                         return; // Stop saving profile if upload fails
                       }

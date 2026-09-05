@@ -12,6 +12,7 @@ import '../../config/obsidian_tokens.dart';
 import '../../widgets/obsidian/tribe_avatar.dart';
 import '../../widgets/obsidian/action_pill.dart';
 import '../../widgets/obsidian/obsidian_empty_state.dart';
+import '../../widgets/obsidian/obsidian_snackbar.dart';
 
 class RantDetailScreen extends ConsumerStatefulWidget {
   final String rantId;
@@ -68,15 +69,11 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
       if (mounted) {
         _replyController.clear();
         setState(() => _replyText = '');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Reply sent')),
-        );
+        ObsidianSnackbar.show(context, 'Reply sent');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to send reply: $e')),
-        );
+        ObsidianSnackbar.show(context, 'Failed to send reply: $e', error: true);
       }
     } finally {
       if (mounted) {

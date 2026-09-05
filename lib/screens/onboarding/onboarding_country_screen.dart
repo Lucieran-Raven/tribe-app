@@ -10,6 +10,7 @@ import '../../widgets/obsidian/obsidian_dots.dart';
 import '../../widgets/obsidian/obsidian_input.dart';
 import '../../widgets/obsidian/obsidian_button.dart';
 import '../../widgets/obsidian/obsidian_check_row.dart';
+import '../../widgets/obsidian/obsidian_snackbar.dart';
 
 class OnboardingCountryScreen extends ConsumerStatefulWidget {
   const OnboardingCountryScreen({super.key});
@@ -56,9 +57,7 @@ class _OnboardingCountryScreenState extends ConsumerState<OnboardingCountryScree
       if (next.errorMsg != null && next.errorMsg != previous?.errorMsg) {
         Future.delayed(Duration.zero, () {
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(next.errorMsg!)),
-            );
+            ObsidianSnackbar.show(context, next.errorMsg!, error: true);
           }
         });
       }

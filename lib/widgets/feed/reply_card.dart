@@ -10,6 +10,7 @@ import '../../services/report_service.dart';
 import '../../config/obsidian_tokens.dart';
 import '../obsidian/tribe_avatar.dart';
 import '../obsidian/action_pill.dart';
+import '../obsidian/obsidian_snackbar.dart';
 
 class ReplyCard extends ConsumerStatefulWidget {
   final ReplyModel reply;
@@ -115,16 +116,12 @@ class _ReplyCardState extends ConsumerState<ReplyCard> {
                       ? null
                       : () async {
                           if (isOwnReply) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("You can't like your own reply")),
-                            );
+                            ObsidianSnackbar.show(context, "You can't like your own reply", error: true);
                             return;
                           }
                           final authState = ref.read(authProvider);
                           if (authState is! AuthAuthenticated) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Sign in to like')),
-                            );
+                            ObsidianSnackbar.show(context, 'Sign in to like', error: true);
                             return;
                           }
                           setState(() => _isVoting = true);
@@ -132,9 +129,7 @@ class _ReplyCardState extends ConsumerState<ReplyCard> {
                             await RantService().toggleReplyVote(widget.reply.rantId, widget.reply.replyId, authState.user.userId);
                           } catch (e) {
                             if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Failed to like: $e')),
-                              );
+                              ObsidianSnackbar.show(context, 'Failed to like: $e', error: true);
                             }
                           } finally {
                             if (mounted) {
@@ -171,9 +166,7 @@ class _ReplyCardState extends ConsumerState<ReplyCard> {
                 await RantService().deleteReply(widget.reply.rantId, widget.reply.replyId);
               } catch (e) {
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to delete: $e')),
-                  );
+                  ObsidianSnackbar.show(context, 'Failed to delete: $e', error: true);
                 }
               }
             },
@@ -223,9 +216,7 @@ class _ReplyCardState extends ConsumerState<ReplyCard> {
                             snippet: widget.reply.content,
                           );
                           if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Report submitted. Thank you.')),
-                            );
+                            ObsidianSnackbar.show(context, 'Report submitted. Thank you.');
                           }
                         }
                       },

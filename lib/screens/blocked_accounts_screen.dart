@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import '../providers/user_profile_provider.dart';
 import '../services/rant_service.dart';
+import '../widgets/obsidian/obsidian_snackbar.dart';
 
 class BlockedAccountsScreen extends ConsumerWidget {
   const BlockedAccountsScreen({super.key});
@@ -71,11 +72,11 @@ class _BlockedUserRow extends ConsumerWidget {
                 final freshUser = await RantService().unblockUser(auth.user.userId, blockedUserId);
                 ref.read(authProvider.notifier).updateUser(freshUser);
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('User unblocked')));
+                  ObsidianSnackbar.show(context, 'User unblocked');
                 }
               } catch (e) {
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+                  ObsidianSnackbar.show(context, 'Failed: $e', error: true);
                 }
               }
             },

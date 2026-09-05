@@ -11,6 +11,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../config/obsidian_tokens.dart';
 import '../../widgets/obsidian/obsidian_button.dart';
 import '../../widgets/obsidian/obsidian_chip.dart';
+import '../../widgets/obsidian/obsidian_snackbar.dart';
 
 class ComposeScreen extends ConsumerStatefulWidget {
   const ComposeScreen({super.key});
@@ -60,7 +61,7 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
           imageUrl = await StorageService().uploadPostImage(_pickedImage!, postId);
         } catch (e) {
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Image upload failed: $e')));
+            ObsidianSnackbar.show(context, 'Image upload failed: $e', error: true);
           }
           if (mounted) setState(() => _isPosting = false);
           return; // Do not create the post if the image upload fails
@@ -84,9 +85,7 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to post: $e')),
-        );
+        ObsidianSnackbar.show(context, 'Failed to post: $e', error: true);
       }
     } finally {
       if (mounted) {

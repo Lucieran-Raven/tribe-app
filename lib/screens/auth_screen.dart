@@ -9,6 +9,7 @@ import '../widgets/auth/google_sign_in_button.dart';
 import '../widgets/obsidian/organic_blob.dart';
 import '../widgets/obsidian/wordmark.dart';
 import '../widgets/obsidian/obsidian_button.dart';
+import '../widgets/obsidian/obsidian_snackbar.dart';
 import 'legal/terms_screen.dart';
 import 'legal/privacy_screen.dart';
 
@@ -31,9 +32,7 @@ class AuthScreen extends ConsumerWidget {
           }
         });
       } else if (next is AuthError) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.message)),
-        );
+        ObsidianSnackbar.show(context, next.message, error: true);
       }
     });
 

@@ -13,6 +13,7 @@ import '../../services/storage_service.dart';
 import '../../models/user_model.dart';
 import '../../widgets/obsidian/obsidian_dots.dart';
 import '../../widgets/obsidian/obsidian_button.dart';
+import '../../widgets/obsidian/obsidian_snackbar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class OnboardingAvatarScreen extends ConsumerStatefulWidget {
@@ -127,7 +128,7 @@ class _OnboardingAvatarScreenState extends ConsumerState<OnboardingAvatarScreen>
                           }
                         } catch (e) {
                           if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+                            ObsidianSnackbar.show(context, 'Upload failed: $e', error: true);
                           }
                           return;
                         }
