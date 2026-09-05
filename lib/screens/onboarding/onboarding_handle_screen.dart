@@ -126,17 +126,13 @@ class _OnboardingHandleScreenState extends ConsumerState<OnboardingHandleScreen>
                       },
                       maxLength: 20,
                       decoration: InputDecoration(
-                        labelText: 'Handle',
                         prefixText: '@',
                         suffixIcon: _buildStatusIcon(state.availability),
                         counterText: '${_controller.text.length}/20',
-                        errorMaxLines: 2,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        errorText: state.availability == HandleAvailability.available 
-                            ? null 
-                            : (state.handleError ?? (state.availability == HandleAvailability.taken ? '@handle is taken' : null)),
+                        errorText: state.handleError ?? (state.availability == HandleAvailability.taken ? '@handle is taken' : null),
                         errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: const BorderSide(color: Colors.red),

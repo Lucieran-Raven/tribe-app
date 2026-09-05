@@ -5,8 +5,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/theme.dart';
+import '../config/obsidian_tokens.dart';
 import '../services/auth_service.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/obsidian/organic_blob.dart';
+import '../widgets/obsidian/wordmark.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -15,25 +18,13 @@ class SplashScreen extends ConsumerStatefulWidget {
   ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends ConsumerState<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
-
+class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(authProvider.notifier).initialize();
     });
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 1000),
-      vsync: this,
-    )..repeat(reverse: true);
-
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
 
     // Navigate after 2 seconds based on auth state
     Future.delayed(const Duration(seconds: 2), () async {
@@ -61,44 +52,24 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AnimatedBuilder(
-              animation: _scaleAnimation,
-              builder: (context, child) {
-                return Transform.scale(
-                  scale: _scaleAnimation.value,
-                  child: child,
-                );
-              },
-              child: Text(
-                'TRIBE',
-                style: GoogleFonts.poppins(
-                  fontSize: 48,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.brandPrimary,
-                ),
+      body: Container(
+        color: ObsidianTokens.bg0,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              OrganicBlob(
+                size: 84,
+                child: Text('T', style: GoogleFonts.manrope(fontSize: 26, fontWeight: FontWeight.w800, color: ObsidianTokens.bg0)),
               ),
-            ),
-            const SizedBox(height: 200),
-            Text(
-              'v1.0.0',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Colors.grey,
-              ),
-            ),
-          ],
+              const SizedBox(height: 6),
+              const Wordmark(size: 30),
+              const SizedBox(height: 8),
+              Text('v1.0.0', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: ObsidianTokens.inkFaint, letterSpacing: 0.5)),
+            ],
+          ),
         ),
       ),
     );

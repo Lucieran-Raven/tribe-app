@@ -211,7 +211,7 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
                           Text('${rant.replyCount}'),
                           const SizedBox(width: 24),
                           IconButton(
-                            icon: const Icon(Icons.thumb_up_outlined),
+                            icon: const Icon(Icons.arrow_upward_outlined),
                             onPressed: null,
                           ),
                           Text('${rant.karma}'),
