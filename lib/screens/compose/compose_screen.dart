@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import '../../models/rant_model.dart';
@@ -8,10 +7,6 @@ import '../../providers/auth_provider.dart';
 import '../../services/rant_service.dart';
 import '../../services/storage_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../config/obsidian_tokens.dart';
-import '../../widgets/obsidian/obsidian_button.dart';
-import '../../widgets/obsidian/obsidian_chip.dart';
-import '../../widgets/obsidian/obsidian_snackbar.dart';
 
 class ComposeScreen extends ConsumerStatefulWidget {
   const ComposeScreen({super.key});
@@ -61,7 +56,7 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
           imageUrl = await StorageService().uploadPostImage(_pickedImage!, postId);
         } catch (e) {
           if (context.mounted) {
-            ObsidianSnackbar.show(context, 'Image upload failed: $e', error: true);
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Image upload failed: $e')));
           }
           if (mounted) setState(() => _isPosting = false);
           return; // Do not create the post if the image upload fails
@@ -85,7 +80,9 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ObsidianSnackbar.show(context, 'Failed to post: $e', error: true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to post: $e')),
+        );
       }
     } finally {
       if (mounted) {
@@ -97,123 +94,87 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 24),
-      decoration: BoxDecoration(
-        color: const Color(0x14FFFFFF),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(34)),
-        border: Border(top: BorderSide(color: ObsidianTokens.lineStrong(false))),
-      ),
+      padding: const EdgeInsets.all(16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            width: 42,
-            height: 5,
-            margin: const EdgeInsets.only(bottom: 16),
-            decoration: BoxDecoration(
-              color: ObsidianTokens.grey700,
-              borderRadius: BorderRadius.circular(3),
+          Text(
+            'Create Post',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _controller,
+            maxLines: 10,
+            minLines: 3,
+            maxLength: 500,
+            decoration: const InputDecoration(
+              hintText: "What's on your mind?",
+              border: OutlineInputBorder(),
+              counterText: '',
             ),
           ),
+          if (_pickedImage != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.file(_pickedImage!, height: 150, width: double.infinity, fit: BoxFit.cover),
+                  ),
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: GestureDetector(
+                      onTap: () => setState(() => _pickedImage = null),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                        child: const Icon(Icons.close, color: Colors.white, size: 16),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Create post',
-                style: GoogleFonts.manrope(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                  color: ObsidianTokens.milk,
-                ),
-              ),
               IconButton(
-                icon: const Icon(Icons.close, color: ObsidianTokens.inkDim, size: 22),
-                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.image),
+                onPressed: _isPosting ? null : () async {
+                  final picker = ImagePicker();
+                  final pickedFile = await picker.pickImage(source: ImageSource.gallery, maxWidth: 1280, maxHeight: 1280, imageQuality: 80);
+                  if (pickedFile != null) {
+                    setState(() => _pickedImage = File(pickedFile.path));
+                  }
+                },
               ),
+              Text('${_rantText.length}/500', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey)),
             ],
           ),
           const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: ObsidianTokens.bg2,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: ObsidianTokens.line(false)),
-              boxShadow: ObsidianTokens.clayOutSmDark,
-            ),
-            child: TextField(
-              controller: _controller,
-              maxLines: 4,
-              maxLength: 500,
-              onChanged: (value) => setState(() => _rantText = value),
-              style: GoogleFonts.inter(
-                fontSize: 14.5,
-                fontWeight: FontWeight.w600,
-                color: ObsidianTokens.ink,
-              ),
-              decoration: InputDecoration(
-                hintText: "What's on your mind?",
-                hintStyle: GoogleFonts.inter(
-                  fontSize: 14.5,
-                  fontWeight: FontWeight.w600,
-                  color: ObsidianTokens.inkFaint,
-                ),
-                border: InputBorder.none,
-                counterText: '',
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Text(
-              '${_rantText.length}/500',
-              style: GoogleFonts.inter(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: ObsidianTokens.inkFaint,
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          ObsidianChip(
-            label: _pickedImage != null ? 'Photo attached' : 'Add photo',
-            icon: Icons.image_outlined,
-            active: _pickedImage != null,
-            onTap: _isPosting ? null : () async {
-              final picker = ImagePicker();
-              final pickedFile = await picker.pickImage(source: ImageSource.gallery, maxWidth: 1280, maxHeight: 1280, imageQuality: 80);
-              if (pickedFile != null) {
-                setState(() => _pickedImage = File(pickedFile.path));
-              }
-            },
-          ),
-          if (_pickedImage != null) ...[
-            const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Image.file(_pickedImage!, height: 128, width: double.infinity, fit: BoxFit.cover),
-            ),
-          ],
-          const SizedBox(height: 18),
           Row(
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Expanded(
-                child: ObsidianButton(
-                  label: 'Cancel',
-                  kind: ObsidianButtonKind.secondary,
-                  onPressed: _isPosting ? null : () => Navigator.pop(context),
-                ),
+              TextButton(
+                onPressed: _isPosting ? null : () => Navigator.pop(context),
+                child: const Text('Cancel'),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ObsidianButton(
-                  label: 'Post',
-                  onPressed: _rantText.trim().isEmpty || _rantText.length > 500 || _isPosting
-                      ? null
-                      : _postRant,
-                  loading: _isPosting,
-                ),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: _rantText.trim().isEmpty || _rantText.length > 500 || _isPosting
+                    ? null
+                    : _postRant,
+                child: _isPosting
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Post'),
               ),
             ],
           ),

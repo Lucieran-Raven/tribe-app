@@ -12,7 +12,6 @@ import '../services/report_service.dart';
 import '../services/rant_service.dart';
 import '../utils/time_utils.dart';
 import '../config/theme.dart';
-import '../widgets/obsidian/obsidian_snackbar.dart';
 
 class UserProfileScreen extends ConsumerWidget {
   final String userId;
@@ -57,7 +56,9 @@ class UserProfileScreen extends ConsumerWidget {
                             reason: selectedReason!,
                           );
                           if (context.mounted) {
-                            ObsidianSnackbar.show(context, 'Report submitted. Thank you.');
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Report submitted. Thank you.')),
+                            );
                           }
                         }
                       },
@@ -79,11 +80,15 @@ class UserProfileScreen extends ConsumerWidget {
           : await RantService().unblockUser(auth.user.userId, userId);
       ref.read(authProvider.notifier).updateUser(freshUser);
       if (context.mounted) {
-        ObsidianSnackbar.show(context, block ? 'User blocked' : 'User unblocked');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(block ? 'User blocked' : 'User unblocked')),
+        );
       }
     } catch (e) {
       if (context.mounted) {
-        ObsidianSnackbar.show(context, 'Failed: $e', error: true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $e')),
+        );
       }
     }
   }

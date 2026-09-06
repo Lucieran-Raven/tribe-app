@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
 import '../services/search_service.dart';
 import '../models/rant_model.dart';
@@ -10,10 +9,6 @@ import '../models/user_model.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/search/user_search_card.dart';
 import '../widgets/feed/rant_card.dart';
-import '../config/obsidian_tokens.dart';
-import '../widgets/obsidian/obsidian_input.dart';
-import '../widgets/obsidian/tribe_avatar.dart';
-import '../widgets/obsidian/obsidian_empty_state.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
@@ -101,28 +96,18 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final visibleRants = _rants.where((r) => !blocked.contains(r.userId)).toList();
 
     return Scaffold(
-      backgroundColor: ObsidianTokens.bg0,
-      appBar: AppBar(
-        backgroundColor: const Color(0x13FFFFFF),
-        elevation: 0,
-        title: Text(
-          'Search',
-          style: GoogleFonts.manrope(
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
-            color: ObsidianTokens.milk,
-          ),
-        ),
-        shape: const Border(bottom: BorderSide(color: Color(0x12FFFFFF))),
-      ),
+      appBar: AppBar(title: const Text('Search')),
       body: Column(
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
-            child: ObsidianInput(
+            child: TextField(
               controller: _controller,
-              hint: 'Search posts or users…',
-              prefix: Icon(Icons.search, size: 16, color: ObsidianTokens.inkFaint),
+              decoration: InputDecoration(
+                hintText: 'Search posts or users...',
+                prefixIcon: const Icon(Icons.search),
+                border: const OutlineInputBorder(),
+              ),
               onChanged: _onSearchChanged,
             ),
           ),
@@ -130,160 +115,72 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : visibleUsers.isEmpty && visibleRants.isEmpty && _controller.text.isNotEmpty
-                    ? ObsidianEmptyState(
-                        icon: Icons.search_off,
-                        headline: 'No results for "${_controller.text}"',
-                      )
+                    ? const Center(child: Text('No results found.'))
                     : ListView(
                         children: [
-                          if (_controller.text.isEmpty) ...[
+                          if (_controller.text.isEmpty && _searchHistory.isNotEmpty) ...[
                             Padding(
-                              padding: const EdgeInsets.fromLTRB(18, 12, 18, 8),
+                              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    'Recent',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: ObsidianTokens.inkFaint,
-                                    ),
-                                  ),
+                                  const Text('Recent Searches', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
                                   TextButton(
                                     onPressed: () async {
                                       final prefs = await SharedPreferences.getInstance();
                                       await prefs.remove('search_history');
                                       setState(() => _searchHistory = []);
                                     },
-                                    child: Text(
-                                      'Clear all',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
-                                        color: ObsidianTokens.gold,
-                                      ),
-                                    ),
+                                    child: const Text('Clear All'),
                                   ),
                                 ],
                               ),
                             ),
-                            if (_searchHistory.isEmpty)
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                                child: Text(
-                                  'No recent searches.',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: ObsidianTokens.inkFaint,
-                                  ),
-                                ),
-                              )
-                            else
-                              ..._searchHistory.map((term) => GestureDetector(
-                                    onTap: () {
-                                      _controller.text = term;
-                                      _performSearch(term);
-                                    },
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 4),
-                                      decoration: BoxDecoration(
-                                        border: Border(bottom: BorderSide(color: ObsidianTokens.line(false))),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.search, size: 14, color: ObsidianTokens.inkFaint),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: Text(
-                                              term,
-                                              style: GoogleFonts.inter(
-                                                fontSize: 13.5,
-                                                fontWeight: FontWeight.w600,
-                                                color: ObsidianTokens.ink,
-                                              ),
-                                            ),
-                                          ),
-                                          IconButton(
-                                            icon: Icon(Icons.close, size: 14, color: ObsidianTokens.inkFaint),
-                                            onPressed: () async {
-                                              setState(() => _searchHistory.remove(term));
-                                              final prefs = await SharedPreferences.getInstance();
-                                              await prefs.setStringList('search_history', _searchHistory);
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  )),
+                            ..._searchHistory.map((term) => ListTile(
+                              leading: const Icon(Icons.history, color: Colors.grey),
+                              title: Text(term),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.close, size: 18),
+                                onPressed: () async {
+                                  setState(() => _searchHistory.remove(term));
+                                  final prefs = await SharedPreferences.getInstance();
+                                  await prefs.setStringList('search_history', _searchHistory);
+                                },
+                              ),
+                              onTap: () {
+                                _controller.text = term;
+                                _performSearch(term);
+                              },
+                            )),
                           ],
                           if (visibleUsers.isNotEmpty) ...[
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(18, 12, 18, 8),
+                            const Padding(
+                              padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
                               child: Text(
                                 'Users',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: ObsidianTokens.inkFaint,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey,
                                 ),
                               ),
                             ),
-                            ...visibleUsers.map((user) => GestureDetector(
+                            ...visibleUsers.map((user) => UserSearchCard(
+                                  user: user,
                                   onTap: () {
                                     GoRouter.of(context).push('/user/${user.userId}');
                                   },
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 4),
-                                    decoration: BoxDecoration(
-                                      border: Border(bottom: BorderSide(color: ObsidianTokens.line(false))),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        TribeAvatar(
-                                          handle: user.handle ?? 'user',
-                                          avatarUrl: user.avatarUrl,
-                                          size: 30,
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                user.displayName ?? user.handle ?? 'User',
-                                                style: GoogleFonts.inter(
-                                                  fontSize: 13.5,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: ObsidianTokens.ink,
-                                                ),
-                                              ),
-                                              Text(
-                                                '@${user.handle ?? 'user'}',
-                                                style: GoogleFonts.inter(
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: ObsidianTokens.inkDim,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
                                 )),
                           ],
                           if (visibleRants.isNotEmpty) ...[
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(18, 12, 18, 8),
+                            const Padding(
+                              padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
                               child: Text(
                                 'Posts',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: ObsidianTokens.inkFaint,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey,
                                 ),
                               ),
                             ),

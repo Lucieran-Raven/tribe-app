@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../providers/feed_provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/feed/rant_card.dart';
-import '../config/obsidian_tokens.dart';
-import '../widgets/obsidian/obsidian_empty_state.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -17,18 +14,8 @@ class HomeScreen extends ConsumerWidget {
     final blocked = authState is AuthAuthenticated ? authState.user.blockedUsers : const <String>[];
 
     return Scaffold(
-      backgroundColor: ObsidianTokens.bg0,
       appBar: AppBar(
-        backgroundColor: ObsidianTokens.bg0,
-        elevation: 0,
-        title: Text(
-          'Home',
-          style: GoogleFonts.manrope(
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-            color: ObsidianTokens.milk,
-          ),
-        ),
+        title: const Text('Home'),
       ),
       body: feedAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -36,14 +23,7 @@ class HomeScreen extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                'Failed to load feed',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: ObsidianTokens.ink,
-                ),
-              ),
+              const Text('Failed to load feed'),
               const SizedBox(height: 16),
               TextButton(
                 onPressed: () => ref.invalidate(feedProvider),
@@ -55,10 +35,8 @@ class HomeScreen extends ConsumerWidget {
         data: (rants) {
           final visibleRants = rants.where((r) => !blocked.contains(r.userId)).toList();
           if (visibleRants.isEmpty) {
-            return const ObsidianEmptyState(
-              icon: Icons.campaign_outlined,
-              headline: 'No posts yet',
-              sub: 'Be the first to share.',
+            return const Center(
+              child: Text('No posts yet. Be the first to share.'),
             );
           }
 

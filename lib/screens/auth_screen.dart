@@ -3,13 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../config/theme.dart';
-import '../config/obsidian_tokens.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/auth/google_sign_in_button.dart';
-import '../widgets/obsidian/organic_blob.dart';
-import '../widgets/obsidian/wordmark.dart';
-import '../widgets/obsidian/obsidian_button.dart';
-import '../widgets/obsidian/obsidian_snackbar.dart';
 import 'legal/terms_screen.dart';
 import 'legal/privacy_screen.dart';
 
@@ -23,75 +18,87 @@ class AuthScreen extends ConsumerWidget {
     // Listen to auth state changes and navigate accordingly
     ref.listen<AuthState>(authProvider, (previous, next) {
       if (next is AuthAuthenticated) {
-        Future.delayed(const Duration(milliseconds: 50), () {
-          if (!context.mounted) return;
-          if (next.user.handle == null || next.user.handle!.isEmpty) {
-            context.go('/onboarding/1');
-          } else {
-            context.go('/home');
-          }
-        });
+        // Manually navigate based on onboarding status
+        if (next.user.handle == null || next.user.handle!.isEmpty) {
+          context.go('/onboarding/1');
+        } else {
+          context.go('/home');
+        }
       } else if (next is AuthError) {
-        ObsidianSnackbar.show(context, next.message, error: true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(next.message)),
+        );
       }
     });
 
     return Scaffold(
-      body: Container(
-        color: ObsidianTokens.bg0,
-        padding: EdgeInsets.fromLTRB(26, 34, 26, 34 + MediaQuery.of(context).padding.bottom),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const SizedBox.shrink(),
-            Column(
-              children: [
-                OrganicBlob(
-                  size: 68,
-                  child: Text('T', style: GoogleFonts.manrope(fontSize: 22, fontWeight: FontWeight.w800, color: ObsidianTokens.bg0)),
-                ),
-                const SizedBox(height: 14),
-                const Wordmark(size: 30),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
-                  decoration: BoxDecoration(
-                    color: ObsidianTokens.bg2,
-                    borderRadius: BorderRadius.circular(100),
-                    border: Border.all(color: ObsidianTokens.line(false)),
-                    boxShadow: ObsidianTokens.clayOutSmDark,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 60),
+              // Top 30%: TRIBE logo and tagline
+              Column(
+                children: [
+                  Text(
+                    'TRIBE',
+                    style: GoogleFonts.poppins(
+                      fontSize: 48,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.brandPrimary,
+                    ),
                   ),
-                  child: Text('Where honesty is the algorithm', style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w700, color: ObsidianTokens.inkDim)),
-                ),
-              ],
-            ),
-            Column(
-              children: [
-                if (authState is AuthLoading)
-                  const Center(
-                    child: CircularProgressIndicator(color: ObsidianTokens.milk),
-                  )
-                else
-                  ObsidianButton(
-                    label: 'Continue with Google',
-                    onPressed: () => ref.read(authProvider.notifier).signInWithGoogle(),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Where honesty is the algorithm',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      color: Colors.grey,
+                    ),
                   ),
-                const SizedBox(height: 18),
-                RichText(
-                  textAlign: TextAlign.center,
-                  text: TextSpan(
-                    style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: ObsidianTokens.inkFaint),
-                    children: [
-                      const TextSpan(text: 'By continuing you agree to our '),
-                      TextSpan(text: 'Terms', style: TextStyle(color: ObsidianTokens.inkDim, decoration: TextDecoration.underline)),
-                      const TextSpan(text: ' and '),
-                      TextSpan(text: 'Privacy Policy', style: TextStyle(color: ObsidianTokens.inkDim, decoration: TextDecoration.underline)),
-                    ],
-                  ),
+                ],
+              ),
+              const Spacer(),
+              // Center: Loading indicator or Google Sign-In Button
+              if (authState is AuthLoading)
+                const Center(
+                  child: CircularProgressIndicator(),
+                )
+              else
+                GoogleSignInButton(
+                  onPressed: () => ref.read(authProvider.notifier).signInWithGoogle(),
+                  isLoading: false,
                 ),
-              ],
-            ),
-          ],
+              const SizedBox(height: 24),
+              // Bottom: Terms and Privacy text
+              Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text('By continuing, you agree to our ', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
+                  InkWell(
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => TermsScreen())),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
+                      child: Text('Terms of Service', style: GoogleFonts.poppins(fontSize: 12, color: AppTheme.brandPrimary, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  Text(' and ', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
+                  InkWell(
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => PrivacyScreen())),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
+                      child: Text('Privacy Policy', style: GoogleFonts.poppins(fontSize: 12, color: AppTheme.brandPrimary, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  Text('.', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
+                ],
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
         ),
       ),
     );
