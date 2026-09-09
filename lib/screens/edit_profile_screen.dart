@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
-import 'package:flutter/painting.dart';
 import '../../config/affiliations_seed.dart';
-import '../../config/theme.dart';
 import '../../models/affiliation_model.dart';
 import '../../models/user_model.dart';
 import '../../providers/onboarding_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/storage_service.dart';
+import '../../design/tribe_design.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
@@ -57,6 +55,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       setState(() {
         _searchQuery = _searchController.text;
       });
+    });
+    _bioController.addListener(() {
+      setState(() {});
     });
   }
 
@@ -127,11 +128,42 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     }
   }
 
+  Future<void> _save() async {
+    final authState = ref.read(authProvider);
+    final user = authState is AuthAuthenticated ? authState.user : null;
+    if (_pickedAvatar != null && user != null) {
+      try {
+        final newAvatarUrl = await StorageService().uploadAvatar(_pickedAvatar!, user.userId);
+        await FirebaseFirestore.instance.collection('users').doc(user.userId).update({'avatarUrl': newAvatarUrl});
+        PaintingBinding.instance.imageCache.clear();
+        final freshUserDoc = await FirebaseFirestore.instance.collection('users').doc(user.userId).get();
+        final freshUser = UserModel.fromJson(freshUserDoc.data() as Map<String, dynamic>);
+        ref.read(authProvider.notifier).updateUser(freshUser);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Avatar upload failed: $e')));
+        }
+        return;
+      }
+    }
+    await ref.read(onboardingProvider.notifier).updateProfile(
+          ref,
+          _bioController.text.trim().isEmpty ? null : _bioController.text.trim(),
+          _selectedAffiliations,
+          displayName: _displayNameController.text.trim().isEmpty ? null : _displayNameController.text.trim(),
+        );
+    final currentState = ref.read(onboardingProvider);
+    if (currentState.errorMsg == null && mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(onboardingProvider);
     final authState = ref.watch(authProvider);
     final user = authState is AuthAuthenticated ? authState.user : null;
+    final t = const TribeTheme(true);
 
     ref.listen<OnboardingState>(onboardingProvider, (previous, next) {
       if (next.errorMsg != null && next.errorMsg != previous?.errorMsg) {
@@ -141,239 +173,190 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       }
     });
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Edit Profile'),
-        actions: [
-          IconButton(
-            icon: state.saving
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.save),
-            onPressed: state.saving
-                ? null
-                : () async {
-                    // Upload avatar if picked
-                    if (_pickedAvatar != null && user != null) {
-                      try {
-                        final newAvatarUrl = await StorageService().uploadAvatar(_pickedAvatar!, user.userId);
-                        await FirebaseFirestore.instance.collection('users').doc(user.userId).update({'avatarUrl': newAvatarUrl});
-                        PaintingBinding.instance.imageCache.clear();
-                        final freshUserDoc = await FirebaseFirestore.instance.collection('users').doc(user.userId).get();
-                        final freshUser = UserModel.fromJson(freshUserDoc.data() as Map<String, dynamic>);
-                        ref.read(authProvider.notifier).updateUser(freshUser);
-                      } catch (e) {
-                        print('AVATAR UPLOAD FAILED: $e');
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Avatar upload failed: $e')));
-                        }
-                        return; // Stop saving profile if upload fails
-                      }
-                    }
-                    await ref.read(onboardingProvider.notifier).updateProfile(
-                          ref,
-                          _bioController.text.trim().isEmpty ? null : _bioController.text.trim(),
-                          _selectedAffiliations,
-                          displayName: _displayNameController.text.trim().isEmpty ? null : _displayNameController.text.trim(),
-                        );
-                    final currentState = ref.read(onboardingProvider);
-                    if (currentState.errorMsg == null && context.mounted) {
-                      Navigator.of(context).pop();
-                    }
-                  },
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Avatar Section
-            Center(
-              child: Stack(
-                children: [
-                  CircleAvatar(
-                    radius: 60,
-                    backgroundImage: _pickedAvatar != null 
-                        ? FileImage(_pickedAvatar!) 
-                        : (user?.avatarUrl != null ? NetworkImage(user!.avatarUrl!) : null),
-                    child: _pickedAvatar == null && user?.avatarUrl == null 
-                        ? const Icon(Icons.person, size: 60) 
-                        : null,
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: GestureDetector(
-                      onTap: () async {
-                        final picker = ImagePicker();
-                        final pickedFile = await picker.pickImage(source: ImageSource.gallery, maxWidth: 512, maxHeight: 512, imageQuality: 80);
-                        if (pickedFile != null) {
-                          setState(() => _pickedAvatar = File(pickedFile.path));
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(color: AppTheme.brandPrimary, shape: BoxShape.circle),
-                        child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
-                      ),
-                    ),
+    return TribeThemeScope(
+      theme: t,
+      child: Scaffold(
+        backgroundColor: t.bg1,
+        body: SafeArea(
+          child: Column(
+            children: [
+              GlassAppBar(
+                leading: IconBtn(icon: Icons.arrow_back, onTap: () => Navigator.of(context).pop()),
+                title: Text('Edit profile', style: t.display(size: 18, color: t.milk)),
+                actions: [
+                  IconBtn(
+                    icon: Icons.check,
+                    color: t.gold,
+                    onTap: state.saving ? null : _save,
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 24),
-            // Display Name Section
-            TextField(
-              controller: _displayNameController,
-              maxLength: 30,
-              decoration: InputDecoration(
-                labelText: 'Display Name',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                counterText: '',
-              ),
-            ),
-            const SizedBox(height: 24),
-            // Bio Section
-            Text(
-              'Bio',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _bioController,
-              maxLines: 3,
-              maxLength: 150,
-              decoration: InputDecoration(
-                hintText: 'Tell us about yourself...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            // Affiliations Section
-            Text(
-              'Affiliations',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            // Search field
-            TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search affiliations...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                        },
-                      )
-                    : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            // Category chips
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: ['All', 'Universities', 'Cities', 'Interests'].map((category) {
-                  final isSelected = _selectedCategory == category;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: FilterChip(
-                      label: Text(category),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        setState(() {
-                          _selectedCategory = category;
-                        });
-                      },
-                      selectedColor: AppTheme.brandPrimary.withOpacity(0.2),
-                      checkmarkColor: AppTheme.brandPrimary,
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-            const SizedBox(height: 8),
-            // Selected count
-            Text(
-              '${_selectedAffiliations.length}/5 selected',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Colors.grey.shade600,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 8),
-            // Selected chips
-            SizedBox(
-              height: 48,
-              child: _selectedAffiliations.isNotEmpty
-                  ? ListView(
-                      scrollDirection: Axis.horizontal,
-                      children: _selectedAffiliations.map((affiliation) {
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: Chip(
-                            label: Text(affiliation.name),
-                            deleteIcon: const Icon(Icons.close, size: 18),
-                            onDeleted: () {
-                              _toggleAffiliation(affiliation);
-                            },
-                            backgroundColor: AppTheme.brandPrimary.withOpacity(0.1),
-                          ),
-                        );
-                      }).toList(),
-                    )
-                  : null,
-            ),
-            const SizedBox(height: 8),
-            // Affiliations list
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _filteredAffiliations.length,
-              itemBuilder: (context, index) {
-                final affiliation = _filteredAffiliations[index];
-                final isSelected = _selectedAffiliations.any((a) => a.id == affiliation.id);
-                final icon = _getIconForType(affiliation.type);
-
-                return ListTile(
-                  leading: Icon(icon),
-                  title: Text(affiliation.name),
-                  subtitle: Text(affiliation.type),
-                  trailing: isSelected
-                      ? Icon(Icons.check_circle, color: AppTheme.brandPrimary)
-                      : Checkbox(
-                          value: isSelected,
-                          onChanged: (_) {
-                            _toggleAffiliation(affiliation);
-                          },
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Avatar Section
+                      Center(
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Avatar(handle: user?.handle ?? 'user', imageUrl: user?.avatarUrl, size: 86),
+                            Positioned(
+                              bottom: -8,
+                              right: -8,
+                              child: GestureDetector(
+                                onTap: () async {
+                                  final picker = ImagePicker();
+                                  final pickedFile = await picker.pickImage(source: ImageSource.gallery, maxWidth: 512, maxHeight: 512, imageQuality: 80);
+                                  if (pickedFile != null) {
+                                    setState(() => _pickedAvatar = File(pickedFile.path));
+                                  }
+                                },
+                                child: Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [t.milk, t.milkDim],
+                                    ),
+                                    shape: BoxShape.circle,
+                                    boxShadow: t.clayMilkOut,
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Icon(Icons.camera_alt, size: 12, color: t.bg0),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                  onTap: () {
-                    _toggleAffiliation(affiliation);
-                  },
-                );
-              },
-            ),
-          ],
+                      ),
+                      const SizedBox(height: 24),
+                      // Display Name Section
+                      Text('Display name', style: t.caption(size: 11.5)),
+                      const SizedBox(height: 8),
+                      ClayInput(
+                        controller: _displayNameController,
+                        maxLength: 30,
+                      ),
+                      const SizedBox(height: 24),
+                      // Bio Section
+                      Text('Bio', style: t.caption(size: 11.5)),
+                      const SizedBox(height: 8),
+                      ClayInput(
+                        controller: _bioController,
+                        maxLines: 3,
+                        maxLength: 150,
+                      ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Text('${_bioController.text.length}/150', style: t.caption(size: 11)),
+                      ),
+                      const SizedBox(height: 24),
+                      // Affiliations Section
+                      Text('Affiliations', style: t.caption(size: 11.5)),
+                      const SizedBox(height: 8),
+                      // Selected chips
+                      if (_selectedAffiliations.isNotEmpty)
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: _selectedAffiliations.map((affiliation) {
+                            return Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(_getIconForType(affiliation.type), size: 16, color: t.inkDim),
+                                const SizedBox(width: 8),
+                                Text(affiliation.name, style: t.body(size: 13.5, weight: FontWeight.w600, color: t.ink)),
+                                const SizedBox(width: 8),
+                                IconBtn(icon: Icons.close, size: 14, onTap: () => _toggleAffiliation(affiliation)),
+                              ],
+                            );
+                          }).toList(),
+                        ),
+                      const SizedBox(height: 16),
+                      // Search field
+                      ClayInput(
+                        controller: _searchController,
+                        hint: 'Search affiliations...',
+                        prefix: Icon(Icons.search, size: 16, color: t.inkFaint),
+                        suffix: _searchQuery.isNotEmpty
+                            ? IconBtn(icon: Icons.clear, size: 16, onTap: () => _searchController.clear())
+                            : null,
+                      ),
+                      const SizedBox(height: 16),
+                      // Category chips
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: ['All', 'Universities', 'Cities', 'Interests'].map((category) {
+                            final isSelected = _selectedCategory == category;
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: TribeChip(
+                                label: category,
+                                onTap: () {
+                                  setState(() {
+                                    _selectedCategory = category;
+                                  });
+                                },
+                                active: isSelected,
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Selected count
+                      Text('${_selectedAffiliations.length}/5 selected', style: t.caption(size: 11)),
+                      const SizedBox(height: 8),
+                      // Affiliations list
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _filteredAffiliations.length,
+                        itemBuilder: (context, index) {
+                          final affiliation = _filteredAffiliations[index];
+                          final isSelected = _selectedAffiliations.any((a) => a.id == affiliation.id);
+                          final icon = _getIconForType(affiliation.type);
+
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Row(
+                              children: [
+                                Icon(icon, size: 20, color: t.inkDim),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(affiliation.name, style: t.body(size: 14, weight: FontWeight.w500, color: t.ink)),
+                                      Text(affiliation.type, style: t.caption(size: 11)),
+                                    ],
+                                  ),
+                                ),
+                                if (isSelected)
+                                  Icon(Icons.check_circle, size: 20, color: t.gold)
+                                else
+                                  GestureDetector(
+                                    onTap: () => _toggleAffiliation(affiliation),
+                                    child: MiniCheckbox(checked: isSelected),
+                                  ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

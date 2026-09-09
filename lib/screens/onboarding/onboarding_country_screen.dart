@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../config/countries_seed.dart';
-import '../../config/theme.dart';
+import '../../design/tribe_design.dart';
 import '../../providers/onboarding_provider.dart';
 import '../../widgets/onboarding/onboarding_page_indicator.dart';
 
@@ -44,9 +43,22 @@ class _OnboardingCountryScreenState extends ConsumerState<OnboardingCountryScree
         .toList();
   }
 
+  String _extractFlag(String country) {
+    final lastSpaceIndex = country.lastIndexOf(' ');
+    if (lastSpaceIndex == -1) return '';
+    return country.substring(lastSpaceIndex + 1);
+  }
+
+  String _extractName(String country) {
+    final lastSpaceIndex = country.lastIndexOf(' ');
+    if (lastSpaceIndex == -1) return country;
+    return country.substring(0, lastSpaceIndex);
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(onboardingProvider);
+    final t = const TribeTheme(true);
 
     ref.listen<OnboardingState>(onboardingProvider, (previous, next) {
       if (next.errorMsg != null && next.errorMsg != previous?.errorMsg) {
@@ -56,159 +68,125 @@ class _OnboardingCountryScreenState extends ConsumerState<OnboardingCountryScree
       }
     });
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/onboarding/3'),
-        ),
-      ),
-      body: Column(
-        children: [
-          // Icon
-          Icon(
-            Icons.public,
-            size: 64,
-            color: AppTheme.brandPrimary,
-          ),
-          const SizedBox(height: 8),
-          // Headline
-          Text(
-            'Where are you from?',
-            style: GoogleFonts.poppins(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          // Body
-          Text(
-            'This helps us show you content from your region.',
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              color: Colors.grey.shade600,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          // Warning Banner
-          Container(
-            padding: const EdgeInsets.all(12),
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              color: Colors.yellow.shade100,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.warning_amber_rounded, color: Colors.orange),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '⚠️ Your country can only be set once and can never be changed.',
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.orange.shade900,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          // Search field
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search countries...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                        },
-                      )
-                    : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          // Countries list
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _filteredCountries.length,
-              itemBuilder: (context, index) {
-                final country = _filteredCountries[index];
-                final isSelected = _selectedCountry == country;
-
-                return ListTile(
-                  title: Text(country),
-                  trailing: isSelected
-                      ? Icon(Icons.check_circle, color: AppTheme.brandPrimary)
-                      : Checkbox(
-                          value: isSelected,
-                          onChanged: (_) {
-                            setState(() => _selectedCountry = country);
-                          },
-                        ),
-                  onTap: () {
-                    setState(() => _selectedCountry = country);
-                  },
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
+    return TribeThemeScope(
+      theme: t,
+      child: Scaffold(
+        backgroundColor: t.bg1,
+        body: SafeArea(
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             children: [
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: (_selectedCountry == null || state.saving)
-                      ? null
-                      : () async {
-                          ref.read(onboardingProvider.notifier).setCountry(_selectedCountry!);
-                          if (context.mounted) {
-                            context.go('/onboarding/5');
-                          }
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.brandPrimary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: state.saving
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : Text(
-                          'Next',
-                          style: GoogleFonts.poppins(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+              // 1. HEADER ROW FIRST
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 16, 18, 6),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IconBtn(icon: Icons.arrow_back, onTap: () => context.go('/onboarding/3')),
+                    const OnboardingPageIndicator(activeIndex: 3),
+                    const SizedBox(width: 20),
+                  ],
                 ),
               ),
-              const SizedBox(height: 24),
-              const OnboardingPageIndicator(activeIndex: 3),
-              const SizedBox(height: 16),
+              // 2. CONTENT
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 4, 24, 12),
+                  child: Column(
+                    children: [
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Icon(Icons.public, size: 22, color: t.gold),
+                      ),
+                      const SizedBox(height: 8),
+                      Center(
+                        child: Text(
+                          "Where's your tribe?",
+                          style: t.display(size: 18, color: t.milk),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      // warning pill
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+                        decoration: BoxDecoration(
+                          color: t.bg2,
+                          border: Border.all(color: t.line),
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: t.clayOutSm,
+                        ),
+                        child: Text(
+                          '⚠ You can only set this once. Choose carefully.',
+                          style: t.body(size: 12, weight: FontWeight.w700, color: t.inkDim),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ClayInput(
+                        hint: 'Search countries…',
+                        controller: _searchController,
+                        suffix: _searchQuery.isNotEmpty
+                            ? GestureDetector(
+                                onTap: () {
+                                  _searchController.clear();
+                                },
+                                child: Icon(Icons.close, size: 18, color: t.inkFaint),
+                              )
+                            : null,
+                      ),
+                      const SizedBox(height: 8),
+                      // 3. LIST WITH FLAGS — REAL DATA
+                      Expanded(
+                        child: ListView(
+                          children: _filteredCountries.map((country) {
+                            final flag = _extractFlag(country);
+                            final name = _extractName(country);
+                            final isSelected = _selectedCountry == country;
+                            return Container(
+                              decoration: BoxDecoration(
+                                border: Border(bottom: BorderSide(color: t.line, width: 1)),
+                              ),
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() => _selectedCountry = country);
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  child: Row(
+                                    children: [
+                                      Text(flag, style: const TextStyle(fontSize: 20)),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          name,
+                                          style: t.body(size: 14, weight: FontWeight.w600, color: t.ink),
+                                        ),
+                                      ),
+                                      MiniCheckbox(checked: isSelected),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      // 4. NEXT PINNED BOTTOM
+                      ClayButtonPrimary(
+                        label: 'Next',
+                        onTap: (_selectedCountry == null || state.saving)
+                            ? null
+                            : () async {
+                                ref.read(onboardingProvider.notifier).setCountry(_selectedCountry!);
+                                if (context.mounted) {
+                                  context.go('/onboarding/5');
+                                }
+                              },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),

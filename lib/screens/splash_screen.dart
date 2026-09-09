@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../config/theme.dart';
+import '../design/tribe_design.dart';
 import '../services/auth_service.dart';
 import '../providers/auth_provider.dart';
 
@@ -68,37 +67,43 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AnimatedBuilder(
-              animation: _scaleAnimation,
-              builder: (context, child) {
-                return Transform.scale(
-                  scale: _scaleAnimation.value,
-                  child: child,
-                );
-              },
-              child: Text(
-                'TRIBE',
-                style: GoogleFonts.poppins(
-                  fontSize: 48,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.brandPrimary,
+    final t = const TribeTheme(true);
+    return TribeThemeScope(
+      theme: t,
+      child: Scaffold(
+        backgroundColor: t.bg0,
+        body: SafeArea(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AnimatedBuilder(
+                  animation: _scaleAnimation,
+                  builder: (context, child) {
+                    return Transform.scale(
+                      scale: _scaleAnimation.value,
+                      child: child,
+                    );
+                  },
+                  child: Container(
+                    width: 84,
+                    height: 84,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: [t.milk, t.milkDim], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                      borderRadius: blobRadius(84, 84),
+                      boxShadow: t.clayMilkOut,
+                    ),
+                    alignment: Alignment.center,
+                    child: Text('T', style: t.display(size: 26, color: t.bg0)),
+                  ),
                 ),
-              ),
+                const SizedBox(height: 12),
+                const Wordmark(size: 30),
+                const SizedBox(height: 6),
+                Text('v1.0.0', style: t.caption(size: 11)),
+              ],
             ),
-            const SizedBox(height: 200),
-            Text(
-              'v1.0.0',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Colors.grey,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

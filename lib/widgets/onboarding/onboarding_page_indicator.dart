@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../config/theme.dart';
+import '../../design/tribe_design.dart';
 
 class OnboardingPageIndicator extends StatelessWidget {
   final int activeIndex;
@@ -13,6 +13,7 @@ class OnboardingPageIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = TribeThemeScope.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(
@@ -20,13 +21,12 @@ class OnboardingPageIndicator extends StatelessWidget {
         (index) => AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           margin: const EdgeInsets.symmetric(horizontal: 4),
-          width: index == activeIndex ? 24 : 8,
-          height: 8,
+          width: index == activeIndex ? 18 : 7,
+          height: 7,
           decoration: BoxDecoration(
-            color: index == activeIndex
-                ? AppTheme.brandPrimary
-                : Colors.grey.shade300,
+            color: index == activeIndex ? t.gold : t.bg3,
             borderRadius: BorderRadius.circular(4),
+            border: index == activeIndex ? null : Border.all(color: t.line),
           ),
         ),
       ),

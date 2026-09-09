@@ -1,17 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../providers/user_profile_provider.dart';
 import '../providers/auth_provider.dart';
-import '../models/user_model.dart';
-import '../models/affiliation_model.dart';
-import '../models/reply_model.dart';
-import '../widgets/feed/rant_card.dart';
 import '../widgets/profile/profile_reply_card.dart';
 import '../services/report_service.dart';
 import '../services/rant_service.dart';
-import '../utils/time_utils.dart';
-import '../config/theme.dart';
+import '../design/tribe_design.dart';
 
 class UserProfileScreen extends ConsumerWidget {
   final String userId;
@@ -19,54 +13,33 @@ class UserProfileScreen extends ConsumerWidget {
   const UserProfileScreen({super.key, required this.userId});
 
   void _showReportDialog(BuildContext context, WidgetRef ref) {
-    String? selectedReason;
-    showDialog(
+    showDialog<void>(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) {
-          return AlertDialog(
-            title: const Text('Report User'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: ['Spam', 'Harassment', 'Hate speech', 'Nudity', 'Other'].map((reason) {
-                return RadioListTile<String>(
-                  title: Text(reason),
-                  value: reason,
-                  groupValue: selectedReason,
-                  onChanged: (val) => setDialogState(() => selectedReason = val),
+      barrierDismissible: false,
+      barrierColor: Colors.transparent,
+      builder: (ctx) => SizedBox.expand(
+        child: TribeThemeScope(
+          theme: const TribeTheme(true),
+          child: ReportModal(
+            onClose: () => Navigator.of(ctx).pop(),
+            onSubmit: (String reason) async {
+              final authState = ref.read(authProvider);
+              if (authState is AuthAuthenticated) {
+                await ReportService().reportContent(
+                  targetType: 'user',
+                  targetId: userId,
+                  reporterId: authState.user.userId,
+                  reason: reason,
                 );
-              }).toList(),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: selectedReason == null
-                    ? null
-                    : () async {
-                        Navigator.pop(ctx);
-                        final authState = ref.read(authProvider);
-                        if (authState is AuthAuthenticated) {
-                          await ReportService().reportContent(
-                            targetType: 'user',
-                            targetId: userId,
-                            reporterId: authState.user.userId,
-                            reason: selectedReason!,
-                          );
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Report submitted. Thank you.')),
-                            );
-                          }
-                        }
-                      },
-                child: const Text('Submit'),
-              ),
-            ],
-          );
-        },
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Report submitted. Thank you.')),
+                  );
+                }
+              }
+            },
+          ),
+        ),
       ),
     );
   }
@@ -100,50 +73,42 @@ class UserProfileScreen extends ConsumerWidget {
     final repliesAsync = ref.watch(userRepliesProvider(userId));
     final authState = ref.watch(authProvider);
     final isBlocked = authState is AuthAuthenticated && authState.user.blockedUsers.contains(userId);
-    final blockedList = authState is AuthAuthenticated ? authState.user.blockedUsers : const <String>[];
+    final t = const TribeTheme(true);
 
     if (isBlocked) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Profile'),
-          actions: [
-            PopupMenuButton<String>(
-              onSelected: (value) async {
-                if (value == 'unblock') {
-                  await _toggleBlock(context, ref, userId, false);
-                }
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'unblock',
-                  child: Row(
-                    children: [
-                      Icon(Icons.lock_open),
-                      SizedBox(width: 8),
-                      Text('Unblock User'),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32.0),
+      return TribeThemeScope(
+        theme: t,
+        child: Scaffold(
+          backgroundColor: t.bg1,
+          body: SafeArea(
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.block, size: 64, color: Colors.grey.shade400),
-                const SizedBox(height: 16),
-                Text('You blocked this user', style: Theme.of(context).textTheme.headlineSmall),
-                const SizedBox(height: 8),
-                Text("You won't see their posts or replies.", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade600)),
-                const SizedBox(height: 24),
-                ElevatedButton.icon(
-                  onPressed: () => _toggleBlock(context, ref, userId, false),
-                  icon: const Icon(Icons.lock_open),
-                  label: const Text('Unblock'),
+                GlassAppBar(
+                  title: userAsync.whenOrNull(data: (u) =>
+                      Text('@${u.handle ?? 'anonymous'}', style: t.display(size: 18, color: t.milk)))
+                      ?? Text('Profile', style: t.display(size: 18, color: t.milk)),
+                ),
+                Expanded(
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          EmptyState(
+                            icon: Icons.block,
+                            headline: 'You blocked this user',
+                            sub: "You won't see their posts or replies.",
+                          ),
+                          const SizedBox(height: 8),
+                          ClayButtonSecondary(
+                            label: 'Unblock',
+                            onTap: () => _toggleBlock(context, ref, userId, false),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -152,230 +117,313 @@ class UserProfileScreen extends ConsumerWidget {
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-        actions: [
-          if (authState is AuthAuthenticated && authState.user.userId != userId)
-            PopupMenuButton<String>(
-              onSelected: (value) async {
-                if (value == 'report') {
-                  _showReportDialog(context, ref);
-                } else if (value == 'block' || value == 'unblock') {
-                  await _toggleBlock(context, ref, userId, value == 'block');
-                }
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'report',
-                  child: Row(
-                    children: [
-                      Icon(Icons.flag),
-                      SizedBox(width: 8),
-                      Text('Report User'),
-                    ],
-                  ),
-                ),
-                PopupMenuItem(
-                  value: isBlocked ? 'unblock' : 'block',
-                  child: Row(
-                    children: [
-                      Icon(isBlocked ? Icons.lock_open : Icons.block, color: isBlocked ? null : Colors.red),
-                      const SizedBox(width: 8),
-                      Text(isBlocked ? 'Unblock User' : 'Block User', style: TextStyle(color: isBlocked ? null : Colors.red)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-        ],
-      ),
-      body: userAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => const Center(child: Text('Failed to load profile')),
-        data: (user) {
-          final rants = rantsAsync.value ?? [];
-          final replies = repliesAsync.value ?? [];
-          final totalKarma = rants.fold<int>(0, (sum, r) => sum + r.karma) +
-              replies.fold<int>(0, (sum, r) => sum + r.karma);
-
-          return DefaultTabController(
-            length: 3,
-            child: NestedScrollView(
-              headerSliverBuilder: (context, innerBoxIsScrolled) {
-                return [
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          // Header
-                          Center(
-                            child: CircleAvatar(
-                              key: ValueKey(user.avatarUrl),
-                              radius: 50,
-                              backgroundImage: user.avatarUrl != null
-                                  ? NetworkImage(user.avatarUrl!)
-                                  : null,
-                              child: user.avatarUrl == null
-                                  ? const Icon(Icons.person, size: 50)
-                                  : null,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Center(
-                            child: Text(
-                              user.displayName,
-                              style: Theme.of(context).textTheme.headlineSmall,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Center(
-                            child: Text(
-                              '@${user.handle ?? 'anonymous'}',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ),
-                          if (user.country != null) ...[
-                            const SizedBox(height: 4),
-                            Center(
-                              child: Text(
-                                user.country!,
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: Colors.grey.shade700,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 8),
-                          if (user.bio != null && user.bio!.isNotEmpty)
-                            Center(
-                              child: Text(
-                                user.bio!,
-                                style: Theme.of(context).textTheme.bodyMedium,
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          const SizedBox(height: 24),
-                          // Stats row
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              _StatItem(label: 'Posts', value: '${rants.length}'),
-                              _StatItem(label: 'Replies', value: '${replies.length}'),
-                              _StatItem(label: 'Likes', value: '$totalKarma'),
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-                          // Affiliations
-                          if (user.affiliations.isNotEmpty) ...[
-                            Text(
-                              'Affiliations',
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            const SizedBox(height: 8),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: user.affiliations.map((affiliation) {
-                                IconData icon;
-                                if (affiliation.type == 'university') {
-                                  icon = Icons.school;
-                                } else if (affiliation.type == 'city') {
-                                  icon = Icons.location_city;
-                                } else {
-                                  icon = Icons.star;
-                                }
-                                return Chip(
-                                  avatar: Icon(icon, size: 18),
-                                  label: Text(affiliation.name),
-                                );
-                              }).toList(),
-                            ),
-                            const SizedBox(height: 24),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
-                  SliverPersistentHeader(
-                    pinned: true,
-                    delegate: _PinnedTabBarDelegate(
-                      child: TabBar(
-                        labelColor: AppTheme.brandPrimary,
-                        unselectedLabelColor: Colors.grey,
-                        indicatorColor: AppTheme.brandPrimary,
-                        tabs: const [
-                          Tab(text: 'Posts'),
-                          Tab(text: 'Replies'),
-                          Tab(text: 'Likes'),
-                        ],
-                      ),
-                    ),
-                  ),
-                ];
-              },
-              body: TabBarView(
-                children: [
-                  rants.isEmpty
-                      ? const Center(child: Text('No posts yet.'))
-                      : ListView.builder(
-                          itemCount: rants.length,
-                          itemBuilder: (context, index) => RantCard(rant: rants[index]),
-                        ),
-                  replies.isEmpty
-                      ? const Center(child: Text('No replies yet.'))
-                      : ListView.builder(
-                          itemCount: replies.length,
-                          itemBuilder: (context, index) {
-                            final reply = replies[index];
-                            return ProfileReplyCard(reply: reply);
-                          },
-                        ),
-                  ref.watch(userLikesProvider(userId)).when(
-                    loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (e, _) => const Center(child: Text('Failed to load likes')),
-                    data: (likedRants) {
-                      if (likedRants.isEmpty) return const Center(child: Text('No likes yet.'));
-                      return ListView.builder(
-                        itemCount: likedRants.length,
-                        itemBuilder: (context, index) => RantCard(rant: likedRants[index]),
-                      );
-                    },
-                  ),
+    return TribeThemeScope(
+      theme: t,
+      child: Scaffold(
+        backgroundColor: t.bg1,
+        body: SafeArea(
+          child: Column(
+            children: [
+              GlassAppBar(
+                leading: authState is AuthAuthenticated && authState.user.userId != userId
+                    ? IconBtn(icon: Icons.arrow_back, onTap: () => Navigator.of(context).pop())
+                    : null,
+                title: userAsync.whenOrNull(data: (u) =>
+                    Text('@${u.handle ?? 'anonymous'}', style: t.display(size: 18, color: t.milk)))
+                    ?? Text('Profile', style: t.display(size: 18, color: t.milk)),
+                actions: [
+                  if (authState is AuthAuthenticated && authState.user.userId != userId)
+                    IconBtn(icon: Icons.more_horiz, onTap: () => _showMenu(context, ref, isBlocked)),
                 ],
               ),
-            ),
-          );
-        },
+              Expanded(
+                child: userAsync.when(
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (e, _) => const Center(child: Text('Failed to load profile')),
+                  data: (user) {
+            final rants = rantsAsync.value ?? [];
+            final replies = repliesAsync.value ?? [];
+            final totalKarma = rants.fold<int>(0, (sum, r) => sum + r.karma) +
+                replies.fold<int>(0, (sum, r) => sum + r.karma);
+
+            return DefaultTabController(
+              length: 3,
+              child: NestedScrollView(
+                headerSliverBuilder: (context, innerBoxIsScrolled) {
+                  return [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Avatar(handle: user.handle ?? 'anonymous', imageUrl: user.avatarUrl, size: 78),
+                                const SizedBox(width: 18),
+                                Expanded(
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          children: [
+                                            Text('${rants.length}', style: t.display(size: 17, color: t.milk)),
+                                            Text('Posts', style: t.caption(size: 11)),
+                                          ],
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: Column(
+                                          children: [
+                                            Text('${replies.length}', style: t.display(size: 17, color: t.milk)),
+                                            Text('Replies', style: t.caption(size: 11)),
+                                          ],
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: Column(
+                                          children: [
+                                            Text('$totalKarma', style: t.display(size: 17, color: t.milk)),
+                                            Text('Likes', style: t.caption(size: 11)),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+                            Text(user.displayName, style: t.display(size: 15, color: t.milk)),
+                            const SizedBox(height: 1),
+                            Text('@${user.handle ?? 'anonymous'}', style: t.body(size: 12.5, weight: FontWeight.w700, color: t.inkDim)),
+                            if (user.country != null) ...[
+                              const SizedBox(height: 6),
+                              Text(user.country!, style: t.body(size: 12, weight: FontWeight.w600, color: t.inkDim)),
+                            ],
+                            if (user.bio != null && user.bio!.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Text(user.bio!, style: t.body(size: 13, weight: FontWeight.w500, color: t.inkDim)),
+                            ],
+                            if (user.affiliations.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                children: user.affiliations.map((affiliation) {
+                                  IconData icon;
+                                  if (affiliation.type == 'university') {
+                                    icon = Icons.school;
+                                  } else if (affiliation.type == 'city') {
+                                    icon = Icons.location_city;
+                                  } else {
+                                    icon = Icons.star;
+                                  }
+                                  return TribeChip(icon: icon, label: affiliation.name);
+                                }).toList(),
+                              ),
+                            ],
+                            const SizedBox(height: 16),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SliverPersistentHeader(
+                      pinned: true,
+                      delegate: _PinnedTabBarDelegate(
+                        child: TabBar(
+                          labelColor: t.milk,
+                          unselectedLabelColor: t.inkFaint,
+                          indicatorSize: TabBarIndicatorSize.tab,
+                          dividerColor: Colors.transparent,
+                          indicatorColor: Colors.transparent,
+                          tabs: [
+                            Tab(icon: Icon(Icons.grid_view_rounded)),
+                            Tab(icon: Icon(Icons.chat_bubble_outline)),
+                            Tab(icon: Icon(Icons.thumb_up_outlined)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ];
+                },
+                body: TabBarView(
+                  children: [
+                    rants.isEmpty
+                        ? const Center(child: Text('No posts yet.'))
+                        : GridView.builder(
+                            padding: const EdgeInsets.all(3),
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 3,
+                              crossAxisSpacing: 3,
+                              mainAxisSpacing: 3,
+                            ),
+                            itemCount: rants.length,
+                            itemBuilder: (context, index) {
+                              final rant = rants[index];
+                              return Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(colors: [t.bg3, t.bg1]),
+                                  border: Border.all(color: t.line),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                padding: const EdgeInsets.all(11),
+                                child: Stack(
+                                  children: [
+                                    if (rant.imageUrl != null)
+                                      Positioned(
+                                        top: 0,
+                                        right: 0,
+                                        child: Icon(Icons.image_outlined, size: 13, color: t.grey500),
+                                      ),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            rant.content,
+                                            maxLines: 4,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: t.body(size: 11.5, weight: FontWeight.w600, color: t.inkDim),
+                                          ),
+                                        ),
+                                        Row(
+                                          children: [
+                                            Icon(Icons.thumb_up, size: 11, color: t.inkFaint),
+                                            const SizedBox(width: 5),
+                                            Text('${rant.karma}', style: t.body(size: 10.5, weight: FontWeight.w700, color: t.inkFaint)),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                    replies.isEmpty
+                        ? const Center(child: Text('No replies yet.'))
+                        : ListView.builder(
+                            itemCount: replies.length,
+                            itemBuilder: (context, index) {
+                              final reply = replies[index];
+                              return ProfileReplyCard(reply: reply);
+                            },
+                          ),
+                    ref.watch(userLikesProvider(userId)).when(
+                      loading: () => const Center(child: CircularProgressIndicator()),
+                      error: (e, _) => const Center(child: Text('Failed to load likes')),
+                      data: (likedRants) {
+                        if (likedRants.isEmpty) return const Center(child: Text('No likes yet.'));
+                        return GridView.builder(
+                          padding: const EdgeInsets.all(3),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            crossAxisSpacing: 3,
+                            mainAxisSpacing: 3,
+                          ),
+                          itemCount: likedRants.length,
+                          itemBuilder: (context, index) {
+                            final rant = likedRants[index];
+                            return Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(colors: [t.bg3, t.bg1]),
+                                border: Border.all(color: t.line),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              padding: const EdgeInsets.all(11),
+                              child: Stack(
+                                children: [
+                                  if (rant.imageUrl != null)
+                                    Positioned(
+                                      top: 0,
+                                      right: 0,
+                                      child: Icon(Icons.image_outlined, size: 13, color: t.grey500),
+                                    ),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          rant.content,
+                                          maxLines: 4,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: t.body(size: 11.5, weight: FontWeight.w600, color: t.inkDim),
+                                        ),
+                                      ),
+                                      Row(
+                                        children: [
+                                          Icon(Icons.thumb_up, size: 11, color: t.like),
+                                          const SizedBox(width: 5),
+                                          Text('${rant.karma}', style: t.body(size: 10.5, weight: FontWeight.w700, color: t.like)),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+            ],
+          ),
+        ),
       ),
     );
   }
-}
 
-class _StatItem extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _StatItem({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: Theme.of(context).textTheme.headlineSmall,
+  void _showMenu(BuildContext context, WidgetRef ref, bool isBlocked) {
+    final t = const TribeTheme(true);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => TribeThemeScope(
+        theme: t,
+        child: Container(
+          decoration: BoxDecoration(
+            color: t.bg2,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            border: Border(top: BorderSide(color: t.lineStrong)),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: SafeArea(
+            top: false,
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(color: t.line, borderRadius: BorderRadius.circular(4))),
+              GestureDetector(
+                onTap: () { Navigator.of(ctx).pop(); _showReportDialog(context, ref); },
+                child: Padding(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                  child: Row(children: [
+                    Icon(Icons.flag_outlined, size: 17, color: t.ink),
+                    const SizedBox(width: 13),
+                    Expanded(child: Text('Report User', style: t.body(size: 14, weight: FontWeight.w700, color: t.ink))),
+                  ]))),
+              Container(height: 1, color: t.line),
+              GestureDetector(
+                onTap: () { Navigator.of(ctx).pop(); _toggleBlock(context, ref, userId, !isBlocked); },
+                child: Padding(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                  child: Row(children: [
+                    Icon(Icons.block, size: 17, color: t.danger),
+                    const SizedBox(width: 13),
+                    Expanded(child: Text(isBlocked ? 'Unblock User' : 'Block User',
+                      style: t.body(size: 14, weight: FontWeight.w700, color: t.danger))),
+                  ]))),
+            ]),
+          ),
         ),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-      ],
+      ),
     );
   }
 }
@@ -385,22 +433,22 @@ class _PinnedTabBarDelegate extends SliverPersistentHeaderDelegate {
   const _PinnedTabBarDelegate({required this.child});
 
   @override
-  double get minExtent => child.preferredSize.height + 1;
+  double get minExtent => child.preferredSize.height;
 
   @override
-  double get maxExtent => child.preferredSize.height + 1;
+  double get maxExtent => child.preferredSize.height;
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final t = TribeThemeScope.of(context);
     return Container(
-      color: Theme.of(context).scaffoldBackgroundColor,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [child, const Divider(height: 1)],
-      ),
+      color: t.bg1,
+      child: child,
     );
   }
 
   @override
   bool shouldRebuild(covariant _PinnedTabBarDelegate oldDelegate) => false;
 }
+
+

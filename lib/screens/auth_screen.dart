@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
-import '../config/theme.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import '../design/tribe_design.dart';
 import '../providers/auth_provider.dart';
-import '../widgets/auth/google_sign_in_button.dart';
 import 'legal/terms_screen.dart';
 import 'legal/privacy_screen.dart';
 
@@ -14,6 +13,7 @@ class AuthScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authProvider);
+    final t = const TribeTheme(true);
 
     // Listen to auth state changes and navigate accordingly
     ref.listen<AuthState>(authProvider, (previous, next) {
@@ -31,73 +31,74 @@ class AuthScreen extends ConsumerWidget {
       }
     });
 
-    return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 60),
-              // Top 30%: TRIBE logo and tagline
-              Column(
-                children: [
-                  Text(
-                    'TRIBE',
-                    style: GoogleFonts.poppins(
-                      fontSize: 48,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.brandPrimary,
+    return TribeThemeScope(
+      theme: t,
+      child: Scaffold(
+        backgroundColor: t.bg1,
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(26, 54, 26, 34),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const SizedBox(),
+                Column(children: [
+                  Container(
+                    width: 68,
+                    height: 68,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: [t.milk, t.milkDim], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                      borderRadius: blobRadius(68, 68),
+                      boxShadow: t.clayMilkOut,
                     ),
+                    alignment: Alignment.center,
+                    child: Text('T', style: t.display(size: 22, color: t.bg0)),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Where honesty is the algorithm',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      color: Colors.grey,
-                    ),
+                  const SizedBox(height: 14),
+                  const Wordmark(size: 30),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+                    decoration: BoxDecoration(color: t.bg2, border: Border.all(color: t.line), borderRadius: BorderRadius.circular(100), boxShadow: t.clayOutSm),
+                    child: Text('Where honesty is the algorithm', style: t.body(size: 12.5, weight: FontWeight.w700, color: t.inkDim)),
                   ),
-                ],
-              ),
-              const Spacer(),
-              // Center: Loading indicator or Google Sign-In Button
-              if (authState is AuthLoading)
-                const Center(
-                  child: CircularProgressIndicator(),
-                )
-              else
-                GoogleSignInButton(
-                  onPressed: () => ref.read(authProvider.notifier).signInWithGoogle(),
-                  isLoading: false,
-                ),
-              const SizedBox(height: 24),
-              // Bottom: Terms and Privacy text
-              Wrap(
-                alignment: WrapAlignment.center,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Text('By continuing, you agree to our ', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
-                  InkWell(
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => TermsScreen())),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
-                      child: Text('Terms of Service', style: GoogleFonts.poppins(fontSize: 12, color: AppTheme.brandPrimary, fontWeight: FontWeight.bold)),
-                    ),
+                ]),
+                Column(children: [
+                  ClayButtonPrimary(
+                    label: authState is AuthLoading ? 'Signing in…' : 'Continue with Google',
+                    loading: authState is AuthLoading,
+                    leading: authState is AuthLoading ? null : SvgPicture.asset('assets/google_g.svg', width: 16, height: 16),
+                    onTap: authState is AuthLoading ? null : () => ref.read(authProvider.notifier).signInWithGoogle(),
                   ),
-                  Text(' and ', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
-                  InkWell(
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => PrivacyScreen())),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
-                      child: Text('Privacy Policy', style: GoogleFonts.poppins(fontSize: 12, color: AppTheme.brandPrimary, fontWeight: FontWeight.bold)),
-                    ),
+                  const SizedBox(height: 18),
+                  Text.rich(
+                    TextSpan(children: [
+                      TextSpan(text: 'By continuing you agree to our ', style: t.body(size: 11.5, weight: FontWeight.w600, color: t.inkFaint)),
+                      WidgetSpan(
+                        child: InkWell(
+                          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => TermsScreen())),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
+                            child: Text('Terms', style: t.body(size: 11.5, weight: FontWeight.w600, color: t.inkDim).copyWith(decoration: TextDecoration.underline)),
+                          ),
+                        ),
+                      ),
+                      TextSpan(text: ' and ', style: t.body(size: 11.5, weight: FontWeight.w600, color: t.inkFaint)),
+                      WidgetSpan(
+                        child: InkWell(
+                          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => PrivacyScreen())),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
+                            child: Text('Privacy Policy', style: t.body(size: 11.5, weight: FontWeight.w600, color: t.inkDim).copyWith(decoration: TextDecoration.underline)),
+                          ),
+                        ),
+                      ),
+                    ]),
+                    textAlign: TextAlign.center,
                   ),
-                  Text('.', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
-                ],
-              ),
-              const SizedBox(height: 24),
-            ],
+                ]),
+              ],
+            ),
           ),
         ),
       ),

@@ -6,6 +6,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/vote_provider.dart';
 import '../../services/rant_service.dart';
 import '../../services/report_service.dart';
+import '../../design/tribe_design.dart';
 
 class ReplyCard extends ConsumerStatefulWidget {
   final ReplyModel reply;
@@ -25,226 +26,169 @@ class _ReplyCardState extends ConsumerState<ReplyCard> {
     final hasVoted = hasVotedAsync.value ?? false;
     final authState = ref.watch(authProvider);
     final isOwnReply = authState is AuthAuthenticated && authState.user.userId == widget.reply.userId;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
+    final t = TribeThemeScope.of(context);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: t.bg2,
+        borderRadius: BorderRadius.circular(16),
+        border: Border(left: BorderSide(color: _colorForHandle(widget.reply.handle), width: 2)),
+      ),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            key: ValueKey(widget.reply.avatarUrl),
-            radius: 16,
-            backgroundImage: widget.reply.avatarUrl != null
-                ? NetworkImage(widget.reply.avatarUrl!)
-                : null,
-            child: widget.reply.avatarUrl == null
-                ? const Icon(Icons.person, size: 16)
-                : null,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          Row(
+            children: [
+              Avatar(handle: widget.reply.handle, imageUrl: widget.reply.avatarUrl, size: 30),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '@${widget.reply.handle}',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      TimeUtils.formatRelativeTime(widget.reply.timestamp),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey,
-                      ),
+                    Row(
+                      children: [
+                        Text('@${widget.reply.handle}', style: t.body(size: 12.5, weight: FontWeight.w800, color: t.ink)),
+                        const SizedBox(width: 8),
+                        Text(TimeUtils.formatRelativeTime(widget.reply.timestamp), style: t.caption(size: 11)),
+                      ],
                     ),
                   ],
                 ),
-                PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert),
-                  onSelected: (value) async {
-                    if (value == 'delete') {
-                      _confirmDelete(context);
-                    } else if (value == 'report') {
-                      _showReportDialog(context);
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    if (isOwnReply)
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(Icons.delete, color: Colors.red),
-                            SizedBox(width: 8),
-                            Text('Delete Reply', style: TextStyle(color: Colors.red)),
-                          ],
-                        ),
-                      )
-                    else
-                      const PopupMenuItem(
-                        value: 'report',
-                        child: Row(
-                          children: [
-                            Icon(Icons.flag),
-                            SizedBox(width: 8),
-                            Text('Report Reply'),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  widget.reply.content,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const SizedBox(width: 4),
-                    GestureDetector(
-                      onTap: _isVoting
-                          ? null
-                          : () async {
-                              if (isOwnReply) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text("You can't like your own reply")),
-                                );
-                                return;
-                              }
-                              final authState = ref.read(authProvider);
-                              if (authState is! AuthAuthenticated) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Sign in to like')),
-                                );
-                                return;
-                              }
-                              setState(() => _isVoting = true);
+              ),
+              IconBtn(
+                icon: Icons.more_horiz,
+                size: 16,
+                onTap: () {
+                  if (isOwnReply) {
+                    showDialog<void>(
+                      context: context,
+                      barrierDismissible: false,
+                      barrierColor: Colors.transparent,
+                      builder: (ctx) => SizedBox.expand(
+                        child: TribeThemeScope(
+                          theme: const TribeTheme(true),
+                          child: ConfirmModal(
+                            title: 'Delete Reply?',
+                            body: "This can't be undone.",
+                            confirmLabel: 'Delete',
+                            onClose: () => Navigator.of(ctx).pop(),
+                            onConfirm: () async {
                               try {
-                                await RantService().toggleReplyVote(widget.reply.rantId, widget.reply.replyId, authState.user.userId);
+                                await RantService().deleteReply(widget.reply.rantId, widget.reply.replyId);
                               } catch (e) {
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Failed to like: $e')),
+                                    SnackBar(content: Text('Failed to delete: $e')),
                                   );
-                                }
-                              } finally {
-                                if (mounted) {
-                                  setState(() => _isVoting = false);
                                 }
                               }
                             },
-                      child: Icon(
-                        hasVoted ? Icons.thumb_up : Icons.thumb_up_outlined,
-                        size: 16,
-                        color: isOwnReply
-                            ? Colors.grey
-                            : (hasVoted
-                                ? Theme.of(context).colorScheme.primary
-                                : Colors.grey),
+                            danger: true,
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${widget.reply.karma}',
-                      style: const TextStyle(color: Colors.grey, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _confirmDelete(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete Reply?'),
-        content: const Text('This cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            onPressed: () async {
-              Navigator.pop(ctx);
-              try {
-                await RantService().deleteReply(widget.reply.rantId, widget.reply.replyId);
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to delete: $e')),
-                  );
-                }
-              }
-            },
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showReportDialog(BuildContext context) {
-    String? selectedReason;
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) {
-          return AlertDialog(
-            title: const Text('Report Reply'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: ['Spam', 'Harassment', 'Hate speech', 'Nudity', 'Other'].map((reason) {
-                return RadioListTile<String>(
-                  title: Text(reason),
-                  value: reason,
-                  groupValue: selectedReason,
-                  onChanged: (val) => setDialogState(() => selectedReason = val),
-                );
-              }).toList(),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Cancel'),
+                    );
+                  } else {
+                    showDialog<void>(
+                      context: context,
+                      barrierDismissible: false,
+                      barrierColor: Colors.transparent,
+                      builder: (ctx) => SizedBox.expand(
+                        child: TribeThemeScope(
+                          theme: const TribeTheme(true),
+                          child: ReportModal(
+                            onClose: () => Navigator.of(ctx).pop(),
+                            onSubmit: (String reason) async {
+                              final authState = ref.read(authProvider);
+                              if (authState is AuthAuthenticated) {
+                                await ReportService().reportContent(
+                                  targetType: 'reply',
+                                  targetId: widget.reply.replyId,
+                                  reporterId: authState.user.userId,
+                                  reason: reason,
+                                  snippet: widget.reply.content,
+                                );
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Report submitted. Thank you.')),
+                                  );
+                                }
+                              }
+                            },
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+                },
               ),
-              TextButton(
-                onPressed: selectedReason == null
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(widget.reply.content, style: t.body(size: 14, weight: FontWeight.w500, color: t.ink)),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              ActionPill(
+                icon: Icons.thumb_up_outlined,
+                label: '${widget.reply.karma}',
+                liked: hasVoted,
+                onTap: _isVoting
                     ? null
                     : () async {
-                        Navigator.pop(ctx);
-                        final authState = ref.read(authProvider);
-                        if (authState is AuthAuthenticated) {
-                          await ReportService().reportContent(
-                            targetType: 'reply',
-                            targetId: widget.reply.replyId,
-                            reporterId: authState.user.userId,
-                            reason: selectedReason!,
-                            snippet: widget.reply.content,
+                        if (isOwnReply) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("You can't like your own reply")),
                           );
+                          return;
+                        }
+                        final authState = ref.read(authProvider);
+                        if (authState is! AuthAuthenticated) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Sign in to like')),
+                          );
+                          return;
+                        }
+                        setState(() => _isVoting = true);
+                        try {
+                          await RantService().toggleReplyVote(widget.reply.rantId, widget.reply.replyId, authState.user.userId);
+                        } catch (e) {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Report submitted. Thank you.')),
+                              SnackBar(content: Text('Failed to like: $e')),
                             );
+                          }
+                        } finally {
+                          if (mounted) {
+                            setState(() => _isVoting = false);
                           }
                         }
                       },
-                child: const Text('Submit'),
               ),
             ],
-          );
-        },
+          ),
+        ],
       ),
     );
   }
+
+  Color _colorForHandle(String? handle) {
+    if (handle == null) return const Color(0xFF6B7280);
+    final hash = handle.hashCode;
+    final colors = [
+      const Color(0xFF6366F1),
+      const Color(0xFF8B5CF6),
+      const Color(0xFFEC4899),
+      const Color(0xFFF43F5E),
+      const Color(0xFFF97316),
+      const Color(0xFFEAB308),
+      const Color(0xFF22C55E),
+      const Color(0xFF06B6D4),
+    ];
+    return colors[hash.abs() % colors.length];
+  }
 }
+
+

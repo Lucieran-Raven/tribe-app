@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/reply_model.dart';
 import '../../services/rant_service.dart';
-import '../../utils/time_utils.dart';
+import '../../design/tribe_design.dart';
 
 class ProfileReplyCard extends StatefulWidget {
   final ReplyModel reply;
@@ -44,60 +44,57 @@ class _ProfileReplyCardState extends State<ProfileReplyCard> {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey.shade200, width: 1),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: _parentDeleted ? null : () => GoRouter.of(context).push('/rant/${widget.reply.rantId}'),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.reply, size: 14, color: Colors.grey.shade600),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Replied to a post',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              if (_loading)
-                Container(height: 14, width: 200, color: Colors.grey.shade200)
-              else
-                Text(
-                  _parentDeleted ? '[Post not available]' : (_parentSnippet ?? ''),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: _parentDeleted ? Colors.red.shade400 : Colors.grey.shade700,
-                    fontStyle: _parentDeleted ? FontStyle.italic : FontStyle.normal,
-                    decoration: _parentDeleted ? TextDecoration.lineThrough : TextDecoration.none,
-                  ),
-                ),
-              const Divider(height: 20),
-              Text(
-                widget.reply.content,
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, height: 1.3),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                TimeUtils.formatRelativeTime(widget.reply.timestamp),
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-              ),
-            ],
-          ),
+    final t = TribeThemeScope.of(context);
+    return GestureDetector(
+      onTap: _parentDeleted ? null : () => GoRouter.of(context).push('/rant/${widget.reply.rantId}'),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        padding: const EdgeInsets.all(13),
+        decoration: BoxDecoration(
+          color: t.bg2,
+          borderRadius: BorderRadius.circular(16),
+          border: Border(left: BorderSide(color: _colorForHandle(widget.reply.handle), width: 2)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Replied to a post', style: t.caption(size: 11)),
+            const SizedBox(height: 8),
+            Text(widget.reply.content, style: t.body(size: 14.5, weight: FontWeight.w500, color: t.ink)),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.only(left: 10),
+              decoration: BoxDecoration(border: Border(left: BorderSide(color: t.grey700, width: 2))),
+              child: _loading
+                  ? Container(height: 14, width: 200, color: t.grey500)
+                  : Text(
+                      _parentDeleted ? '[Post not available]' : (_parentSnippet ?? ''),
+                      style: t.body(size: 12, weight: FontWeight.w600, color: t.inkFaint),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+            ),
+          ],
         ),
       ),
     );
   }
+
+  Color _colorForHandle(String? handle) {
+    if (handle == null) return const Color(0xFF6B7280);
+    final hash = handle.hashCode;
+    final colors = [
+      const Color(0xFF6366F1),
+      const Color(0xFF8B5CF6),
+      const Color(0xFFEC4899),
+      const Color(0xFFF43F5E),
+      const Color(0xFFF97316),
+      const Color(0xFFEAB308),
+      const Color(0xFF22C55E),
+      const Color(0xFF06B6D4),
+    ];
+    return colors[hash.abs() % colors.length];
+  }
 }
+
+

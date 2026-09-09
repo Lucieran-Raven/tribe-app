@@ -3,11 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../providers/user_profile_provider.dart';
-import '../config/theme.dart';
-import '../services/auth_service.dart';
-import '../widgets/feed/rant_card.dart';
 import '../widgets/profile/profile_reply_card.dart';
-import '../utils/time_utils.dart';
+import '../design/tribe_design.dart';
+import 'settings_screen.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -17,15 +15,18 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  bool _isDeleting = false;
-
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
+    final t = const TribeTheme(true);
 
     if (authState is! AuthAuthenticated) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return TribeThemeScope(
+        theme: t,
+        child: Scaffold(
+          backgroundColor: t.bg1,
+          body: const Center(child: CircularProgressIndicator()),
+        ),
       );
     }
 
@@ -40,301 +41,259 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final totalKarma = userRants.fold<int>(0, (sum, r) => sum + r.karma) +
         userReplies.fold<int>(0, (sum, r) => sum + r.karma);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-      ),
-      body: DefaultTabController(
-        length: 3,
-        child: NestedScrollView(
-          headerSliverBuilder: (context, innerBoxIsScrolled) {
-            return [
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      // Avatar
-                      CircleAvatar(
-                        key: ValueKey(user.avatarUrl),
-                        radius: 50,
-                        backgroundImage: user.avatarUrl != null
-                            ? NetworkImage(user.avatarUrl!)
-                            : null,
-                        child: user.avatarUrl == null
-                            ? const Icon(Icons.person, size: 50)
-                            : null,
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // Display Name
-                      Text(
-                        user.displayName,
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                      const SizedBox(height: 4),
-                      
-                      // Handle
-                      Text(
-                        '@${user.handle ?? 'anonymous'}',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey,
+    return TribeThemeScope(
+      theme: t,
+      child: Scaffold(
+        backgroundColor: t.bg1,
+        appBar: GlassAppBar(
+          title: Text('Profile', style: t.display(size: 18, color: t.milk)),
+          actions: [
+            IconBtn(
+              icon: Icons.settings_outlined,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              ),
+            ),
+          ],
+        ),
+        body: DefaultTabController(
+          length: 3,
+          child: NestedScrollView(
+            headerSliverBuilder: (context, innerBoxIsScrolled) {
+              return [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Avatar(handle: user.handle ?? 'anonymous', imageUrl: user.avatarUrl, size: 78),
+                            const SizedBox(width: 18),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(user.displayName, style: t.display(size: 16, color: t.milk)),
+                                  const SizedBox(height: 2),
+                                  Text('@${user.handle ?? 'anonymous'}', style: t.body(size: 13, weight: FontWeight.w700, color: t.ink)),
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          children: [
+                                            Text('$rantCount', style: t.display(size: 17, color: t.milk)),
+                                            const SizedBox(height: 2),
+                                            Text('Posts', style: t.caption(size: 11)),
+                                          ],
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: Column(
+                                          children: [
+                                            Text('$replyCount', style: t.display(size: 17, color: t.milk)),
+                                            const SizedBox(height: 2),
+                                            Text('Replies', style: t.caption(size: 11)),
+                                          ],
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: Column(
+                                          children: [
+                                            Text('$totalKarma', style: t.display(size: 17, color: t.milk)),
+                                            const SizedBox(height: 2),
+                                            Text('Likes', style: t.caption(size: 11)),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      if (user.country != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          user.country!,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.grey.shade700,
-                            fontWeight: FontWeight.w500,
+                        const SizedBox(height: 12),
+                        if (user.country != null)
+                          Text(user.country!, style: t.body(size: 12, weight: FontWeight.w600, color: t.inkDim)),
+                        const SizedBox(height: 6),
+                        if (user.bio != null && user.bio!.isNotEmpty)
+                          Text(user.bio!, style: t.body(size: 13, weight: FontWeight.w500, color: t.inkDim)),
+                        const SizedBox(height: 12),
+                        if (user.affiliations.isNotEmpty)
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: user.affiliations.map((affiliation) {
+                              IconData icon;
+                              if (affiliation.type == 'university') {
+                                icon = Icons.school;
+                              } else if (affiliation.type == 'city') {
+                                icon = Icons.location_city;
+                              } else {
+                                icon = Icons.star;
+                              }
+                              return TribeChip(icon: icon, label: affiliation.name);
+                            }).toList(),
                           ),
+                        const SizedBox(height: 14),
+                        ClayButtonSecondary(
+                          label: 'Edit profile',
+                          onTap: () => GoRouter.of(context).push('/edit-profile'),
                         ),
+                        const SizedBox(height: 16),
                       ],
-                      const SizedBox(height: 8),
-                      // Bio
-                      if (user.bio != null && user.bio!.isNotEmpty)
-                        Text(
-                          user.bio!,
-                          style: Theme.of(context).textTheme.bodyMedium,
-                          textAlign: TextAlign.center,
-                        ),
-                      const SizedBox(height: 24),
-                      
-                      // Stats Row
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          _StatItem(label: 'Posts', value: '$rantCount'),
-                          _StatItem(label: 'Replies', value: '$replyCount'),
-                          _StatItem(label: 'Likes', value: '$totalKarma'),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      
-                      // Affiliations
-                      if (user.affiliations.isNotEmpty) ...[
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            'Affiliations',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: user.affiliations.map((affiliation) {
-                            IconData icon;
-                            if (affiliation.type == 'university') {
-                              icon = Icons.school;
-                            } else if (affiliation.type == 'city') {
-                              icon = Icons.location_city;
-                            } else {
-                              icon = Icons.star;
-                            }
-                            
-                            return Chip(
-                              avatar: Icon(icon, size: 18),
-                              label: Text(affiliation.name),
-                            );
-                          }).toList(),
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-                      
-                      // Edit Profile Button
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: () => GoRouter.of(context).push('/edit-profile'),
-                          icon: const Icon(Icons.edit),
-                          label: const Text('Edit Profile'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // Blocked Accounts Button
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: () => GoRouter.of(context).push('/blocked-accounts'),
-                          icon: const Icon(Icons.block),
-                          label: const Text('Blocked Accounts'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // Sign Out Button
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: () async {
-                            await ref.read(authProvider.notifier).signOut();
-                            if (context.mounted) {
-                              GoRouter.of(context).go('/auth');
-                            }
-                          },
-                          icon: const Icon(Icons.logout),
-                          label: const Text('Sign Out'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.red,
-                            side: const BorderSide(color: Colors.red),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      // Delete Account Button
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: _isDeleting ? null : _confirmDeleteAccount,
-                          icon: const Icon(Icons.delete_forever),
-                          label: const Text('Delete Account'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.red,
-                            side: const BorderSide(color: Colors.red),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: _PinnedTabBarDelegate(
-                  child: TabBar(
-                    labelColor: AppTheme.brandPrimary,
-                    unselectedLabelColor: Colors.grey,
-                    indicatorColor: AppTheme.brandPrimary,
-                    tabs: const [
-                      Tab(text: 'Posts'),
-                      Tab(text: 'Replies'),
-                      Tab(text: 'Likes'),
-                    ],
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _PinnedTabBarDelegate(
+                    child: TabBar(
+                      indicatorSize: TabBarIndicatorSize.label,
+                      dividerColor: Colors.transparent,
+                      indicator: BoxDecoration(
+                        border: Border(bottom: BorderSide(color: t.gold, width: 2)),
+                      ),
+                      tabs: [
+                        Tab(icon: Icon(Icons.grid_view_rounded, color: t.inkFaint)),
+                        Tab(icon: Icon(Icons.chat_bubble_outline, color: t.inkFaint)),
+                        Tab(icon: Icon(Icons.thumb_up_outlined, color: t.inkFaint)),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ];
-          },
-          body: TabBarView(
-            children: [
-              userRants.isEmpty
-                  ? const Center(child: Text('No posts yet.'))
-                  : ListView.builder(
-                      itemCount: userRants.length,
-                      itemBuilder: (context, index) => RantCard(rant: userRants[index]),
-                    ),
-              userReplies.isEmpty
-                  ? const Center(child: Text('No replies yet.'))
-                  : ListView.builder(
-                      itemCount: userReplies.length,
-                      itemBuilder: (context, index) {
-                        final reply = userReplies[index];
-                        return ProfileReplyCard(reply: reply);
-                      },
-                    ),
-              ref.watch(userLikesProvider(userId)).when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => const Center(child: Text('Failed to load likes')),
-                data: (likedRants) {
-                  if (likedRants.isEmpty) return const Center(child: Text('No likes yet.'));
-                  return ListView.builder(
-                    itemCount: likedRants.length,
-                    itemBuilder: (context, index) => RantCard(rant: likedRants[index]),
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _confirmDeleteAccount() {
-    final rootContext = context; // Capture parent context
-    showDialog(
-      context: rootContext,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete Account?'),
-        content: const Text(
-          'This will permanently delete your account, your posts, and your replies. This cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.of(dialogContext).pop(); // Close dialog using dialogContext
-              setState(() => _isDeleting = true);
-              
-              try {
-                await AuthService().deleteAccount();
-                
-                // Navigate FIRST using rootContext before resetting state
-                if (rootContext.mounted) {
-                  GoRouter.of(rootContext).go('/auth');
-                }
-                
-                // Try to sign out, but don't block or crash if it fails
-                try {
-                  await ref.read(authProvider.notifier).signOut();
-                } catch (_) {}
-              } catch (e) {
-                if (rootContext.mounted) {
-                  ScaffoldMessenger.of(rootContext).showSnackBar(
-                    SnackBar(content: Text('Failed to delete account: $e. Please sign in again and retry.')),
-                  );
-                }
-              } finally {
-                // Only setState if the screen is still mounted
-                if (mounted) {
-                  setState(() => _isDeleting = false);
-                }
-              }
+              ];
             },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete Forever'),
+            body: TabBarView(
+              children: [
+                userRants.isEmpty
+                    ? const Center(child: Text('No posts yet.'))
+                    : GridView.builder(
+                        padding: const EdgeInsets.all(3),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 3,
+                          mainAxisSpacing: 3,
+                        ),
+                        itemCount: userRants.length,
+                        itemBuilder: (context, index) {
+                          final rant = userRants[index];
+                          return Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(colors: [t.bg3, t.bg1]),
+                              border: Border.all(color: t.line),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            padding: const EdgeInsets.all(11),
+                            child: Stack(
+                              children: [
+                                if (rant.imageUrl != null)
+                                  Positioned(
+                                    top: 0,
+                                    right: 0,
+                                    child: Icon(Icons.image_outlined, size: 13, color: t.grey500),
+                                  ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        rant.content,
+                                        maxLines: 4,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: t.body(size: 11.5, weight: FontWeight.w600, color: t.inkDim),
+                                      ),
+                                    ),
+                                    Row(
+                                      children: [
+                                        Icon(Icons.thumb_up, size: 11, color: t.inkFaint),
+                                        const SizedBox(width: 5),
+                                        Text('${rant.karma}', style: t.body(size: 10.5, weight: FontWeight.w700, color: t.inkFaint)),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                userReplies.isEmpty
+                    ? const Center(child: Text('No replies yet.'))
+                    : ListView.builder(
+                        itemCount: userReplies.length,
+                        itemBuilder: (context, index) {
+                          final reply = userReplies[index];
+                          return ProfileReplyCard(reply: reply);
+                        },
+                      ),
+                ref.watch(userLikesProvider(userId)).when(
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (e, _) => const Center(child: Text('Failed to load likes')),
+                  data: (likedRants) {
+                    if (likedRants.isEmpty) return const Center(child: Text('No likes yet.'));
+                    return GridView.builder(
+                      padding: const EdgeInsets.all(3),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        crossAxisSpacing: 3,
+                        mainAxisSpacing: 3,
+                      ),
+                      itemCount: likedRants.length,
+                      itemBuilder: (context, index) {
+                        final rant = likedRants[index];
+                        return Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(colors: [t.bg3, t.bg1]),
+                            border: Border.all(color: t.line),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          padding: const EdgeInsets.all(11),
+                          child: Stack(
+                            children: [
+                              if (rant.imageUrl != null)
+                                Positioned(
+                                  top: 0,
+                                  right: 0,
+                                  child: Icon(Icons.image_outlined, size: 13, color: t.grey500),
+                                ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      rant.content,
+                                      maxLines: 4,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: t.body(size: 11.5, weight: FontWeight.w600, color: t.inkDim),
+                                    ),
+                                  ),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.thumb_up, size: 11, color: t.like),
+                                      const SizedBox(width: 5),
+                                      Text('${rant.karma}', style: t.body(size: 10.5, weight: FontWeight.w700, color: t.like)),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
-    );
-  }
-}
-
-class _StatItem extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _StatItem({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: Theme.of(context).textTheme.headlineSmall,
-        ),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-      ],
     );
   }
 }
@@ -344,22 +303,22 @@ class _PinnedTabBarDelegate extends SliverPersistentHeaderDelegate {
   const _PinnedTabBarDelegate({required this.child});
 
   @override
-  double get minExtent => child.preferredSize.height + 1;
+  double get minExtent => child.preferredSize.height;
 
   @override
-  double get maxExtent => child.preferredSize.height + 1;
+  double get maxExtent => child.preferredSize.height;
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final t = TribeThemeScope.of(context);
     return Container(
-      color: Theme.of(context).scaffoldBackgroundColor,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [child, const Divider(height: 1)],
-      ),
+      color: t.bg1,
+      child: child,
     );
   }
 
   @override
   bool shouldRebuild(covariant _PinnedTabBarDelegate oldDelegate) => false;
 }
+
+

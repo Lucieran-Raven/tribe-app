@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import '../providers/user_profile_provider.dart';
 import '../services/rant_service.dart';
+import '../design/tribe_design.dart';
 
 class BlockedAccountsScreen extends ConsumerWidget {
   const BlockedAccountsScreen({super.key});
@@ -10,37 +11,49 @@ class BlockedAccountsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authProvider);
+    final t = const TribeTheme(true);
+
     if (authState is! AuthAuthenticated) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return TribeThemeScope(
+        theme: t,
+        child: Scaffold(
+          backgroundColor: t.bg1,
+          body: const Center(child: CircularProgressIndicator()),
+        ),
+      );
     }
     final blockedUserIds = authState.user.blockedUsers;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Blocked Accounts')),
-      body: blockedUserIds.isEmpty
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.block, size: 64, color: Colors.grey.shade400),
-                    const SizedBox(height: 16),
-                    Text('No blocked accounts', style: Theme.of(context).textTheme.headlineSmall),
-                    const SizedBox(height: 8),
-                    Text("You haven't blocked anyone yet.", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade600)),
-                  ],
-                ),
+    return TribeThemeScope(
+      theme: t,
+      child: Scaffold(
+        backgroundColor: t.bg1,
+        body: SafeArea(
+          child: Column(
+            children: [
+              GlassAppBar(
+                leading: IconBtn(icon: Icons.arrow_back, onTap: () => Navigator.of(context).pop()),
+                title: Text('Blocked', style: t.display(size: 18, color: t.milk)),
               ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: blockedUserIds.length,
-              itemBuilder: (context, index) {
-                final blockedUserId = blockedUserIds[index];
-                return _BlockedUserRow(blockedUserId: blockedUserId);
-              },
-            ),
+              Expanded(
+                child: blockedUserIds.isEmpty
+            ? const EmptyState(
+                icon: Icons.block,
+                headline: 'No blocked accounts',
+              )
+            : ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: blockedUserIds.length,
+                itemBuilder: (context, index) {
+                  final blockedUserId = blockedUserIds[index];
+                  return _BlockedUserRow(blockedUserId: blockedUserId);
+                },
+              ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -52,34 +65,40 @@ class _BlockedUserRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(userProfileProvider(blockedUserId));
+    final t = TribeThemeScope.of(context);
+
     return userAsync.when(
       loading: () => const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator())),
       error: (e, _) => ListTile(title: Text('User unavailable')),
       data: (user) {
-        return ListTile(
-          leading: CircleAvatar(
-            backgroundImage: user.avatarUrl != null ? NetworkImage(user.avatarUrl!) : null,
-            child: user.avatarUrl == null ? const Icon(Icons.person) : null,
-          ),
-          title: Text('@${user.handle ?? 'anonymous'}'),
-          subtitle: Text(user.displayName),
-          trailing: TextButton(
-            onPressed: () async {
-              final auth = ref.read(authProvider);
-              if (auth is! AuthAuthenticated) return;
-              try {
-                final freshUser = await RantService().unblockUser(auth.user.userId, blockedUserId);
-                ref.read(authProvider.notifier).updateUser(freshUser);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('User unblocked')));
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
-                }
-              }
-            },
-            child: const Text('Unblock'),
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+          child: Row(
+            children: [
+              Avatar(handle: user.handle ?? 'user', imageUrl: user.avatarUrl, size: 34),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text('@${user.handle ?? 'anonymous'}', style: t.body(size: 13.5, weight: FontWeight.w800, color: t.ink)),
+              ),
+              TribeChip(
+                label: 'Unblock',
+                onTap: () async {
+                  final auth = ref.read(authProvider);
+                  if (auth is! AuthAuthenticated) return;
+                  try {
+                    final freshUser = await RantService().unblockUser(auth.user.userId, blockedUserId);
+                    ref.read(authProvider.notifier).updateUser(freshUser);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('User unblocked')));
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+                    }
+                  }
+                },
+              ),
+            ],
           ),
         );
       },

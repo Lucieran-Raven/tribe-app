@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/rant_model.dart';
 import '../../models/reply_model.dart';
@@ -7,6 +8,8 @@ import '../../providers/replies_provider.dart';
 import '../../services/rant_service.dart';
 import '../../utils/time_utils.dart';
 import '../../widgets/feed/reply_card.dart';
+import '../../widgets/feed/full_image_viewer.dart';
+import '../../design/tribe_design.dart';
 
 class RantDetailScreen extends ConsumerStatefulWidget {
   final String rantId;
@@ -19,17 +22,8 @@ class RantDetailScreen extends ConsumerStatefulWidget {
 
 class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
   final TextEditingController _replyController = TextEditingController();
-  String _replyText = '';
   bool _isSending = false;
   bool _isPostAvailable = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _replyController.addListener(() {
-      setState(() => _replyText = _replyController.text);
-    });
-  }
 
   @override
   void dispose() {
@@ -38,7 +32,7 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
   }
 
   Future<void> _sendReply() async {
-    final content = _replyText.trim();
+    final content = _replyController.text.trim();
     if (content.isEmpty) return;
 
     final authState = ref.read(authProvider);
@@ -62,7 +56,6 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
 
       if (mounted) {
         _replyController.clear();
-        setState(() => _replyText = '');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Reply sent')),
         );
@@ -84,209 +77,200 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final blocked = authState is AuthAuthenticated ? authState.user.blockedUsers : const <String>[];
+    final t = const TribeTheme(true);
 
     if (!_isPostAvailable) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Post')),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.error_outline, size: 64, color: Colors.grey.shade400),
-                const SizedBox(height: 16),
-                Text('Post Unavailable', style: Theme.of(context).textTheme.headlineSmall),
-                const SizedBox(height: 8),
-                Text('This post has been deleted or is no longer available.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade600)),
-                const SizedBox(height: 24),
-                ElevatedButton.icon(
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.arrow_back),
-                  label: const Text('Go Back'),
-                ),
-              ],
+      return TribeThemeScope(
+        theme: t,
+        child: Scaffold(
+          backgroundColor: t.bg1,
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error_outline, size: 64, color: t.inkFaint),
+                  const SizedBox(height: 16),
+                  Text('Post Unavailable', style: t.display(size: 17, color: t.milk)),
+                  const SizedBox(height: 8),
+                  Text('This post has been deleted or is no longer available.', textAlign: TextAlign.center, style: t.body(size: 13, weight: FontWeight.w500, color: t.inkDim)),
+                  const SizedBox(height: 24),
+                  ClayButtonSecondary(label: 'Go Back', onTap: () => Navigator.of(context).pop()),
+                ],
+              ),
             ),
           ),
         ),
       );
     }
 
-    // If available, return the normal Scaffold with the FutureBuilder, Divider, Replies, and BottomNavBar
-    return Scaffold(
-      appBar: AppBar(title: const Text('Post')),
-      body: Column(
-        children: [
-          // Original rant at top
-          FutureBuilder<RantModel>(
-            future: RantService().getRant(widget.rantId),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()));
-              }
-              if (snapshot.hasError || (snapshot.connectionState == ConnectionState.done && !snapshot.hasData)) {
-                // Use a post-frame callback to avoid calling setState during build
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted && _isPostAvailable) {
-                    setState(() => _isPostAvailable = false);
-                  }
-                });
-                return const Center(child: CircularProgressIndicator()); // Fallback while state updates
-              }
-              final rant = snapshot.data!;
-              return Card(
-                margin: const EdgeInsets.all(16),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 20,
-                            backgroundImage: rant.avatarUrl != null
-                                ? NetworkImage(rant.avatarUrl!)
-                                : null,
-                            child: rant.avatarUrl == null
-                                ? const Icon(Icons.person, size: 20)
-                                : null,
+    return TribeThemeScope(
+      theme: t,
+      child: Scaffold(
+        backgroundColor: t.bg1,
+        body: SafeArea(
+          child: Column(
+            children: [
+              GlassAppBar(
+                leading: IconBtn(icon: Icons.arrow_back, onTap: () => Navigator.of(context).pop()),
+                title: Text('Post', style: t.display(size: 18, color: t.milk)),
+              ),
+              Expanded(
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    FutureBuilder<RantModel>(
+                      future: RantService().getRant(widget.rantId),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()));
+                        }
+                        if (snapshot.hasError || (snapshot.connectionState == ConnectionState.done && !snapshot.hasData)) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (mounted && _isPostAvailable) {
+                              setState(() => _isPostAvailable = false);
+                            }
+                          });
+                          return const Center(child: CircularProgressIndicator());
+                        }
+                        final rant = snapshot.data!;
+                        return Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          padding: const EdgeInsets.all(13),
+                          decoration: BoxDecoration(
+                            color: t.bg2,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: t.line),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '@${rant.handle}',
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.w600,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Avatar(handle: rant.handle, imageUrl: rant.avatarUrl, size: 38),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('@${rant.handle}', style: t.body(size: 13.5, weight: FontWeight.w800, color: t.ink)),
+                                        Text(TimeUtils.formatRelativeTime(rant.timestamp), style: t.caption(size: 11)),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                                Text(
-                                  TimeUtils.formatRelativeTime(rant.timestamp),
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Colors.grey,
-                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Text(rant.content, style: t.body(size: 16.5, weight: FontWeight.w500, color: t.ink)),
+                              if (rant.imageUrl != null) ...[
+                                const SizedBox(height: 12),
+                                GestureDetector(
+                                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) =>
+                                      FullImageViewer(imageUrl: rant.imageUrl!))),
+                                  child: ClampedCoverImage(image: NetworkImage(rant.imageUrl!), maxHeight: 220),
                                 ),
                               ],
-                            ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  ActionPill(icon: Icons.chat_bubble_outline, label: '${rant.replyCount}', onTap: null),
+                                  const SizedBox(width: 16),
+                                  ActionPill(icon: Icons.thumb_up_outlined, label: '${rant.karma}', onTap: null),
+                                ],
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        rant.content,
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
-                      if (rant.imageUrl != null) ...[
-                        const SizedBox(height: 12),
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxHeight: 300),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.network(
-                              rant.imageUrl!,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                              loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return AspectRatio(
-                                  aspectRatio: 16/9,
-                                  child: Container(color: Colors.grey.shade200, child: const Center(child: CircularProgressIndicator(strokeWidth: 2))),
-                                );
-                              },
-                              errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
-                            ),
+                        );
+                      },
+                    ),
+                    ref.watch(repliesProvider(widget.rantId)).when(
+                      loading: () => const Center(child: CircularProgressIndicator()),
+                      error: (error, stack) => Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text('Failed to load replies'),
+                              const SizedBox(height: 16),
+                              TextButton(
+                                onPressed: () => ref.invalidate(repliesProvider(widget.rantId)),
+                                child: const Text('Retry'),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.chat_bubble_outline),
-                            onPressed: null,
-                          ),
-                          Text('${rant.replyCount}'),
-                          const SizedBox(width: 24),
-                          IconButton(
-                            icon: const Icon(Icons.arrow_upward_outlined),
-                            onPressed: null,
-                          ),
-                          Text('${rant.karma}'),
-                        ],
                       ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-          const Divider(),
-          // Replies list
-          Expanded(
-            child: ref.watch(repliesProvider(widget.rantId)).when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text('Failed to load replies'),
-                    const SizedBox(height: 16),
-                    TextButton(
-                      onPressed: () => ref.invalidate(repliesProvider(widget.rantId)),
-                      child: const Text('Retry'),
+                      data: (replies) {
+                        final visibleReplies = replies.where((r) => !blocked.contains(r.userId)).toList();
+                        return Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 12, 20, 6),
+                              child: Text('${visibleReplies.length} ${visibleReplies.length == 1 ? "reply" : "replies"}', style: t.caption(size: 12)),
+                            ),
+                            if (visibleReplies.isEmpty)
+                              Padding(
+                                padding: const EdgeInsets.all(34),
+                                child: Center(child: Text('Be the first to reply.', style: t.body(size: 13, weight: FontWeight.w600, color: t.inkFaint))),
+                              )
+                            else
+                              ...visibleReplies.map((r) => ReplyCard(reply: r)),
+                            const SizedBox(height: 8),
+                          ],
+                        );
+                      },
                     ),
                   ],
                 ),
               ),
-              data: (replies) {
-                final visibleReplies = replies.where((r) => !blocked.contains(r.userId)).toList();
-                if (visibleReplies.isEmpty) {
-                  return const Center(
-                    child: Text('Be the first to reply'),
-                  );
-                }
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: visibleReplies.length,
-                  itemBuilder: (context, index) {
-                    return ReplyCard(reply: visibleReplies[index]);
-                  },
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _replyController,
-                  maxLength: 300,
-                  decoration: const InputDecoration(
-                    hintText: 'Write a reply...',
-                    border: OutlineInputBorder(),
-                  ),
+              Container(
+                decoration: BoxDecoration(
+                  color: t.glassBgStrong,
+                  border: Border(top: BorderSide(color: t.line)),
                 ),
-              ),
-              const SizedBox(width: 8),
-              ElevatedButton(
-                onPressed: _replyText.trim().isEmpty || _isSending
-                    ? null
-                    : _sendReply,
-                child: _isSending
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Send'),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ClayInput(
+                        controller: _replyController,
+                        hint: 'Write a reply…',
+                        maxLength: 300,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    ValueListenableBuilder(
+                      valueListenable: _replyController,
+                      builder: (context, text, child) {
+                        final isEmpty = text.toString().trim().isEmpty;
+                        return GestureDetector(
+                          onTap: isEmpty || _isSending ? null : _sendReply,
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: isEmpty ? t.bg2 : null,
+                              gradient: isEmpty ? null : LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [t.milk, t.milkDim],
+                              ),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: t.line),
+                              boxShadow: isEmpty ? null : t.clayMilkOut,
+                            ),
+                            alignment: Alignment.center,
+                            child: _isSending
+                                ? const CupertinoActivityIndicator(radius: 8)
+                                : Icon(Icons.send, size: 17, color: isEmpty ? t.inkFaint : t.bg0),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -295,3 +279,5 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
     );
   }
 }
+
+

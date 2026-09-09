@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/notification_model.dart';
 import '../../utils/time_utils.dart';
+import '../../design/tribe_design.dart';
 
 class NotificationCard extends ConsumerWidget {
   final NotificationModel notification;
@@ -28,53 +29,82 @@ class NotificationCard extends ConsumerWidget {
         break;
     }
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: ListTile(
-        leading: CircleAvatar(
-          key: ValueKey(notification.fromAvatarUrl),
-          radius: 20,
-          backgroundImage: notification.fromAvatarUrl != null
-              ? NetworkImage(notification.fromAvatarUrl!)
-              : null,
-          child: notification.fromAvatarUrl == null
-              ? const Icon(Icons.person, size: 20)
-              : null,
-        ),
-        title: Text(
-          '@${notification.fromHandle} $actionText',
-          style: TextStyle(
-            fontWeight: notification.isRead ? FontWeight.normal : FontWeight.bold,
-          ),
-        ),
-        subtitle: Text(
-          notification.targetSnippet,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
+    final t = TribeThemeScope.of(context);
+    final isLike = notification.type == NotificationType.karma || notification.type == NotificationType.replyKarma;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: t.line))),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Avatar(handle: notification.fromHandle, imageUrl: notification.fromAvatarUrl, size: 38),
+                Positioned(
+                  bottom: -4,
+                  right: -4,
+                  child: Container(
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: isLike ? t.likeTint : t.bg3,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: t.lineStrong),
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(
+                      isLike ? Icons.thumb_up : Icons.chat_bubble,
+                      size: 11,
+                      color: isLike ? t.like : t.inkDim,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  RichText(
+                    text: TextSpan(
+                      children: [
+                        TextSpan(text: '@${notification.fromHandle} ', style: t.body(size: 13.5, weight: FontWeight.w800, color: t.ink)),
+                        TextSpan(text: actionText, style: t.body(size: 13.5, weight: FontWeight.w600, color: t.inkDim)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    notification.targetSnippet,
+                    style: t.body(size: 12.5, weight: FontWeight.w600, color: t.inkFaint),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(TimeUtils.formatRelativeTime(notification.timestamp), style: t.caption(size: 11)),
+                ],
+              ),
+            ),
             if (!notification.isRead)
               Container(
                 width: 8,
                 height: 8,
-                decoration: const BoxDecoration(
-                  color: Colors.blue,
+                margin: const EdgeInsets.only(top: 4),
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
+                  color: t.gold,
                 ),
               ),
-            const SizedBox(width: 8),
-            Text(
-              TimeUtils.formatRelativeTime(notification.timestamp),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey,
-              ),
-            ),
           ],
         ),
-        onTap: onTap,
       ),
     );
   }
 }
+
+

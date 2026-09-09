@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
-import '../../config/theme.dart';
+import '../../design/tribe_design.dart';
 import '../../widgets/onboarding/onboarding_page_indicator.dart';
 import '../../providers/onboarding_provider.dart';
 
@@ -24,66 +23,78 @@ class _OnboardingWelcomeScreenState extends ConsumerState<OnboardingWelcomeScree
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
+    final t = const TribeTheme(true);
+    return TribeThemeScope(
+      theme: t,
+      child: Scaffold(
+        backgroundColor: t.bg1,
+        body: SafeArea(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 60),
-              // Large brand-colored icon as Lottie stand-in
-              Icon(
-                Icons.diversity_1_rounded,
-                size: 120,
-                color: AppTheme.brandPrimary,
-              ),
-              const SizedBox(height: 40),
-              // Headline
-              Text(
-                'Welcome to TRIBE',
-                style: GoogleFonts.poppins(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
+              // Header row with indicator
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 16, 18, 6),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Opacity(
+                      opacity: 0,
+                      child: IconBtn(icon: Icons.arrow_back, onTap: () => context.go('/onboarding/1')),
+                    ),
+                    const OnboardingPageIndicator(activeIndex: 0),
+                    const SizedBox(width: 20),
+                  ],
                 ),
-                textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 16),
-              // Body
-              Text(
-                'A place to say what you can\'t say on Instagram. Anonymous rants. Real replies. Your people.',
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  color: Colors.grey.shade600,
-                  height: 1.5,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const Spacer(),
-              // Page indicator
-              const OnboardingPageIndicator(activeIndex: 0),
-              const SizedBox(height: 40),
-              // Get Started button
-              ElevatedButton(
-                onPressed: () => context.go('/onboarding/2'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: AppTheme.brandPrimary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+              // Vertically centered cluster
+              Expanded(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 10, 24, 26),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Icon badge container
+                        Container(
+                          width: 76,
+                          height: 76,
+                          decoration: BoxDecoration(
+                            color: t.bg2,
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(color: t.line),
+                            boxShadow: t.clayOut,
+                          ),
+                          alignment: Alignment.center,
+                          child: Icon(Icons.groups_rounded, size: 30, color: t.gold),
+                        ),
+                        const SizedBox(height: 18),
+                        // Headline
+                        Text(
+                          'Say the\nquiet part.',
+                          textAlign: TextAlign.center,
+                          style: t.display(size: 22, color: t.milk).copyWith(height: 1.2),
+                        ),
+                        const SizedBox(height: 18),
+                        // Description
+                        SizedBox(
+                          width: 250,
+                          child: Text(
+                            'TRIBE is where your campus tells the truth. Post rants and confessions you\'d never say under your real name.',
+                            textAlign: TextAlign.center,
+                            style: t.body(size: 13.5, weight: FontWeight.w500, color: t.inkDim).copyWith(height: 1.6),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        // Get Started button
+                        ClayButtonPrimary(
+                          label: 'Get started',
+                          onTap: () => context.go('/onboarding/2'),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                child: Text(
-                  'Get Started',
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
               ),
-              const SizedBox(height: 24),
             ],
           ),
         ),

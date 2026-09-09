@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/user_model.dart';
+import '../../design/tribe_design.dart';
 
 class UserSearchCard extends StatelessWidget {
   final UserModel user;
@@ -13,19 +14,30 @@ class UserSearchCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: CircleAvatar(
-        radius: 20,
-        backgroundImage: user.avatarUrl != null
-            ? NetworkImage(user.avatarUrl!)
-            : null,
-        child: user.avatarUrl == null
-            ? const Icon(Icons.person, size: 20)
-            : null,
-      ),
-      title: Text(user.displayName),
-      subtitle: Text('@${user.handle ?? 'anonymous'}'),
+    final t = TribeThemeScope.of(context);
+    return GestureDetector(
       onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+        child: Row(
+          children: [
+            Avatar(handle: user.handle ?? 'anonymous', imageUrl: user.avatarUrl, size: 38),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(user.displayName, style: t.body(size: 14, weight: FontWeight.w700, color: t.ink)),
+                  Text('@${user.handle ?? 'anonymous'}', style: t.body(size: 12.5, weight: FontWeight.w600, color: t.inkDim)),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, size: 16, color: t.inkFaint),
+          ],
+        ),
+      ),
     );
   }
 }
+
+
