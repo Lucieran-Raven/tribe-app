@@ -198,15 +198,19 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   Future<void> _save() async {
     final authState = ref.read(authProvider);
     final user = authState is AuthAuthenticated ? authState.user : null;
-    
+
     setState(() => _isSavingAvatar = true);
-    
+
     try {
       if (_pickedAvatar != null && user != null) {
         final newAvatarUrl = await StorageService().uploadAvatar(_pickedAvatar!, user.userId);
-        await FirebaseFirestore.instance.collection('users').doc(user.userId).update({'avatarUrl': newAvatarUrl});
-        
-        // Batch update avatar URL in all user's rants
+
+        // 1. Update user document
+        await FirebaseFirestore.instance.collection('users').doc(user.userId).update({
+          'avatarUrl': newAvatarUrl,
+        });
+
+        // 2. Batch update ALL user's rants
         final rantsSnapshot = await FirebaseFirestore.instance
             .collection('rants')
             .where('userId', isEqualTo: user.userId)
@@ -215,21 +219,43 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         for (final doc in rantsSnapshot.docs) {
           batch.update(doc.reference, {'avatarUrl': newAvatarUrl});
         }
+
+        // 3. Batch update ALL user's replies (across all rants)
+        final repliesSnapshot = await FirebaseFirestore.instance
+            .collectionGroup('replies')
+            .where('userId', isEqualTo: user.userId)
+            .get();
+        for (final doc in repliesSnapshot.docs) {
+          batch.update(doc.reference, {'avatarUrl': newAvatarUrl});
+        }
+
+        // 4. Batch update notifications where this user is the sender
+        final notificationsSnapshot = await FirebaseFirestore.instance
+            .collectionGroup('notifications')
+            .where('fromUserId', isEqualTo: user.userId)
+            .get();
+        for (final doc in notificationsSnapshot.docs) {
+          batch.update(doc.reference, {'fromAvatarUrl': newAvatarUrl});
+        }
+
         await batch.commit();
-        
+
+        // 5. Clear image cache so new image loads immediately
         PaintingBinding.instance.imageCache.clear();
+
+        // 6. Refresh auth state
         final freshUserDoc = await FirebaseFirestore.instance.collection('users').doc(user.userId).get();
-        final freshUser = UserModel.fromJson(freshUserDoc.data() as Map<String, dynamic>);
+        final freshUser = UserModel.fromJson(freshUserDoc.data()!);
         ref.read(authProvider.notifier).updateUser(freshUser);
       }
-      
+
       await ref.read(onboardingProvider.notifier).updateProfile(
             ref,
             _bioController.text.trim().isEmpty ? null : _bioController.text.trim(),
             _selectedAffiliations,
             displayName: _displayNameController.text.trim().isEmpty ? null : _displayNameController.text.trim(),
           );
-      
+
       final currentState = ref.read(onboardingProvider);
       if (currentState.errorMsg == null && mounted) {
         Toast.success(context, 'Profile updated');
@@ -289,7 +315,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         child: Stack(
                           clipBehavior: Clip.none,
                           children: [
-                            Avatar(handle: user?.handle ?? 'user', imageUrl: user?.avatarUrl, size: 86),
+                            Avatar(
+                              handle: user?.handle ?? 'user',
+                              imageUrl: _pickedAvatar != null ? null : user?.avatarUrl,
+                              localFile: _pickedAvatar,
+                              size: 86,
+                            ),
                             Positioned(
                               bottom: -8,
                               right: -8,
