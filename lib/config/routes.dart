@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../screens/auth_screen.dart';
-import '../screens/home_screen.dart';
 import '../screens/splash_screen.dart';
 import '../screens/onboarding/onboarding_welcome_screen.dart';
 import '../screens/onboarding/onboarding_avatar_screen.dart';
@@ -18,6 +17,13 @@ import '../screens/legal/terms_screen.dart';
 import '../screens/legal/privacy_screen.dart';
 import '../screens/blocked_accounts_screen.dart';
 import '../main.dart';
+
+Widget _buildPageTransition(Widget child, Animation<double> animation) {
+  return FadeTransition(
+    opacity: CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+    child: child,
+  );
+}
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -38,65 +44,157 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: '/splash',
-        builder: (context, state) => const SplashScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const SplashScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return _buildPageTransition(child, animation);
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
       ),
       GoRoute(
         path: '/auth',
-        builder: (context, state) => const AuthScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const AuthScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return _buildPageTransition(child, animation);
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
       ),
       GoRoute(
         path: '/onboarding/1',
-        builder: (context, state) => const OnboardingWelcomeScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const OnboardingWelcomeScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return _buildPageTransition(child, animation);
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
       ),
       GoRoute(
         path: '/onboarding/2',
-        builder: (context, state) => const OnboardingAvatarScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const OnboardingAvatarScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return _buildPageTransition(child, animation);
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
       ),
       GoRoute(
         path: '/onboarding/3',
-        builder: (context, state) => const OnboardingHandleScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const OnboardingHandleScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return _buildPageTransition(child, animation);
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
       ),
       GoRoute(
         path: '/onboarding/4',
-        builder: (context, state) => const OnboardingCountryScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const OnboardingCountryScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return _buildPageTransition(child, animation);
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
       ),
       GoRoute(
         path: '/onboarding/5',
-        builder: (context, state) => const OnboardingAffiliationsScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const OnboardingAffiliationsScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return _buildPageTransition(child, animation);
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
       ),
       GoRoute(
         path: '/home',
-        builder: (context, state) => const MainScaffold(),
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const MainScaffold(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return _buildPageTransition(child, animation);
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
       ),
       GoRoute(
         path: '/rant/:id',
-        builder: (context, state) {
-          final rantId = state.pathParameters['id']!;
-          return RantDetailScreen(rantId: rantId);
-        },
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: RantDetailScreen(rantId: state.pathParameters['id']!),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return _buildPageTransition(child, animation);
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
       ),
       GoRoute(
         path: '/user/:id',
-        builder: (context, state) {
-          final userId = state.pathParameters['id']!;
-          return UserProfileScreen(userId: userId);
-        },
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: UserProfileScreen(userId: state.pathParameters['id']!),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return _buildPageTransition(child, animation);
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
       ),
       GoRoute(
         path: '/edit-profile',
-        builder: (context, state) => const EditProfileScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const EditProfileScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return _buildPageTransition(child, animation);
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
       ),
       GoRoute(
         path: '/blocked-accounts',
-        builder: (context, state) => const BlockedAccountsScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const BlockedAccountsScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return _buildPageTransition(child, animation);
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
       ),
       GoRoute(
         path: '/terms',
-        builder: (context, state) => const TermsScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const TermsScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return _buildPageTransition(child, animation);
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
       ),
       GoRoute(
         path: '/privacy',
-        builder: (context, state) => const PrivacyScreen(),
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const PrivacyScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return _buildPageTransition(child, animation);
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
       ),
     ],
   );

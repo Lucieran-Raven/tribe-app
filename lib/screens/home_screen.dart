@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/feed_provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/feed/rant_card.dart';
+import '../widgets/common/skeletons.dart';
 import '../design/tribe_design.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -29,7 +30,7 @@ class HomeScreen extends ConsumerWidget {
             ),
             Expanded(
               child: feedAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const FeedSkeleton(),
                 error: (error, stack) => Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -60,6 +61,8 @@ class HomeScreen extends ConsumerWidget {
                     child: ListView.builder(
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       itemCount: visibleRants.length,
+                      addAutomaticKeepAlives: true,
+                      addRepaintBoundaries: true,
                       itemBuilder: (context, index) {
                         return RantCard(rant: visibleRants[index]);
                       },

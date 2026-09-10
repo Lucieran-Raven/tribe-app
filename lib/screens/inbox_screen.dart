@@ -5,6 +5,7 @@ import '../providers/notification_provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/notification_service.dart';
 import '../widgets/inbox/notification_card.dart';
+import '../widgets/common/skeletons.dart';
 import '../design/tribe_design.dart';
 
 class InboxScreen extends ConsumerWidget {
@@ -32,7 +33,26 @@ class InboxScreen extends ConsumerWidget {
         backgroundColor: t.bg1,
         appBar: GlassAppBar(title: Text('Inbox', style: t.display(size: 18, color: t.milk))),
         body: notificationsAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => ListView.builder(
+            itemCount: 4,
+            itemBuilder: (_, i) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    const ShimmerBox(width: 40, height: 40, radius: 20),
+                    const SizedBox(width: 12),
+                    const ShimmerBox(width: 150, height: 12),
+                  ]),
+                  const SizedBox(height: 8),
+                  const ShimmerBox(width: double.infinity, height: 14),
+                  const SizedBox(height: 4),
+                  const ShimmerBox(width: 200, height: 14),
+                ],
+              ),
+            ),
+          ),
           error: (error, stack) => Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,

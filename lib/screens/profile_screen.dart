@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../providers/auth_provider.dart';
 import '../providers/user_profile_provider.dart';
 import '../widgets/profile/profile_reply_card.dart';
+import '../widgets/common/skeletons.dart';
 import '../design/tribe_design.dart';
 import 'settings_screen.dart';
 
@@ -26,7 +27,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         theme: t,
         child: Scaffold(
           backgroundColor: t.bg1,
-          body: const Center(child: CircularProgressIndicator()),
+          body: const ProfileSkeleton(),
         ),
       );
     }
