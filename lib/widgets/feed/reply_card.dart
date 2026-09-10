@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/reply_model.dart';
 import '../../utils/time_utils.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/vote_provider.dart';
 import '../../services/rant_service.dart';
 import '../../services/report_service.dart';
 import '../../design/tribe_design.dart';
@@ -19,12 +18,13 @@ class ReplyCard extends ConsumerStatefulWidget {
 }
 
 class _ReplyCardState extends ConsumerState<ReplyCard> {
-  bool _isVoting = false;
+  bool _localLiked = false;
+  int _localKarma = 0;
 
   @override
   Widget build(BuildContext context) {
-    final hasVotedAsync = ref.watch(replyVoteProvider((widget.reply.rantId, widget.reply.replyId)));
-    final hasVoted = hasVotedAsync.value ?? false;
+    final hasVoted = _localLiked;
+    final displayKarma = _localKarma > 0 ? _localKarma : widget.reply.karma;
     final authState = ref.watch(authProvider);
     final isOwnReply = authState is AuthAuthenticated && authState.user.userId == widget.reply.userId;
     final t = TribeThemeScope.of(context);
@@ -132,11 +132,9 @@ class _ReplyCardState extends ConsumerState<ReplyCard> {
               children: [
                 ActionPill(
                   icon: Icons.thumb_up_outlined,
-                  label: '${widget.reply.karma}',
+                  label: '$displayKarma',
                   liked: hasVoted,
-                  onTap: _isVoting
-                      ? null
-                      : () async {
+                  onTap: () async {
                           if (isOwnReply) {
                             Toast.warning(context, "You can't like your own reply");
                             return;
@@ -146,18 +144,26 @@ class _ReplyCardState extends ConsumerState<ReplyCard> {
                             Toast.info(context, 'Sign in to like');
                             return;
                           }
-                          setState(() => _isVoting = true);
-                          try {
-                            await RantService().toggleReplyVote(widget.reply.rantId, widget.reply.replyId, authState.user.userId);
-                          } catch (e) {
-                            if (context.mounted) {
+
+                          final originalLiked = _localLiked;
+                          final originalKarma = _localKarma > 0 ? _localKarma : widget.reply.karma;
+
+                          setState(() {
+                            _localLiked = !_localLiked;
+                            _localKarma = _localLiked ? originalKarma + 1 : originalKarma - 1;
+                          });
+
+                          RantService().toggleReplyVote(widget.reply.rantId, widget.reply.replyId, authState.user.userId).catchError((e) {
+                            if (mounted) {
+                              setState(() {
+                                _localLiked = originalLiked;
+                                _localKarma = originalKarma;
+                              });
+                            }
+                            if (mounted) {
                               Toast.error(context, 'Failed to like: $e');
                             }
-                          } finally {
-                            if (mounted) {
-                              setState(() => _isVoting = false);
-                            }
-                          }
+                          });
                         },
                 ),
               ],

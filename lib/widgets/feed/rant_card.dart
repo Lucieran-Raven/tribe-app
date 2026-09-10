@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../models/rant_model.dart';
 import '../../utils/time_utils.dart';
-import '../../providers/vote_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/rant_service.dart';
 import '../../services/report_service.dart';
@@ -22,12 +21,13 @@ class RantCard extends ConsumerStatefulWidget {
 }
 
 class _RantCardState extends ConsumerState<RantCard> {
-  bool _isVoting = false;
+  bool _localLiked = false;
+  int _localKarma = 0;
 
   @override
   Widget build(BuildContext context) {
-    final voteAsync = ref.watch(userVoteProvider(widget.rant.rantId));
-    final hasVoted = voteAsync.value ?? false;
+    final hasVoted = _localLiked;
+    final displayKarma = _localKarma > 0 ? _localKarma : widget.rant.karma;
     final authState = ref.watch(authProvider);
     final isOwnPost = authState is AuthAuthenticated && authState.user.userId == widget.rant.userId;
     final t = TribeThemeScope.of(context);
@@ -173,11 +173,9 @@ class _RantCardState extends ConsumerState<RantCard> {
               const SizedBox(width: 12),
               ActionPill(
                 icon: Icons.thumb_up_outlined,
-                label: '${widget.rant.karma}',
+                label: '$displayKarma',
                 liked: hasVoted,
-                onTap: _isVoting
-                    ? null
-                    : () async {
+                onTap: () async {
                         if (isOwnPost) {
                           Toast.warning(context, "You can't like your own post");
                           return;
@@ -187,18 +185,26 @@ class _RantCardState extends ConsumerState<RantCard> {
                           Toast.info(context, 'Please sign in to like');
                           return;
                         }
-                        setState(() => _isVoting = true);
-                        try {
-                          await RantService().toggleVote(widget.rant.rantId, authState.user.userId);
-                        } catch (e) {
-                          if (context.mounted) {
+
+                        final originalLiked = _localLiked;
+                        final originalKarma = _localKarma > 0 ? _localKarma : widget.rant.karma;
+
+                        setState(() {
+                          _localLiked = !_localLiked;
+                          _localKarma = _localLiked ? originalKarma + 1 : originalKarma - 1;
+                        });
+
+                        RantService().toggleVote(widget.rant.rantId, authState.user.userId).catchError((e) {
+                          if (mounted) {
+                            setState(() {
+                              _localLiked = originalLiked;
+                              _localKarma = originalKarma;
+                            });
+                          }
+                          if (mounted) {
                             Toast.error(context, 'Failed to like: $e');
                           }
-                        } finally {
-                          if (mounted) {
-                            setState(() => _isVoting = false);
-                          }
-                        }
+                        });
                       },
               ),
             ],

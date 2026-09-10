@@ -9,6 +9,7 @@
 // ============================================================================
 
 import 'dart:ui';
+import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -175,17 +176,23 @@ BorderRadius blobRadius(double w, double h) => BorderRadius.only(
 class Avatar extends StatelessWidget {
   final String handle;
   final String? imageUrl;
+  final File? localFile;
   final double size;
-  const Avatar({super.key, required this.handle, this.imageUrl, this.size = 38});
+  const Avatar({super.key, required this.handle, this.imageUrl, this.localFile, this.size = 38});
 
   @override
   Widget build(BuildContext context) {
     final t = TribeThemeScope.of(context);
     final ring = colorForHandle(handle);
     final letter = handle.isNotEmpty ? handle[0].toUpperCase() : '?';
-    
+
     Widget child;
-    if (imageUrl != null && imageUrl!.isNotEmpty) {
+    if (localFile != null) {
+      child = CircleAvatar(
+        radius: size / 2,
+        backgroundImage: FileImage(localFile!),
+      );
+    } else if (imageUrl != null && imageUrl!.isNotEmpty) {
       child = CachedNetworkImage(
         imageUrl: imageUrl!,
         imageBuilder: (context, imageProvider) => CircleAvatar(
@@ -216,7 +223,7 @@ class Avatar extends StatelessWidget {
         ),
       );
     }
-    
+
     return Container(
       width: size,
       height: size,
