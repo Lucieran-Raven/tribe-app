@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
@@ -9,6 +10,7 @@ import '../../providers/onboarding_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/storage_service.dart';
 import '../../design/tribe_design.dart';
+import '../../widgets/common/avatar_cropper.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
@@ -26,6 +28,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   String _searchQuery = '';
   String _selectedCategory = 'All';
   File? _pickedAvatar;
+  bool _isSavingAvatar = false;
 
   List<AffiliationModel> get _filteredAffiliations {
     var filtered = AffiliationsSeed.affiliations;
@@ -36,7 +39,79 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     }
 
     if (_searchQuery.isNotEmpty) {
-      filtered = filtered.where((a) => a.name.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+      final lowerQuery = _searchQuery.toLowerCase().trim();
+      
+      filtered = filtered.where((a) {
+        final lowerName = a.name.toLowerCase();
+        final lowerId = a.id.toLowerCase();
+        
+        // Exact match on name or ID
+        if (lowerName == lowerQuery || lowerId == lowerQuery) return true;
+        
+        // Starts with
+        if (lowerName.startsWith(lowerQuery) || lowerId.startsWith(lowerQuery)) return true;
+        
+        // Check each word in the name
+        final words = lowerName.split(RegExp(r'[\s/-]+'));
+        for (final word in words) {
+          if (word.startsWith(lowerQuery)) return true;
+        }
+        
+        // Check if query matches any word in the name (contains)
+        for (final word in words) {
+          if (word.contains(lowerQuery)) return true;
+        }
+        
+        // Fallback to contains on full name
+        return lowerName.contains(lowerQuery);
+      }).toList();
+      
+      // Sort by relevance: exact match > starts with > word starts with > contains
+      filtered.sort((a, b) {
+        final lowerNameA = a.name.toLowerCase();
+        final lowerNameB = b.name.toLowerCase();
+        final lowerIdA = a.id.toLowerCase();
+        final lowerIdB = b.id.toLowerCase();
+        
+        int scoreA = 0;
+        int scoreB = 0;
+        
+        // Exact match
+        if (lowerNameA == lowerQuery || lowerIdA == lowerQuery) scoreA = 100;
+        if (lowerNameB == lowerQuery || lowerIdB == lowerQuery) scoreB = 100;
+        
+        // Starts with
+        if (scoreA == 0 && (lowerNameA.startsWith(lowerQuery) || lowerIdA.startsWith(lowerQuery))) scoreA = 80;
+        if (scoreB == 0 && (lowerNameB.startsWith(lowerQuery) || lowerIdB.startsWith(lowerQuery))) scoreB = 80;
+        
+        // Word starts with
+        if (scoreA == 0) {
+          final wordsA = lowerNameA.split(RegExp(r'[\s/-]+'));
+          if (wordsA.any((w) => w.startsWith(lowerQuery))) scoreA = 60;
+        }
+        if (scoreB == 0) {
+          final wordsB = lowerNameB.split(RegExp(r'[\s/-]+'));
+          if (wordsB.any((w) => w.startsWith(lowerQuery))) scoreB = 60;
+        }
+        
+        // Word contains
+        if (scoreA == 0) {
+          final wordsA = lowerNameA.split(RegExp(r'[\s/-]+'));
+          if (wordsA.any((w) => w.contains(lowerQuery))) scoreA = 40;
+        }
+        if (scoreB == 0) {
+          final wordsB = lowerNameB.split(RegExp(r'[\s/-]+'));
+          if (wordsB.any((w) => w.contains(lowerQuery))) scoreB = 40;
+        }
+        
+        // Contains full name
+        if (scoreA == 0 && lowerNameA.contains(lowerQuery)) scoreA = 20;
+        if (scoreB == 0 && lowerNameB.contains(lowerQuery)) scoreB = 20;
+        
+        // Sort by score descending, then alphabetically
+        if (scoreA != scoreB) return scoreB.compareTo(scoreA);
+        return lowerNameA.compareTo(lowerNameB);
+      });
     }
 
     return filtered;
@@ -78,9 +153,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       });
     } else {
       if (_selectedAffiliations.length >= 5) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Max 5 affiliations')),
-        );
+        Toast.warning(context, 'Max 5 affiliations');
         return;
       }
 
@@ -89,23 +162,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       final interestCount = _selectedAffiliations.where((a) => a.type == 'interest').length;
 
       if (affiliation.type == 'university' && universityCount >= 1) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('You can only add 1 university')),
-        );
+        Toast.warning(context, 'You can only add 1 university');
         return;
       }
 
       if (affiliation.type == 'city' && cityCount >= 1) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('You can only add 1 city')),
-        );
+        Toast.warning(context, 'You can only add 1 city');
         return;
       }
 
       if (affiliation.type == 'interest' && interestCount >= 3) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Max 3 interests')),
-        );
+        Toast.warning(context, 'Max 3 interests');
         return;
       }
 
@@ -131,36 +198,54 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   Future<void> _save() async {
     final authState = ref.read(authProvider);
     final user = authState is AuthAuthenticated ? authState.user : null;
-    if (_pickedAvatar != null && user != null) {
-      try {
+    
+    setState(() => _isSavingAvatar = true);
+    
+    try {
+      if (_pickedAvatar != null && user != null) {
         final newAvatarUrl = await StorageService().uploadAvatar(_pickedAvatar!, user.userId);
         await FirebaseFirestore.instance.collection('users').doc(user.userId).update({'avatarUrl': newAvatarUrl});
+        
+        // Batch update avatar URL in all user's rants
+        final rantsSnapshot = await FirebaseFirestore.instance
+            .collection('rants')
+            .where('userId', isEqualTo: user.userId)
+            .get();
+        final batch = FirebaseFirestore.instance.batch();
+        for (final doc in rantsSnapshot.docs) {
+          batch.update(doc.reference, {'avatarUrl': newAvatarUrl});
+        }
+        await batch.commit();
+        
         PaintingBinding.instance.imageCache.clear();
         final freshUserDoc = await FirebaseFirestore.instance.collection('users').doc(user.userId).get();
         final freshUser = UserModel.fromJson(freshUserDoc.data() as Map<String, dynamic>);
         ref.read(authProvider.notifier).updateUser(freshUser);
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Avatar upload failed: $e')));
-        }
-        return;
       }
-    }
-    await ref.read(onboardingProvider.notifier).updateProfile(
-          ref,
-          _bioController.text.trim().isEmpty ? null : _bioController.text.trim(),
-          _selectedAffiliations,
-          displayName: _displayNameController.text.trim().isEmpty ? null : _displayNameController.text.trim(),
-        );
-    final currentState = ref.read(onboardingProvider);
-    if (currentState.errorMsg == null && mounted) {
-      Navigator.of(context).pop();
+      
+      await ref.read(onboardingProvider.notifier).updateProfile(
+            ref,
+            _bioController.text.trim().isEmpty ? null : _bioController.text.trim(),
+            _selectedAffiliations,
+            displayName: _displayNameController.text.trim().isEmpty ? null : _displayNameController.text.trim(),
+          );
+      
+      final currentState = ref.read(onboardingProvider);
+      if (currentState.errorMsg == null && mounted) {
+        Toast.success(context, 'Profile updated');
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        Toast.error(context, 'Failed: $e');
+      }
+    } finally {
+      if (mounted) setState(() => _isSavingAvatar = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(onboardingProvider);
     final authState = ref.watch(authProvider);
     final user = authState is AuthAuthenticated ? authState.user : null;
     final t = const TribeTheme(true);
@@ -184,11 +269,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 leading: IconBtn(icon: Icons.arrow_back, onTap: () => Navigator.of(context).pop()),
                 title: Text('Edit profile', style: t.display(size: 18, color: t.milk)),
                 actions: [
-                  IconBtn(
-                    icon: Icons.check,
-                    color: t.gold,
-                    onTap: state.saving ? null : _save,
-                  ),
+                  _isSavingAvatar
+                      ? const CupertinoActivityIndicator(radius: 8)
+                      : IconBtn(
+                          icon: Icons.check,
+                          color: t.gold,
+                          onTap: _save,
+                        ),
                 ],
               ),
               Expanded(
@@ -208,10 +295,20 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                               right: -8,
                               child: GestureDetector(
                                 onTap: () async {
+                                  if (!mounted) return;
                                   final picker = ImagePicker();
-                                  final pickedFile = await picker.pickImage(source: ImageSource.gallery, maxWidth: 512, maxHeight: 512, imageQuality: 80);
-                                  if (pickedFile != null) {
-                                    setState(() => _pickedAvatar = File(pickedFile.path));
+                                  final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+                                  if (pickedFile != null && mounted) {
+                                    try {
+                                      final cropped = await AvatarCropper.crop(File(pickedFile.path), context);
+                                      if (cropped != null && mounted) {
+                                        setState(() => _pickedAvatar = cropped);
+                                      }
+                                    } catch (e) {
+                                      if (mounted) {
+                                        Toast.error(context, 'Failed to crop image: $e');
+                                      }
+                                    }
                                   }
                                 },
                                 child: Container(

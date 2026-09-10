@@ -266,33 +266,95 @@ class GestureBar extends StatelessWidget {
   }
 }
 
-class TribeSnackbar extends StatelessWidget {
-  final String text;
-  const TribeSnackbar({super.key, required this.text});
+class TribeToast extends StatelessWidget {
+  final String message;
+  final IconData icon;
+  final Color iconColor;
+  final VoidCallback onDismiss;
+  
+  const TribeToast({
+    super.key,
+    required this.message,
+    this.icon = Icons.check_circle,
+    this.iconColor = const Color(0xFF4CAF50),
+    required this.onDismiss,
+  });
+
   @override
   Widget build(BuildContext context) {
     final t = TribeThemeScope.of(context);
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(18),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 14),
-          decoration: BoxDecoration(
-            color: t.glassBgStrong,
+    return Stack(children: [
+      GestureDetector(
+        onTap: onDismiss,
+        child: Container(color: Colors.black.withValues(alpha: 0.3)),
+      ),
+      Positioned(
+        left: 20,
+        right: 20,
+        bottom: 100,
+        child: Material(
+          color: Colors.transparent,
+          child: ClipRRect(
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: t.lineStrong),
-            boxShadow: const [BoxShadow(color: Color(0x80000000), blurRadius: 50, offset: Offset(0, 20))],
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 14),
+                decoration: BoxDecoration(
+                  color: t.glassBgStrong,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: t.lineStrong),
+                  boxShadow: const [BoxShadow(color: Color(0x80000000), blurRadius: 50, offset: Offset(0, 20))],
+                ),
+                child: Row(children: [
+                  Icon(icon, size: 18, color: iconColor),
+                  const SizedBox(width: 11),
+                  Expanded(child: Text(message, style: t.body(size: 13, weight: FontWeight.w700, color: t.milk))),
+                  const SizedBox(width: 8),
+                  IconBtn(icon: Icons.close, size: 16, onTap: onDismiss),
+                ]),
+              ),
+            ),
           ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.check, size: 15, color: t.success),
-            const SizedBox(width: 9),
-            Flexible(child: Text(text, style: t.body(size: 13, weight: FontWeight.w700, color: t.milk))),
-          ]),
+        ),
+      ),
+    ]);
+  }
+
+  static void show(BuildContext context, {
+    required String message,
+    IconData icon = Icons.check_circle,
+    Color iconColor = const Color(0xFF4CAF50),
+  }) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.transparent,
+      builder: (ctx) => TribeThemeScope(
+        theme: const TribeTheme(true),
+        child: TribeToast(
+          message: message,
+          icon: icon,
+          iconColor: iconColor,
+          onDismiss: () => Navigator.of(ctx).pop(),
         ),
       ),
     );
   }
+}
+
+class Toast {
+  static void success(BuildContext context, String msg) =>
+    TribeToast.show(context, message: msg, icon: Icons.check_circle, iconColor: const Color(0xFF4CAF50));
+  
+  static void error(BuildContext context, String msg) =>
+    TribeToast.show(context, message: msg, icon: Icons.error, iconColor: const Color(0xFFE53935));
+  
+  static void warning(BuildContext context, String msg) =>
+    TribeToast.show(context, message: msg, icon: Icons.warning, iconColor: const Color(0xFFFFA726));
+  
+  static void info(BuildContext context, String msg) =>
+    TribeToast.show(context, message: msg, icon: Icons.info, iconColor: const Color(0xFF2196F3));
 }
 
 /// Primary clay button — milk gradient, scales down + drops shadow on press.
@@ -685,26 +747,61 @@ class BottomNavBar extends StatelessWidget {
   final TribeTab tab;
   final ValueChanged<TribeTab> onTab;
   final VoidCallback onCreate;
-  const BottomNavBar({super.key, required this.tab, required this.onTab, required this.onCreate});
+  final int unreadCount;
+  const BottomNavBar({
+    super.key,
+    required this.tab,
+    required this.onTab,
+    required this.onCreate,
+    this.unreadCount = 0,
+  });
 
   @override
   Widget build(BuildContext context) {
     final t = TribeThemeScope.of(context);
 
-    Widget navItem(IconData icon, TribeTab id) {
+    Widget navItem(IconData icon, TribeTab id, {int badgeCount = 0}) {
       final active = tab == id;
       return GestureDetector(
         onTap: () => onTab(id),
-        child: Container(
-          width: 44,
-          height: 36,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: active ? t.bg3 : Colors.transparent,
-            borderRadius: BorderRadius.circular(11),
-            border: active ? Border.all(color: t.line) : null,
-          ),
-          child: Icon(icon, size: 19, color: active ? t.milk : t.grey500),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: 44,
+              height: 36,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: active ? t.bg3 : Colors.transparent,
+                borderRadius: BorderRadius.circular(11),
+                border: active ? Border.all(color: t.line) : null,
+              ),
+              child: Icon(icon, size: 19, color: active ? t.milk : t.grey500),
+            ),
+            if (badgeCount > 0)
+              Positioned(
+                right: -2,
+                top: -2,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: t.bg1, width: 2),
+                  ),
+                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                  child: Text(
+                    badgeCount > 99 ? '99+' : '$badgeCount',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
         ),
       );
     }
@@ -737,7 +834,7 @@ class BottomNavBar extends StatelessWidget {
                   child: Icon(Icons.add, size: 20, color: t.bg0),
                 ),
               ),
-              navItem(Icons.mail_outline_rounded, TribeTab.inbox),
+              navItem(Icons.mail_outline_rounded, TribeTab.inbox, badgeCount: unreadCount),
               navItem(Icons.person_outline_rounded, TribeTab.profile),
             ]),
           ),

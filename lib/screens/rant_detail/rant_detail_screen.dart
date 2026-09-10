@@ -56,15 +56,11 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
 
       if (mounted) {
         _replyController.clear();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Reply sent')),
-        );
+        Toast.success(context, 'Reply sent');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to send reply: $e')),
-        );
+        Toast.error(context, 'Failed to send reply: $e');
       }
     } finally {
       if (mounted) {

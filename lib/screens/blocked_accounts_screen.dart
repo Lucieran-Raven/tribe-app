@@ -89,11 +89,11 @@ class _BlockedUserRow extends ConsumerWidget {
                     final freshUser = await RantService().unblockUser(auth.user.userId, blockedUserId);
                     ref.read(authProvider.notifier).updateUser(freshUser);
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('User unblocked')));
+                      Toast.success(context, 'User unblocked');
                     }
                   } catch (e) {
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+                      Toast.error(context, 'Failed: $e');
                     }
                   }
                 },

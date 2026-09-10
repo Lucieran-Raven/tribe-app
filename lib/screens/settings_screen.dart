@@ -122,9 +122,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 } catch (_) {}
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to delete account: $e. Please sign in again and retry.')),
-                  );
+                  Toast.error(context, 'Failed to delete account: $e. Please sign in again and retry.');
                 }
               } finally {
                 if (mounted) setState(() => _isDeleting = false);

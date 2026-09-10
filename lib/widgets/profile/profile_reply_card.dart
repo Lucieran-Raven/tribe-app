@@ -6,7 +6,14 @@ import '../../design/tribe_design.dart';
 
 class ProfileReplyCard extends StatefulWidget {
   final ReplyModel reply;
-  const ProfileReplyCard({super.key, required this.reply});
+  final String? parentSnippet;
+  final bool parentDeleted;
+  const ProfileReplyCard({
+    super.key,
+    required this.reply,
+    this.parentSnippet,
+    this.parentDeleted = false,
+  });
 
   @override
   State<ProfileReplyCard> createState() => _ProfileReplyCardState();
@@ -24,6 +31,14 @@ class _ProfileReplyCardState extends State<ProfileReplyCard> {
   }
 
   Future<void> _loadParent() async {
+    if (widget.parentSnippet != null) {
+      setState(() {
+        _parentSnippet = widget.parentSnippet;
+        _parentDeleted = widget.parentDeleted;
+        _loading = false;
+      });
+      return;
+    }
     try {
       final rant = await RantService().getRant(widget.reply.rantId);
       if (mounted) {
@@ -65,14 +80,17 @@ class _ProfileReplyCardState extends State<ProfileReplyCard> {
             Container(
               padding: const EdgeInsets.only(left: 10),
               decoration: BoxDecoration(border: Border(left: BorderSide(color: t.grey700, width: 2))),
-              child: _loading
-                  ? Container(height: 14, width: 200, color: t.grey500)
-                  : Text(
-                      _parentDeleted ? '[Post not available]' : (_parentSnippet ?? ''),
-                      style: t.body(size: 12, weight: FontWeight.w600, color: t.inkFaint),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 32),
+                child: _loading
+                    ? Container(height: 14, width: 200, color: t.grey500)
+                    : Text(
+                        _parentDeleted ? '[Post not available]' : (_parentSnippet ?? ''),
+                        style: t.body(size: 12, weight: FontWeight.w600, color: t.inkFaint),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+              ),
             ),
           ],
         ),

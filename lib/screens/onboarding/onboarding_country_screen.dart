@@ -62,9 +62,7 @@ class _OnboardingCountryScreenState extends ConsumerState<OnboardingCountryScree
 
     ref.listen<OnboardingState>(onboardingProvider, (previous, next) {
       if (next.errorMsg != null && next.errorMsg != previous?.errorMsg) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.errorMsg!)),
-        );
+        Toast.error(context, next.errorMsg!);
       }
     });
 

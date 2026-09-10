@@ -8,6 +8,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/storage_service.dart';
 import '../../models/user_model.dart';
 import '../../widgets/onboarding/onboarding_page_indicator.dart';
+import '../../widgets/common/avatar_cropper.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class OnboardingAvatarScreen extends ConsumerStatefulWidget {
@@ -73,12 +74,18 @@ class _OnboardingAvatarScreenState extends ConsumerState<OnboardingAvatarScreen>
                             final picker = ImagePicker();
                             final pickedFile = await picker.pickImage(
                               source: ImageSource.gallery,
-                              maxWidth: 512,
-                              maxHeight: 512,
-                              imageQuality: 80,
                             );
                             if (pickedFile != null) {
-                              setState(() => _pickedImage = File(pickedFile.path));
+                              try {
+                                final cropped = await AvatarCropper.crop(File(pickedFile.path), context);
+                                if (cropped != null && mounted) {
+                                  setState(() => _pickedImage = cropped);
+                                }
+                              } catch (e) {
+                                if (mounted) {
+                                  Toast.error(context, 'Failed to crop image: $e');
+                                }
+                              }
                             }
                           },
                           child: Stack(
@@ -114,12 +121,18 @@ class _OnboardingAvatarScreenState extends ConsumerState<OnboardingAvatarScreen>
                                     final picker = ImagePicker();
                                     final pickedFile = await picker.pickImage(
                                       source: ImageSource.gallery,
-                                      maxWidth: 512,
-                                      maxHeight: 512,
-                                      imageQuality: 80,
                                     );
                                     if (pickedFile != null) {
-                                      setState(() => _pickedImage = File(pickedFile.path));
+                                      try {
+                                        final cropped = await AvatarCropper.crop(File(pickedFile.path), context);
+                                        if (cropped != null && mounted) {
+                                          setState(() => _pickedImage = cropped);
+                                        }
+                                      } catch (e) {
+                                        if (mounted) {
+                                          Toast.error(context, 'Failed to crop image: $e');
+                                        }
+                                      }
                                     }
                                   },
                                   child: Container(
@@ -155,7 +168,7 @@ class _OnboardingAvatarScreenState extends ConsumerState<OnboardingAvatarScreen>
                                 }
                               } catch (e) {
                                 if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+                                  Toast.error(context, 'Upload failed: $e');
                                 }
                                 return; // Stop navigation if upload fails
                               }

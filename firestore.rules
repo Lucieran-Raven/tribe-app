@@ -1,0 +1,75 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function onlyCountersChanged() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['karma', 'replyCount']);
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isSelf(userId);
+
+      match /notifications/{notificationId} {
+        allow read: if isSelf(userId);
+        allow create: if signedIn();
+        allow update: if isSelf(userId) || resource.data.fromUserId == request.auth.uid;
+        allow delete: if isSelf(userId) || resource.data.fromUserId == request.auth.uid;
+      }
+    }
+
+    match /rants/{rantId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if signedIn() && onlyCountersChanged();
+      allow delete: if signedIn() && resource.data.userId == request.auth.uid;
+
+      match /votes/{voterId} {
+        allow read: if signedIn();
+        allow create: if isSelf(voterId);
+        allow delete: if isSelf(voterId)
+          || get(/databases/$(database)/documents/rants/$(rantId)).data.userId
+             == request.auth.uid;
+      }
+
+      match /replies/{replyId} {
+        allow read: if signedIn();
+        allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+        allow update: if signedIn() && onlyCountersChanged();
+        allow delete: if signedIn()
+          && (resource.data.userId == request.auth.uid
+              || get(/databases/$(database)/documents/rants/$(rantId)).data.userId
+                 == request.auth.uid);
+
+        match /votes/{voterId} {
+          allow read: if signedIn();
+          allow create: if isSelf(voterId);
+          allow delete: if isSelf(voterId)
+            || get(/databases/$(database)/documents/rants/$(rantId)/replies/$(replyId)).data.userId
+               == request.auth.uid
+            || get(/databases/$(database)/documents/rants/$(rantId)).data.userId
+               == request.auth.uid;
+        }
+      }
+    }
+
+    match /reports/{reportId} {
+      allow create: if signedIn() && request.resource.data.reporter == request.auth.uid
+        || signedIn() && request.resource.data.reporterId == request.auth.uid;
+      allow read, update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

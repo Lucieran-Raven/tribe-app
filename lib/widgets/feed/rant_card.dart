@@ -82,9 +82,7 @@ class _RantCardState extends ConsumerState<RantCard> {
                                   await RantService().deletePost(widget.rant.rantId);
                                 } catch (e) {
                                   if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Failed to delete: $e')),
-                                    );
+                                    Toast.error(context, 'Failed to delete: $e');
                                   }
                                 }
                               },
@@ -114,9 +112,7 @@ class _RantCardState extends ConsumerState<RantCard> {
                                     snippet: widget.rant.content,
                                   );
                                   if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Report submitted. Thank you.')),
-                                    );
+                                    Toast.success(context, 'Report submitted. Thank you.');
                                   }
                                 }
                               },
@@ -167,16 +163,12 @@ class _RantCardState extends ConsumerState<RantCard> {
                     ? null
                     : () async {
                         if (isOwnPost) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("You can't like your own post")),
-                          );
+                          Toast.warning(context, "You can't like your own post");
                           return;
                         }
                         final authState = ref.read(authProvider);
                         if (authState is! AuthAuthenticated) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Please sign in to like')),
-                          );
+                          Toast.info(context, 'Please sign in to like');
                           return;
                         }
                         setState(() => _isVoting = true);
@@ -184,9 +176,7 @@ class _RantCardState extends ConsumerState<RantCard> {
                           await RantService().toggleVote(widget.rant.rantId, authState.user.userId);
                         } catch (e) {
                           if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Failed to like: $e')),
-                            );
+                            Toast.error(context, 'Failed to like: $e');
                           }
                         } finally {
                           if (mounted) {

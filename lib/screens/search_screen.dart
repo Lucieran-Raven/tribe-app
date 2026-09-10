@@ -19,6 +19,10 @@ class SearchScreen extends ConsumerStatefulWidget {
   ConsumerState<SearchScreen> createState() => _SearchScreenState();
 }
 
+class SearchScreenReset {
+  static VoidCallback? notify;
+}
+
 class _SearchScreenState extends ConsumerState<SearchScreen> {
   final TextEditingController _controller = TextEditingController();
   Timer? _debounce;
@@ -32,13 +36,24 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   void initState() {
     super.initState();
     _loadHistory();
+    SearchScreenReset.notify = resetSearch;
   }
 
   @override
   void dispose() {
     _controller.dispose();
     _debounce?.cancel();
+    SearchScreenReset.notify = null;
     super.dispose();
+  }
+
+  void resetSearch() {
+    _controller.clear();
+    setState(() {
+      _users = [];
+      _rants = [];
+      _isLoading = false;
+    });
   }
 
   String _historyKey() {
@@ -72,8 +87,16 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   void _onSearchChanged(String query) {
+    if (query.isEmpty) {
+      setState(() {
+        _users = [];
+        _rants = [];
+        _isLoading = false;
+      });
+      return;
+    }
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 500), () {
+    _debounce = Timer(const Duration(milliseconds: 800), () {
       _performSearch(query);
     });
   }
@@ -94,6 +117,16 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       final searchService = SearchService();
       final users = await searchService.searchUsers(query);
       final rants = await searchService.searchRants(query);
+
+      // Rank users: exact match first, then starts-with, then contains
+      final lowerQuery = query.toLowerCase();
+      users.sort((a, b) {
+        final aHandle = (a.handle ?? '').toLowerCase();
+        final bHandle = (b.handle ?? '').toLowerCase();
+        final aExact = aHandle == lowerQuery ? 0 : (aHandle.startsWith(lowerQuery) ? 1 : 2);
+        final bExact = bHandle == lowerQuery ? 0 : (bHandle.startsWith(lowerQuery) ? 1 : 2);
+        return aExact.compareTo(bExact);
+      });
 
       setState(() {
         _users = users;
@@ -128,7 +161,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 hint: 'Search posts or users…',
                 prefix: Icon(Icons.search, size: 16, color: t.inkFaint),
                 onChanged: _onSearchChanged,
-                onSubmitted: (q) => _addHistory(q),
+                onSubmitted: (q) {
+                  _debounce?.cancel();
+                  _performSearch(q);
+                  _addHistory(q);
+                },
               ),
             ),
             Expanded(

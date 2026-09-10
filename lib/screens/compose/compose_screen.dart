@@ -56,7 +56,7 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
           imageUrl = await StorageService().uploadPostImage(_pickedImage!, postId);
         } catch (e) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Image upload failed: $e')));
+            Toast.error(context, 'Image upload failed: $e');
           }
           if (mounted) setState(() => _isPosting = false);
           return; // Do not create the post if the image upload fails
@@ -80,9 +80,7 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to post: $e')),
-        );
+        Toast.error(context, 'Failed to post: $e');
       }
     } finally {
       if (mounted) {

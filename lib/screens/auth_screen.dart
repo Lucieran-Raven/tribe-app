@@ -25,9 +25,7 @@ class AuthScreen extends ConsumerWidget {
           context.go('/home');
         }
       } else if (next is AuthError) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.message)),
-        );
+        Toast.error(context, next.message);
       }
     });
 

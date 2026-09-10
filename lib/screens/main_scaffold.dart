@@ -7,6 +7,7 @@ import 'profile_screen.dart';
 import 'compose/compose_screen.dart';
 import '../services/notification_service.dart';
 import '../providers/auth_provider.dart';
+import '../providers/notification_provider.dart';
 import '../design/tribe_design.dart';
 
 class MainScaffold extends ConsumerStatefulWidget {
@@ -22,6 +23,7 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
   @override
   Widget build(BuildContext context) {
     final t = const TribeTheme(true);
+    final unreadCount = ref.watch(unreadCountProvider);
 
     // Map _selectedIndex to TribeTab
     // Stack: 0=Home, 1=Search, 2=Inbox, 3=Profile
@@ -85,6 +87,7 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
         ),
         bottomNavigationBar: BottomNavBar(
           tab: currentTab,
+          unreadCount: unreadCount,
           onTab: (tab) {
             // Handle create tab - show compose sheet
             if (tab == TribeTab.create) {
@@ -114,6 +117,11 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
                 break;
               default:
                 newIndex = 0;
+            }
+
+            // Reset search when leaving search tab
+            if (_currentIndex == 1 && newIndex != 1) {
+              SearchScreenReset.notify?.call();
             }
 
             setState(() => _currentIndex = newIndex);

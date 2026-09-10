@@ -39,9 +39,7 @@ class _OnboardingHandleScreenState extends ConsumerState<OnboardingHandleScreen>
     // Show error snackbar
     ref.listen<OnboardingState>(onboardingProvider, (previous, next) {
       if (next.errorMsg != null && next.errorMsg != previous?.errorMsg) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.errorMsg!)),
-        );
+        Toast.error(context, next.errorMsg!);
       }
     });
 
@@ -153,27 +151,48 @@ class _OnboardingHandleScreenState extends ConsumerState<OnboardingHandleScreen>
                           if (state.availability == HandleAvailability.available) {
                             return Padding(
                               padding: const EdgeInsets.only(top: 6),
-                              child: Text(
-                                '@${state.handleText} is yours.',
-                                style: t.body(size: 11.5, weight: FontWeight.w600, color: t.success),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      '@${state.handleText} is yours.',
+                                      style: t.body(size: 13, weight: FontWeight.w600, color: t.success),
+                                    ),
+                                  ),
+                                  Text('${state.handleText.length}/20', style: t.caption(size: 11, color: state.handleText.length > 20 ? t.danger : t.inkFaint)),
+                                ],
                               ),
                             );
                           }
                           if (state.availability == HandleAvailability.taken) {
                             return Padding(
                               padding: const EdgeInsets.only(top: 6),
-                              child: Text(
-                                "That handle's already claimed.",
-                                style: t.body(size: 11.5, weight: FontWeight.w600, color: t.danger),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      "That handle's already claimed.",
+                                      style: t.body(size: 13, weight: FontWeight.w600, color: t.danger),
+                                    ),
+                                  ),
+                                  Text('${state.handleText.length}/20', style: t.caption(size: 11, color: state.handleText.length > 20 ? t.danger : t.inkFaint)),
+                                ],
                               ),
                             );
                           }
                           if (state.availability == HandleAvailability.invalid) {
                             return Padding(
                               padding: const EdgeInsets.only(top: 6),
-                              child: Text(
-                                'Use at least 3 letters, numbers, or underscores.',
-                                style: t.body(size: 11.5, weight: FontWeight.w600, color: t.danger),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      'Use at least 3 letters, numbers, or underscores.',
+                                      style: t.body(size: 13, weight: FontWeight.w600, color: t.danger),
+                                    ),
+                                  ),
+                                  Text('${state.handleText.length}/20', style: t.caption(size: 11, color: state.handleText.length > 20 ? t.danger : t.inkFaint)),
+                                ],
                               ),
                             );
                           }

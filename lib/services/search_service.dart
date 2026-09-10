@@ -19,7 +19,7 @@ class SearchService {
         .get();
 
     return snapshot.docs
-        .map((doc) => UserModel.fromJson(doc.data() as Map<String, dynamic>))
+        .map((doc) => UserModel.fromJson(doc.data()))
         .toList();
   }
 
@@ -35,9 +35,19 @@ class SearchService {
         .get();
 
     final lowerQuery = query.toLowerCase();
-    return snapshot.docs
-        .map((doc) => RantModel.fromJson(doc.data(), rantId: doc.id))
-        .where((rant) => rant.content.toLowerCase().contains(lowerQuery))
-        .toList();
+    final ranked = snapshot.docs
+      .map((doc) => RantModel.fromJson(doc.data(), rantId: doc.id))
+      .where((rant) => rant.content.toLowerCase().contains(lowerQuery))
+      .toList();
+
+    // Rank: exact phrase match first, then word-boundary match, then substring
+    ranked.sort((a, b) {
+      final aContent = a.content.toLowerCase();
+      final bContent = b.content.toLowerCase();
+      final aExact = aContent == lowerQuery ? 0 : (aContent.contains(' $lowerQuery ') || aContent.startsWith('$lowerQuery ')) ? 1 : 2;
+      final bExact = bContent == lowerQuery ? 0 : (bContent.contains(' $lowerQuery ') || bContent.startsWith('$lowerQuery ')) ? 1 : 2;
+      return aExact.compareTo(bExact);
+    });
+    return ranked;
   }
 }

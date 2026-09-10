@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../providers/user_profile_provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/profile/profile_reply_card.dart';
@@ -32,9 +33,7 @@ class UserProfileScreen extends ConsumerWidget {
                   reason: reason,
                 );
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Report submitted. Thank you.')),
-                  );
+                  Toast.success(context, 'Report submitted. Thank you.');
                 }
               }
             },
@@ -53,15 +52,11 @@ class UserProfileScreen extends ConsumerWidget {
           : await RantService().unblockUser(auth.user.userId, userId);
       ref.read(authProvider.notifier).updateUser(freshUser);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(block ? 'User blocked' : 'User unblocked')),
-        );
+        Toast.success(context, block ? 'User blocked' : 'User unblocked');
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $e')),
-        );
+        Toast.error(context, 'Failed: $e');
       }
     }
   }
@@ -143,8 +138,8 @@ class UserProfileScreen extends ConsumerWidget {
                   data: (user) {
             final rants = rantsAsync.value ?? [];
             final replies = repliesAsync.value ?? [];
-            final totalKarma = rants.fold<int>(0, (sum, r) => sum + r.karma) +
-                replies.fold<int>(0, (sum, r) => sum + r.karma);
+            final totalKarma = rants.fold<int>(0, (acc, r) => acc + r.karma) +
+                replies.fold<int>(0, (acc, r) => acc + r.karma);
 
             return DefaultTabController(
               length: 3,
@@ -304,11 +299,45 @@ class UserProfileScreen extends ConsumerWidget {
                           ),
                     replies.isEmpty
                         ? const Center(child: Text('No replies yet.'))
-                        : ListView.builder(
-                            itemCount: replies.length,
-                            itemBuilder: (context, index) {
-                              final reply = replies[index];
-                              return ProfileReplyCard(reply: reply);
+                        : FutureBuilder<Map<String, String?>>(
+                            future: () async {
+                              final rantIds = replies.map((r) => r.rantId).toSet().toList();
+                              final futures = rantIds.map((id) => FirebaseFirestore.instance.collection('rants').doc(id).get());
+                              final snapshots = await Future.wait(futures);
+                              final Map<String, String?> snippets = {};
+                              for (int i = 0; i < rantIds.length; i++) {
+                                final doc = snapshots[i];
+                                snippets[rantIds[i]] = doc.exists ? (doc.data() as Map<String, dynamic>)['content'] as String? : null;
+                              }
+                              return snippets;
+                            }(),
+                            builder: (context, snapshot) {
+                              if (!snapshot.hasData) {
+                                return ListView.builder(
+                                  itemCount: replies.length,
+                                  itemBuilder: (context, index) {
+                                    final reply = replies[index];
+                                    return ProfileReplyCard(
+                                      reply: reply,
+                                      parentSnippet: null,
+                                      parentDeleted: false,
+                                    );
+                                  },
+                                );
+                              }
+                              final snippets = snapshot.data!;
+                              return ListView.builder(
+                                itemCount: replies.length,
+                                itemBuilder: (context, index) {
+                                  final reply = replies[index];
+                                  final parentDeleted = snippets[reply.rantId] == null;
+                                  return ProfileReplyCard(
+                                    reply: reply,
+                                    parentSnippet: snippets[reply.rantId],
+                                    parentDeleted: parentDeleted,
+                                  );
+                                },
+                              );
                             },
                           ),
                     ref.watch(userLikesProvider(userId)).when(

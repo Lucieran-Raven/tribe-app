@@ -4,17 +4,26 @@
     {
       "collectionGroup": "replies",
       "fieldPath": "userId",
-      "indexes": [ { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" } ]
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" },
+        { "order": "DESCENDING", "queryScope": "COLLECTION_GROUP" }
+      ]
     },
     {
       "collectionGroup": "votes",
       "fieldPath": "userId",
-      "indexes": [ { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" } ]
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" },
+        { "order": "DESCENDING", "queryScope": "COLLECTION_GROUP" }
+      ]
     },
     {
       "collectionGroup": "notifications",
       "fieldPath": "fromUserId",
-      "indexes": [ { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" } ]
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" },
+        { "order": "DESCENDING", "queryScope": "COLLECTION_GROUP" }
+      ]
     }
   ]
 }

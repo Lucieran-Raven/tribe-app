@@ -29,9 +29,81 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
       filtered = filtered.where((a) => a.type == mappedType).toList();
     }
 
-    // Filter by search
+    // Filter by search with intelligent matching
     if (_searchQuery.isNotEmpty) {
-      filtered = filtered.where((a) => a.name.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+      final lowerQuery = _searchQuery.toLowerCase().trim();
+      
+      filtered = filtered.where((a) {
+        final lowerName = a.name.toLowerCase();
+        final lowerId = a.id.toLowerCase();
+        
+        // Exact match on name or ID
+        if (lowerName == lowerQuery || lowerId == lowerQuery) return true;
+        
+        // Starts with
+        if (lowerName.startsWith(lowerQuery) || lowerId.startsWith(lowerQuery)) return true;
+        
+        // Check each word in the name
+        final words = lowerName.split(RegExp(r'[\s/-]+'));
+        for (final word in words) {
+          if (word.startsWith(lowerQuery)) return true;
+        }
+        
+        // Check if query matches any word in the name (contains)
+        for (final word in words) {
+          if (word.contains(lowerQuery)) return true;
+        }
+        
+        // Fallback to contains on full name
+        return lowerName.contains(lowerQuery);
+      }).toList();
+      
+      // Sort by relevance: exact match > starts with > word starts with > contains
+      filtered.sort((a, b) {
+        final lowerNameA = a.name.toLowerCase();
+        final lowerNameB = b.name.toLowerCase();
+        final lowerIdA = a.id.toLowerCase();
+        final lowerIdB = b.id.toLowerCase();
+        
+        int scoreA = 0;
+        int scoreB = 0;
+        
+        // Exact match
+        if (lowerNameA == lowerQuery || lowerIdA == lowerQuery) scoreA = 100;
+        if (lowerNameB == lowerQuery || lowerIdB == lowerQuery) scoreB = 100;
+        
+        // Starts with
+        if (scoreA == 0 && (lowerNameA.startsWith(lowerQuery) || lowerIdA.startsWith(lowerQuery))) scoreA = 80;
+        if (scoreB == 0 && (lowerNameB.startsWith(lowerQuery) || lowerIdB.startsWith(lowerQuery))) scoreB = 80;
+        
+        // Word starts with
+        if (scoreA == 0) {
+          final wordsA = lowerNameA.split(RegExp(r'[\s/-]+'));
+          if (wordsA.any((w) => w.startsWith(lowerQuery))) scoreA = 60;
+        }
+        if (scoreB == 0) {
+          final wordsB = lowerNameB.split(RegExp(r'[\s/-]+'));
+          if (wordsB.any((w) => w.startsWith(lowerQuery))) scoreB = 60;
+        }
+        
+        // Word contains
+        if (scoreA == 0) {
+          final wordsA = lowerNameA.split(RegExp(r'[\s/-]+'));
+          if (wordsA.any((w) => w.contains(lowerQuery))) scoreA = 40;
+        }
+        if (scoreB == 0) {
+          final wordsB = lowerNameB.split(RegExp(r'[\s/-]+'));
+          if (wordsB.any((w) => w.contains(lowerQuery))) scoreB = 40;
+        }
+        
+        // Contains full name
+        if (scoreA == 0 && lowerNameA.contains(lowerQuery)) scoreA = 20;
+        if (scoreB == 0 && lowerNameB.contains(lowerQuery)) scoreB = 20;
+        
+        // Sort by score descending, then alphabetically
+        if (scoreA != scoreB) return scoreB.compareTo(scoreA);
+        return lowerNameA.compareTo(lowerNameB);
+      });
     }
 
     return filtered;
@@ -62,9 +134,7 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
     // Show error snackbar
     ref.listen<OnboardingState>(onboardingProvider, (previous, next) {
       if (next.errorMsg != null && next.errorMsg != previous?.errorMsg) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.errorMsg!)),
-        );
+        Toast.error(context, next.errorMsg!);
       }
     });
 

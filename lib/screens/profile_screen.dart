@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../providers/auth_provider.dart';
 import '../providers/user_profile_provider.dart';
 import '../widgets/profile/profile_reply_card.dart';
@@ -38,8 +39,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final userReplies = userRepliesAsync.value ?? [];
     final rantCount = userRants.length;
     final replyCount = userReplies.length;
-    final totalKarma = userRants.fold<int>(0, (sum, r) => sum + r.karma) +
-        userReplies.fold<int>(0, (sum, r) => sum + r.karma);
+    final totalKarma = userRants.fold<int>(0, (acc, r) => acc + r.karma) +
+        userReplies.fold<int>(0, (acc, r) => acc + r.karma);
 
     return TribeThemeScope(
       theme: t,
@@ -181,7 +182,111 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         itemCount: userRants.length,
                         itemBuilder: (context, index) {
                           final rant = userRants[index];
-                          return Container(
+                          return GestureDetector(
+                            onTap: () => GoRouter.of(context).push('/rant/${rant.rantId}'),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(colors: [t.bg3, t.bg1]),
+                                border: Border.all(color: t.line),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              padding: const EdgeInsets.all(11),
+                              child: Stack(
+                                children: [
+                                  if (rant.imageUrl != null)
+                                    Positioned(
+                                      top: 0,
+                                      right: 0,
+                                      child: Icon(Icons.image_outlined, size: 13, color: t.grey500),
+                                    ),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          rant.content,
+                                          maxLines: 4,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: t.body(size: 11.5, weight: FontWeight.w600, color: t.inkDim),
+                                        ),
+                                      ),
+                                      Row(
+                                        children: [
+                                          Icon(Icons.thumb_up, size: 11, color: t.inkFaint),
+                                          const SizedBox(width: 5),
+                                          Text('${rant.karma}', style: t.body(size: 10.5, weight: FontWeight.w700, color: t.inkFaint)),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                userReplies.isEmpty
+                    ? const Center(child: Text('No replies yet.'))
+                    : FutureBuilder<Map<String, String?>>(
+                        future: () async {
+                          final rantIds = userReplies.map((r) => r.rantId).toSet().toList();
+                          final futures = rantIds.map((id) => FirebaseFirestore.instance.collection('rants').doc(id).get());
+                          final snapshots = await Future.wait(futures);
+                          final Map<String, String?> snippets = {};
+                          for (int i = 0; i < rantIds.length; i++) {
+                            final doc = snapshots[i];
+                            snippets[rantIds[i]] = doc.exists ? (doc.data() as Map<String, dynamic>)['content'] as String? : null;
+                          }
+                          return snippets;
+                        }(),
+                        builder: (context, snapshot) {
+                          if (!snapshot.hasData) {
+                            return ListView.builder(
+                              itemCount: userReplies.length,
+                              itemBuilder: (context, index) {
+                                final reply = userReplies[index];
+                                return ProfileReplyCard(
+                                  reply: reply,
+                                  parentSnippet: null,
+                                  parentDeleted: false,
+                                );
+                              },
+                            );
+                          }
+                          final snippets = snapshot.data!;
+                          return ListView.builder(
+                            itemCount: userReplies.length,
+                            itemBuilder: (context, index) {
+                              final reply = userReplies[index];
+                              final parentDeleted = snippets[reply.rantId] == null;
+                              return ProfileReplyCard(
+                                reply: reply,
+                                parentSnippet: snippets[reply.rantId],
+                                parentDeleted: parentDeleted,
+                              );
+                            },
+                          );
+                        },
+                      ),
+                ref.watch(userLikesProvider(userId)).when(
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (e, _) => const Center(child: Text('Failed to load likes')),
+                  data: (likedRants) {
+                    if (likedRants.isEmpty) return const Center(child: Text('No likes yet.'));
+                    return GridView.builder(
+                      padding: const EdgeInsets.all(3),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        crossAxisSpacing: 3,
+                        mainAxisSpacing: 3,
+                      ),
+                      itemCount: likedRants.length,
+                      itemBuilder: (context, index) {
+                        final rant = likedRants[index];
+                        return GestureDetector(
+                          onTap: () => GoRouter.of(context).push('/rant/${rant.rantId}'),
+                          child: Container(
                             decoration: BoxDecoration(
                               gradient: LinearGradient(colors: [t.bg3, t.bg1]),
                               border: Border.all(color: t.line),
@@ -210,79 +315,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                     ),
                                     Row(
                                       children: [
-                                        Icon(Icons.thumb_up, size: 11, color: t.inkFaint),
+                                        Icon(Icons.thumb_up, size: 11, color: t.like),
                                         const SizedBox(width: 5),
-                                        Text('${rant.karma}', style: t.body(size: 10.5, weight: FontWeight.w700, color: t.inkFaint)),
+                                        Text('${rant.karma}', style: t.body(size: 10.5, weight: FontWeight.w700, color: t.like)),
                                       ],
                                     ),
                                   ],
                                 ),
                               ],
                             ),
-                          );
-                        },
-                      ),
-                userReplies.isEmpty
-                    ? const Center(child: Text('No replies yet.'))
-                    : ListView.builder(
-                        itemCount: userReplies.length,
-                        itemBuilder: (context, index) {
-                          final reply = userReplies[index];
-                          return ProfileReplyCard(reply: reply);
-                        },
-                      ),
-                ref.watch(userLikesProvider(userId)).when(
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => const Center(child: Text('Failed to load likes')),
-                  data: (likedRants) {
-                    if (likedRants.isEmpty) return const Center(child: Text('No likes yet.'));
-                    return GridView.builder(
-                      padding: const EdgeInsets.all(3),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        crossAxisSpacing: 3,
-                        mainAxisSpacing: 3,
-                      ),
-                      itemCount: likedRants.length,
-                      itemBuilder: (context, index) {
-                        final rant = likedRants[index];
-                        return Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(colors: [t.bg3, t.bg1]),
-                            border: Border.all(color: t.line),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          padding: const EdgeInsets.all(11),
-                          child: Stack(
-                            children: [
-                              if (rant.imageUrl != null)
-                                Positioned(
-                                  top: 0,
-                                  right: 0,
-                                  child: Icon(Icons.image_outlined, size: 13, color: t.grey500),
-                                ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      rant.content,
-                                      maxLines: 4,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: t.body(size: 11.5, weight: FontWeight.w600, color: t.inkDim),
-                                    ),
-                                  ),
-                                  Row(
-                                    children: [
-                                      Icon(Icons.thumb_up, size: 11, color: t.like),
-                                      const SizedBox(width: 5),
-                                      Text('${rant.karma}', style: t.body(size: 10.5, weight: FontWeight.w700, color: t.like)),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ],
                           ),
                         );
                       },
