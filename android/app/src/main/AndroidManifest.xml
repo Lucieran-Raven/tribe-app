@@ -9,8 +9,14 @@
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <meta-data
+            android:name="com.onesignal.messaging.small_icon"
+            android:resource="@drawable/ic_notification" />
+        <meta-data
             android:name="com.onesignal.messaging.default_notification_icon"
             android:resource="@mipmap/ic_launcher" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification" />
         <meta-data
             android:name="com.onesignal.BadgeCount"
             android:value="DISABLE" />
