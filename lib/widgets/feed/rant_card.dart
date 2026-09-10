@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../models/rant_model.dart';
 import '../../utils/time_utils.dart';
 import '../../providers/vote_provider.dart';
@@ -8,6 +9,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/rant_service.dart';
 import '../../services/report_service.dart';
 import '../../design/tribe_design.dart';
+import '../../widgets/common/tap_scale.dart';
 import 'full_image_viewer.dart';
 
 class RantCard extends ConsumerStatefulWidget {
@@ -36,8 +38,9 @@ class _RantCardState extends ConsumerState<RantCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header with avatar and info
-          GestureDetector(
+          TapScale(
             onTap: () => GoRouter.of(context).push('/user/${widget.rant.userId}'),
+            haptic: true,
             child: Row(
               children: [
                 Avatar(
@@ -128,8 +131,10 @@ class _RantCardState extends ConsumerState<RantCard> {
           ),
           const SizedBox(height: 12),
           // Content
-          GestureDetector(
+          TapScale(
             onTap: () => GoRouter.of(context).push('/rant/${widget.rant.rantId}'),
+            haptic: true,
+            scale: 0.98,
             child: Text(
               widget.rant.content,
               style: t.body(size: 14.5, weight: FontWeight.w500, color: t.ink),
@@ -137,10 +142,21 @@ class _RantCardState extends ConsumerState<RantCard> {
           ),
           if (widget.rant.imageUrl != null) ...[
             const SizedBox(height: 12),
-            GestureDetector(
+            TapScale(
               onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) =>
                   FullImageViewer(imageUrl: widget.rant.imageUrl!))),
-              child: ClampedCoverImage(image: NetworkImage(widget.rant.imageUrl!), maxHeight: 220),
+              haptic: true,
+              child: CachedNetworkImage(
+                imageUrl: widget.rant.imageUrl!,
+                memCacheWidth: 600,
+                memCacheHeight: 600,
+                placeholder: (context, url) => Container(color: t.bg2),
+                errorWidget: (context, url, error) => Icon(Icons.broken_image, color: t.inkFaint),
+                imageBuilder: (context, imageProvider) => ClampedCoverImage(
+                  image: imageProvider,
+                  maxHeight: 220,
+                ),
+              ),
             ),
           ],
           const SizedBox(height: 12),

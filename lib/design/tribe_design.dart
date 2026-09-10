@@ -13,6 +13,8 @@ import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../widgets/common/tap_scale.dart';
 
 /* ============================================================================
    THEME — "Obsidian Frost" design tokens
@@ -184,9 +186,22 @@ class Avatar extends StatelessWidget {
     
     Widget child;
     if (imageUrl != null && imageUrl!.isNotEmpty) {
-      child = CircleAvatar(
-        radius: size / 2,
-        backgroundImage: NetworkImage(imageUrl!),
+      child = CachedNetworkImage(
+        imageUrl: imageUrl!,
+        imageBuilder: (context, imageProvider) => CircleAvatar(
+          radius: size / 2,
+          backgroundImage: imageProvider,
+        ),
+        placeholder: (context, url) => CircleAvatar(
+          radius: size / 2,
+          backgroundColor: t.bg3,
+          child: Text(letter, style: GoogleFonts.manrope(color: t.ink, fontWeight: FontWeight.w800, fontSize: size * 0.38)),
+        ),
+        errorWidget: (context, url, error) => CircleAvatar(
+          radius: size / 2,
+          backgroundColor: t.bg3,
+          child: Text(letter, style: GoogleFonts.manrope(color: t.ink, fontWeight: FontWeight.w800, fontSize: size * 0.38)),
+        ),
       );
     } else {
       child = Container(
@@ -421,8 +436,9 @@ class ClayButtonSecondary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = TribeThemeScope.of(context);
-    return GestureDetector(
+    return TapScale(
       onTap: onTap,
+      haptic: onTap != null,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 15),
@@ -514,8 +530,9 @@ class TribeChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = TribeThemeScope.of(context);
-    return GestureDetector(
+    return TapScale(
       onTap: onTap,
+      haptic: onTap != null,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
         decoration: BoxDecoration(
@@ -545,8 +562,10 @@ class ActionPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = TribeThemeScope.of(context);
-    return GestureDetector(
+    return TapScale(
       onTap: onTap,
+      haptic: onTap != null,
+      scale: 0.92,
       child: AnimatedScale(
         scale: bump ? 1.15 : 1.0,
         duration: const Duration(milliseconds: 160),
@@ -609,9 +628,13 @@ class IconBtn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = TribeThemeScope.of(context);
-    return GestureDetector(
+    return TapScale(
       onTap: onTap,
-      child: Padding(padding: const EdgeInsets.all(6), child: Icon(icon, size: size, color: color ?? t.inkDim)),
+      haptic: onTap != null,
+      child: Padding(
+        padding: const EdgeInsets.all(6),
+        child: Icon(icon, size: size, color: color ?? t.inkDim),
+      ),
     );
   }
 }
@@ -762,8 +785,9 @@ class BottomNavBar extends StatelessWidget {
 
     Widget navItem(IconData icon, TribeTab id, {int badgeCount = 0}) {
       final active = tab == id;
-      return GestureDetector(
+      return TapScale(
         onTap: () => onTab(id),
+        haptic: true,
         child: Stack(
           clipBehavior: Clip.none,
           children: [
@@ -817,8 +841,9 @@ class BottomNavBar extends StatelessWidget {
             child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
               navItem(Icons.home_rounded, TribeTab.home),
               navItem(Icons.search_rounded, TribeTab.search),
-              GestureDetector(
+              TapScale(
                 onTap: onCreate,
+                haptic: true,
                 child: Container(
                   width: 48,
                   height: 48,
