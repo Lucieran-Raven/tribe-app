@@ -184,6 +184,7 @@ class _RantCardState extends ConsumerState<RantCard> {
                     Toast.warning(context, "You can't like your own post");
                     return;
                   }
+                  final wasLiked = isLiked;
                   final optimisticRant = widget.rant.copyWith(
                     voterIds: isLiked
                       ? widget.rant.voterIds.where((id) => id != currentUserId).toList()
@@ -192,7 +193,13 @@ class _RantCardState extends ConsumerState<RantCard> {
                   ref.read(feedProvider.notifier).updateRant(optimisticRant);
                   try {
                     await RantService().toggleVote(widget.rant.rantId, currentUserId);
-                    if (!isLiked && authState is AuthAuthenticated) {
+                    if (wasLiked) {
+                      await NotificationService().deleteLikeNotification(
+                        fromUserId: currentUserId,
+                        toUserId: widget.rant.userId,
+                        rantId: widget.rant.rantId,
+                      );
+                    } else if (authState is AuthAuthenticated) {
                       await NotificationService().sendLikeNotification(
                         fromUserId: currentUserId,
                         fromUsername: authState.user.handle ?? 'anonymous',

@@ -223,9 +223,16 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
                                         Toast.warning(context, "You can't like your own post");
                                         return;
                                       }
+                                      final wasLiked = isLiked;
                                       try {
                                         await RantService().toggleVote(rant.rantId, currentUserId);
-                                        if (!isLiked && authState is AuthAuthenticated) {
+                                        if (wasLiked) {
+                                          await NotificationService().deleteLikeNotification(
+                                            fromUserId: currentUserId,
+                                            toUserId: rant.userId,
+                                            rantId: rant.rantId,
+                                          );
+                                        } else if (authState is AuthAuthenticated) {
                                           await NotificationService().sendLikeNotification(
                                             fromUserId: currentUserId,
                                             fromUsername: authState.user.handle ?? 'anonymous',

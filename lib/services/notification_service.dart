@@ -179,8 +179,17 @@ class NotificationService {
     
     if (playerId.isEmpty) return; // Can't send notification without playerId
 
+    // Use deterministic doc ID for upsert
+    final docId = 'like_${fromUserId}_${toUserId}_${rantId}';
+    final docRef = _firestore
+        .collection('users')
+        .doc(toUserId)
+        .collection('notifications')
+        .doc(docId);
+
     // Create Firestore notification record (syncs with client-side notifications)
-    await createNotification(toUserId, NotificationModel(
+    await docRef.set(NotificationModel(
+      notificationId: docId,
       type: NotificationType.karma,
       fromUserId: fromUserId,
       fromHandle: fromUsername,
@@ -189,7 +198,7 @@ class NotificationService {
       targetSnippet: 'Your rant',
       timestamp: DateTime.now(),
       isRead: false,
-    ));
+    ).toJson());
 
     // Send push notification via OneSignal REST API
     await _sendPush(
@@ -198,6 +207,22 @@ class NotificationService {
       content: '@$fromUsername liked your rant',
       data: {'rantId': rantId, 'type': 'like', 'fromUserId': fromUserId},
     );
+  }
+
+  Future<void> deleteLikeNotification({
+    required String fromUserId,
+    required String toUserId,
+    required String rantId,
+  }) async {
+    if (fromUserId == toUserId) return;
+    final docId = 'like_$fromUserId\_$toUserId\_$rantId';
+    await _firestore
+        .collection('users')
+        .doc(toUserId)
+        .collection('notifications')
+        .doc(docId)
+        .delete();
+    debugPrint('DELETED LIKE NOTIFICATION $docId');
   }
 
   // Reply notification
@@ -221,8 +246,17 @@ class NotificationService {
     
     if (playerId.isEmpty) return; // Can't send notification without playerId
 
+    // Use deterministic doc ID for upsert
+    final docId = 'reply_$fromUserId\_$toUserId\_$rantId';
+    final docRef = _firestore
+        .collection('users')
+        .doc(toUserId)
+        .collection('notifications')
+        .doc(docId);
+
     // Create Firestore notification record (syncs with client-side notifications)
-    await createNotification(toUserId, NotificationModel(
+    await docRef.set(NotificationModel(
+      notificationId: docId,
       type: NotificationType.reply,
       fromUserId: fromUserId,
       fromHandle: fromUsername,
@@ -231,7 +265,7 @@ class NotificationService {
       targetSnippet: replyContent.length > 50 ? '${replyContent.substring(0, 50)}...' : replyContent,
       timestamp: DateTime.now(),
       isRead: false,
-    ));
+    ).toJson());
 
     debugPrint('About to call _sendPush...');
 
@@ -242,6 +276,22 @@ class NotificationService {
       content: '@$fromUsername replied to your rant',
       data: {'rantId': rantId, 'type': 'reply', 'fromUserId': fromUserId},
     );
+  }
+
+  Future<void> deleteReplyNotification({
+    required String fromUserId,
+    required String toUserId,
+    required String rantId,
+  }) async {
+    if (fromUserId == toUserId) return;
+    final docId = 'reply_$fromUserId\_$toUserId\_$rantId';
+    await _firestore
+        .collection('users')
+        .doc(toUserId)
+        .collection('notifications')
+        .doc(docId)
+        .delete();
+    debugPrint('DELETED REPLY NOTIFICATION $docId');
   }
 }
 
