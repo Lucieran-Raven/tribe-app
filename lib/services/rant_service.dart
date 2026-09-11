@@ -72,49 +72,42 @@ class RantService {
   }
 
   Future<void> toggleVote(String rantId, String userId) async {
-    // Fetch rant document to check ownership
-    final rantDoc = await _firestore.collection('rants').doc(rantId).get();
+    final rantRef = _firestore.collection('rants').doc(rantId);
+    final voteRef = _firestore.collection('rants').doc(rantId).collection('votes').doc(userId);
+    
+    final rantDoc = await rantRef.get();
     if (!rantDoc.exists) {
       throw Exception('Rant not found');
     }
     final rantOwnerId = rantDoc.data()?['userId'];
+    final rantContent = rantDoc.data()?['content'] ?? '';
+    final voterIds = List<String>.from(rantDoc.data()?['voterIds'] ?? []);
+    final hasVoted = voterIds.contains(userId);
 
-    bool wasVoted = false;
-    await _firestore.runTransaction((transaction) async {
-      final voteDocRef = _firestore
-          .collection('rants')
-          .doc(rantId)
-          .collection('votes')
-          .doc(userId);
-      final rantDocRef = _firestore.collection('rants').doc(rantId);
-      final voteDoc = await transaction.get(voteDocRef);
-
-      if (voteDoc.exists) {
-        wasVoted = true;
-        transaction.delete(voteDocRef);
-        transaction.update(rantDocRef, {'karma': FieldValue.increment(-1)});
-      } else {
-        wasVoted = false;
-        transaction.set(voteDocRef, {
-          'userId': userId,
-          'timestamp': DateTime.now().toIso8601String(),
-        });
-        transaction.update(rantDocRef, {'karma': FieldValue.increment(1)});
-      }
-    });
+    final batch = _firestore.batch();
+    if (hasVoted) {
+      batch.update(rantRef, {
+        'voterIds': FieldValue.arrayRemove([userId]),
+        'karma': FieldValue.increment(-1),
+      });
+      batch.delete(voteRef);
+    } else {
+      batch.update(rantRef, {
+        'voterIds': FieldValue.arrayUnion([userId]),
+        'karma': FieldValue.increment(1),
+      });
+      batch.set(voteRef, {'userId': userId, 'timestamp': FieldValue.serverTimestamp()});
+    }
+    await batch.commit();
 
     // Handle notifications
     try {
-      final rantContent = rantDoc.data()?['content'] ?? '';
-
       if (rantOwnerId != null && userId != rantOwnerId) {
-        // Fetch voter's user info
         final voterDoc = await _firestore.collection('users').doc(userId).get();
         final voterHandle = voterDoc.data()?['handle'] ?? 'anonymous';
         final voterAvatarUrl = voterDoc.data()?['avatarUrl'];
 
-        if (!wasVoted) {
-          // Added vote - create notification
+        if (!hasVoted) {
           final deterministicId = 'karma_${rantId}_$userId';
           await NotificationService().upsertKarmaNotification(
             rantOwnerId,
@@ -129,7 +122,6 @@ class RantService {
             ),
             deterministicId,
           );
-          // Send push notification
           await PushService().sendPush(
             targetUserId: rantOwnerId,
             title: 'New Like',
@@ -137,13 +129,11 @@ class RantService {
             targetRantId: rantId,
           );
         } else {
-          // Removed vote - delete notification
           final deterministicId = 'karma_${rantId}_$userId';
           await NotificationService().deleteKarmaNotification(rantOwnerId, deterministicId);
         }
       }
     } catch (e) {
-      // Notification failure should not break the vote
       debugPrint('Failed to handle notification: $e');
     }
   }
@@ -161,60 +151,42 @@ class RantService {
   }
 
   Future<void> toggleReplyVote(String rantId, String replyId, String userId) async {
-    // Fetch reply document to check ownership
-    final replyDoc = await _firestore
-        .collection('rants')
-        .doc(rantId)
-        .collection('replies')
-        .doc(replyId)
-        .get();
+    final replyRef = _firestore.collection('rants').doc(rantId).collection('replies').doc(replyId);
+    final voteRef = _firestore.collection('rants').doc(rantId).collection('replies').doc(replyId).collection('votes').doc(userId);
+    
+    final replyDoc = await replyRef.get();
     if (!replyDoc.exists) {
       throw Exception('Reply not found');
     }
     final replyOwnerId = replyDoc.data()?['userId'];
+    final replyContent = replyDoc.data()?['content'] ?? '';
+    final voterIds = List<String>.from(replyDoc.data()?['voterIds'] ?? []);
+    final hasVoted = voterIds.contains(userId);
 
-    bool wasVoted = false;
-    await _firestore.runTransaction((transaction) async {
-      final voteDocRef = _firestore
-          .collection('rants')
-          .doc(rantId)
-          .collection('replies')
-          .doc(replyId)
-          .collection('votes')
-          .doc(userId);
-      final replyDocRef = _firestore
-          .collection('rants')
-          .doc(rantId)
-          .collection('replies')
-          .doc(replyId);
-      final voteDoc = await transaction.get(voteDocRef);
-
-      if (voteDoc.exists) {
-        wasVoted = true;
-        transaction.delete(voteDocRef);
-        transaction.update(replyDocRef, {'karma': FieldValue.increment(-1)});
-      } else {
-        wasVoted = false;
-        transaction.set(voteDocRef, {
-          'userId': userId,
-          'timestamp': DateTime.now().toIso8601String(),
-        });
-        transaction.update(replyDocRef, {'karma': FieldValue.increment(1)});
-      }
-    });
+    final batch = _firestore.batch();
+    if (hasVoted) {
+      batch.update(replyRef, {
+        'voterIds': FieldValue.arrayRemove([userId]),
+        'karma': FieldValue.increment(-1),
+      });
+      batch.delete(voteRef);
+    } else {
+      batch.update(replyRef, {
+        'voterIds': FieldValue.arrayUnion([userId]),
+        'karma': FieldValue.increment(1),
+      });
+      batch.set(voteRef, {'userId': userId, 'timestamp': FieldValue.serverTimestamp()});
+    }
+    await batch.commit();
 
     // Handle notifications
     try {
-      final replyContent = replyDoc.data()?['content'] ?? '';
-
       if (replyOwnerId != null && userId != replyOwnerId) {
-        // Fetch voter's user info
         final voterDoc = await _firestore.collection('users').doc(userId).get();
         final voterHandle = voterDoc.data()?['handle'] ?? 'anonymous';
         final voterAvatarUrl = voterDoc.data()?['avatarUrl'];
 
-        if (!wasVoted) {
-          // Added vote - create notification
+        if (!hasVoted) {
           final deterministicId = 'replyKarma_${replyId}_$userId';
           await NotificationService().upsertKarmaNotification(
             replyOwnerId,
@@ -230,7 +202,6 @@ class RantService {
             ),
             deterministicId,
           );
-          // Send push notification
           await PushService().sendPush(
             targetUserId: replyOwnerId,
             title: 'New Like',
@@ -238,13 +209,11 @@ class RantService {
             targetRantId: rantId,
           );
         } else {
-          // Removed vote - delete notification
           final deterministicId = 'replyKarma_${replyId}_$userId';
           await NotificationService().deleteKarmaNotification(replyOwnerId, deterministicId);
         }
       }
     } catch (e) {
-      // Notification failure should not break the vote
       debugPrint('Failed to handle notification: $e');
     }
   }

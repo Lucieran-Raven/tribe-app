@@ -9,6 +9,7 @@ class RantModel {
   final int replyCount;
   final int karma;
   final bool isVisible;
+  final List<String> voterIds;
 
   RantModel({
     required this.rantId,
@@ -21,6 +22,7 @@ class RantModel {
     this.replyCount = 0,
     this.karma = 0,
     this.isVisible = true,
+    this.voterIds = const [],
   });
 
   factory RantModel.fromJson(Map<String, dynamic> json, {String? rantId}) {
@@ -35,6 +37,7 @@ class RantModel {
       replyCount: json['replyCount'] as int? ?? 0,
       karma: json['karma'] as int? ?? 0,
       isVisible: json['isVisible'] as bool? ?? true,
+      voterIds: List<String>.from(json['voterIds'] ?? []),
     );
   }
 
@@ -50,6 +53,7 @@ class RantModel {
       'replyCount': replyCount,
       'karma': karma,
       'isVisible': isVisible,
+      'voterIds': voterIds,
     };
   }
 
@@ -64,6 +68,7 @@ class RantModel {
     int? replyCount,
     int? karma,
     bool? isVisible,
+    List<String>? voterIds,
   }) {
     return RantModel(
       rantId: rantId ?? this.rantId,
@@ -76,6 +81,7 @@ class RantModel {
       replyCount: replyCount ?? this.replyCount,
       karma: karma ?? this.karma,
       isVisible: isVisible ?? this.isVisible,
+      voterIds: voterIds ?? this.voterIds,
     );
   }
 }

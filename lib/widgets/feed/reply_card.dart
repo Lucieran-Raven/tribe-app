@@ -8,25 +8,18 @@ import '../../services/report_service.dart';
 import '../../design/tribe_design.dart';
 import '../../widgets/common/tap_scale.dart';
 
-class ReplyCard extends ConsumerStatefulWidget {
+class ReplyCard extends ConsumerWidget {
   final ReplyModel reply;
 
   const ReplyCard({super.key, required this.reply});
 
   @override
-  ConsumerState<ReplyCard> createState() => _ReplyCardState();
-}
-
-class _ReplyCardState extends ConsumerState<ReplyCard> {
-  bool _localLiked = false;
-  int _localKarma = 0;
-
-  @override
-  Widget build(BuildContext context) {
-    final hasVoted = _localLiked;
-    final displayKarma = _localKarma > 0 ? _localKarma : widget.reply.karma;
+  Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authProvider);
-    final isOwnReply = authState is AuthAuthenticated && authState.user.userId == widget.reply.userId;
+    final currentUserId = authState is AuthAuthenticated ? authState.user.userId : null;
+    final isLiked = currentUserId != null && reply.voterIds.contains(currentUserId);
+    final karma = reply.voterIds.length;
+    final isOwnReply = authState is AuthAuthenticated && authState.user.userId == reply.userId;
     final t = TribeThemeScope.of(context);
 
     return TapScale(
@@ -37,14 +30,14 @@ class _ReplyCardState extends ConsumerState<ReplyCard> {
         decoration: BoxDecoration(
           color: t.bg2,
           borderRadius: BorderRadius.circular(16),
-          border: Border(left: BorderSide(color: _colorForHandle(widget.reply.handle), width: 2)),
+          border: Border(left: BorderSide(color: _colorForHandle(reply.handle), width: 2)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Avatar(handle: widget.reply.handle, imageUrl: widget.reply.avatarUrl, size: 30),
+                Avatar(handle: reply.handle, imageUrl: reply.avatarUrl, size: 30),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -52,9 +45,9 @@ class _ReplyCardState extends ConsumerState<ReplyCard> {
                     children: [
                       Row(
                         children: [
-                          Text('@${widget.reply.handle}', style: t.body(size: 12.5, weight: FontWeight.w800, color: t.ink)),
+                          Text('@${reply.handle}', style: t.body(size: 12.5, weight: FontWeight.w800, color: t.ink)),
                           const SizedBox(width: 8),
-                          Text(TimeUtils.formatRelativeTime(widget.reply.timestamp), style: t.caption(size: 11)),
+                          Text(TimeUtils.formatRelativeTime(reply.timestamp), style: t.caption(size: 11)),
                         ],
                       ),
                     ],
@@ -79,7 +72,7 @@ class _ReplyCardState extends ConsumerState<ReplyCard> {
                               onClose: () => Navigator.of(ctx).pop(),
                               onConfirm: () async {
                                 try {
-                                  await RantService().deleteReply(widget.reply.rantId, widget.reply.replyId);
+                                  await RantService().deleteReply(reply.rantId, reply.replyId);
                                 } catch (e) {
                                   if (context.mounted) {
                                     Toast.error(context, 'Failed to delete: $e');
@@ -106,10 +99,10 @@ class _ReplyCardState extends ConsumerState<ReplyCard> {
                                 if (authState is AuthAuthenticated) {
                                   await ReportService().reportContent(
                                     targetType: 'reply',
-                                    targetId: widget.reply.replyId,
+                                    targetId: reply.replyId,
                                     reporterId: authState.user.userId,
                                     reason: reason,
-                                    snippet: widget.reply.content,
+                                    snippet: reply.content,
                                   );
                                   if (context.mounted) {
                                     Toast.success(context, 'Report submitted. Thank you.');
@@ -126,45 +119,31 @@ class _ReplyCardState extends ConsumerState<ReplyCard> {
               ],
             ),
             const SizedBox(height: 8),
-            Text(widget.reply.content, style: t.body(size: 14, weight: FontWeight.w500, color: t.ink)),
+            Text(reply.content, style: t.body(size: 14, weight: FontWeight.w500, color: t.ink)),
             const SizedBox(height: 8),
             Row(
               children: [
                 ActionPill(
                   icon: Icons.thumb_up_outlined,
-                  label: '$displayKarma',
-                  liked: hasVoted,
+                  label: '$karma',
+                  liked: isLiked,
                   onTap: () async {
-                          if (isOwnReply) {
-                            Toast.warning(context, "You can't like your own reply");
-                            return;
-                          }
-                          final authState = ref.read(authProvider);
-                          if (authState is! AuthAuthenticated) {
-                            Toast.info(context, 'Sign in to like');
-                            return;
-                          }
-
-                          final originalLiked = _localLiked;
-                          final originalKarma = _localKarma > 0 ? _localKarma : widget.reply.karma;
-
-                          setState(() {
-                            _localLiked = !_localLiked;
-                            _localKarma = _localLiked ? originalKarma + 1 : originalKarma - 1;
-                          });
-
-                          RantService().toggleReplyVote(widget.reply.rantId, widget.reply.replyId, authState.user.userId).catchError((e) {
-                            if (mounted) {
-                              setState(() {
-                                _localLiked = originalLiked;
-                                _localKarma = originalKarma;
-                              });
-                            }
-                            if (mounted) {
-                              Toast.error(context, 'Failed to like: $e');
-                            }
-                          });
-                        },
+                    if (currentUserId == null) {
+                      Toast.info(context, 'Sign in to like');
+                      return;
+                    }
+                    if (reply.userId == currentUserId) {
+                      Toast.warning(context, "You can't like your own reply");
+                      return;
+                    }
+                    try {
+                      await RantService().toggleReplyVote(reply.rantId, reply.replyId, currentUserId);
+                    } catch (e) {
+                      if (context.mounted) {
+                        Toast.error(context, 'Failed to like: $e');
+                      }
+                    }
+                  },
                 ),
               ],
             ),
@@ -173,20 +152,20 @@ class _ReplyCardState extends ConsumerState<ReplyCard> {
       ),
     );
   }
+}
 
-  Color _colorForHandle(String? handle) {
-    if (handle == null) return const Color(0xFF6B7280);
-    final hash = handle.hashCode;
-    final colors = [
-      const Color(0xFF6366F1),
-      const Color(0xFF8B5CF6),
-      const Color(0xFFEC4899),
-      const Color(0xFFF43F5E),
-      const Color(0xFFF97316),
-      const Color(0xFFEAB308),
-      const Color(0xFF22C55E),
-      const Color(0xFF06B6D4),
-    ];
-    return colors[hash.abs() % colors.length];
-  }
+Color _colorForHandle(String? handle) {
+  if (handle == null) return const Color(0xFF6B7280);
+  final hash = handle.hashCode;
+  final colors = [
+    const Color(0xFF6366F1),
+    const Color(0xFF8B5CF6),
+    const Color(0xFFEC4899),
+    const Color(0xFFF43F5E),
+    const Color(0xFFF97316),
+    const Color(0xFFEAB308),
+    const Color(0xFF22C55E),
+    const Color(0xFF06B6D4),
+  ];
+  return colors[hash.abs() % colors.length];
 }

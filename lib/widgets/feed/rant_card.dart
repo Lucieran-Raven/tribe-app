@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../models/rant_model.dart';
 import '../../utils/time_utils.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/feed_provider.dart';
 import '../../services/rant_service.dart';
 import '../../services/report_service.dart';
 import '../../services/notification_service.dart';
@@ -22,14 +23,12 @@ class RantCard extends ConsumerStatefulWidget {
 }
 
 class _RantCardState extends ConsumerState<RantCard> {
-  bool _localLiked = false;
-  int _localKarma = 0;
-
   @override
   Widget build(BuildContext context) {
-    final hasVoted = _localLiked;
-    final displayKarma = _localKarma > 0 ? _localKarma : widget.rant.karma;
     final authState = ref.watch(authProvider);
+    final currentUserId = authState is AuthAuthenticated ? authState.user.userId : null;
+    final isLiked = currentUserId != null && widget.rant.voterIds.contains(currentUserId);
+    final karma = widget.rant.voterIds.length;
     final isOwnPost = authState is AuthAuthenticated && authState.user.userId == widget.rant.userId;
     final t = TribeThemeScope.of(context);
 
@@ -174,49 +173,41 @@ class _RantCardState extends ConsumerState<RantCard> {
               const SizedBox(width: 12),
               ActionPill(
                 icon: Icons.thumb_up_outlined,
-                label: '$displayKarma',
-                liked: hasVoted,
+                label: '$karma',
+                liked: isLiked,
                 onTap: () async {
-                        if (isOwnPost) {
-                          Toast.warning(context, "You can't like your own post");
-                          return;
-                        }
-                        final authState = ref.read(authProvider);
-                        if (authState is! AuthAuthenticated) {
-                          Toast.info(context, 'Please sign in to like');
-                          return;
-                        }
-
-                        final originalLiked = _localLiked;
-                        final originalKarma = _localKarma > 0 ? _localKarma : widget.rant.karma;
-
-                        setState(() {
-                          _localLiked = !_localLiked;
-                          _localKarma = _localLiked ? originalKarma + 1 : originalKarma - 1;
-                        });
-
-                        RantService().toggleVote(widget.rant.rantId, authState.user.userId).then((_) {
-                          if (_localLiked && !isOwnPost) {
-                            NotificationService().sendLikeNotification(
-                              fromUserId: authState.user.userId,
-                              fromUsername: authState.user.handle ?? 'anonymous',
-                              fromAvatarUrl: authState.user.avatarUrl ?? '',
-                              toUserId: widget.rant.userId,
-                              rantId: widget.rant.rantId,
-                            );
-                          }
-                        }).catchError((e) {
-                          if (mounted) {
-                            setState(() {
-                              _localLiked = originalLiked;
-                              _localKarma = originalKarma;
-                            });
-                          }
-                          if (mounted) {
-                            Toast.error(context, 'Failed to like: $e');
-                          }
-                        });
-                      },
+                  if (currentUserId == null) {
+                    Toast.info(context, 'Sign in to like');
+                    return;
+                  }
+                  if (widget.rant.userId == currentUserId) {
+                    Toast.warning(context, "You can't like your own post");
+                    return;
+                  }
+                  final optimisticRant = widget.rant.copyWith(
+                    voterIds: isLiked
+                      ? widget.rant.voterIds.where((id) => id != currentUserId).toList()
+                      : [...widget.rant.voterIds, currentUserId],
+                  );
+                  ref.read(feedProvider.notifier).updateRant(optimisticRant);
+                  try {
+                    await RantService().toggleVote(widget.rant.rantId, currentUserId);
+                    if (!isLiked && authState is AuthAuthenticated) {
+                      await NotificationService().sendLikeNotification(
+                        fromUserId: currentUserId,
+                        fromUsername: authState.user.handle ?? 'anonymous',
+                        fromAvatarUrl: authState.user.avatarUrl ?? '',
+                        toUserId: widget.rant.userId,
+                        rantId: widget.rant.rantId,
+                      );
+                    }
+                  } catch (e) {
+                    ref.read(feedProvider.notifier).updateRant(widget.rant);
+                    if (context.mounted) {
+                      Toast.error(context, 'Failed to like: $e');
+                    }
+                  }
+                },
               ),
             ],
           ),

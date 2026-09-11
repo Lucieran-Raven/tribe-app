@@ -166,6 +166,9 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
                           return const Center(child: CircularProgressIndicator());
                         }
                         final rant = snapshot.data!;
+                        final currentUserId = authState is AuthAuthenticated ? authState.user.userId : null;
+                        final isLiked = currentUserId != null && rant.voterIds.contains(currentUserId);
+                        final karma = rant.voterIds.length;
                         return Container(
                           margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                           padding: const EdgeInsets.all(13),
@@ -207,7 +210,37 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
                                 children: [
                                   ActionPill(icon: Icons.chat_bubble_outline, label: '${rant.replyCount}', onTap: null),
                                   const SizedBox(width: 16),
-                                  ActionPill(icon: Icons.thumb_up_outlined, label: '${rant.karma}', onTap: null),
+                                  ActionPill(
+                                    icon: Icons.thumb_up_outlined,
+                                    label: '$karma',
+                                    liked: isLiked,
+                                    onTap: () async {
+                                      if (currentUserId == null) {
+                                        Toast.info(context, 'Sign in to like');
+                                        return;
+                                      }
+                                      if (rant.userId == currentUserId) {
+                                        Toast.warning(context, "You can't like your own post");
+                                        return;
+                                      }
+                                      try {
+                                        await RantService().toggleVote(rant.rantId, currentUserId);
+                                        if (!isLiked && authState is AuthAuthenticated) {
+                                          await NotificationService().sendLikeNotification(
+                                            fromUserId: currentUserId,
+                                            fromUsername: authState.user.handle ?? 'anonymous',
+                                            fromAvatarUrl: authState.user.avatarUrl ?? '',
+                                            toUserId: rant.userId,
+                                            rantId: rant.rantId,
+                                          );
+                                        }
+                                      } catch (e) {
+                                        if (context.mounted) {
+                                          Toast.error(context, 'Failed to like: $e');
+                                        }
+                                      }
+                                    },
+                                  ),
                                 ],
                               ),
                             ],

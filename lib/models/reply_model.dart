@@ -8,6 +8,7 @@ class ReplyModel {
   final DateTime timestamp;
   final String? parentId;
   final int karma;
+  final List<String> voterIds;
 
   ReplyModel({
     required this.replyId,
@@ -19,6 +20,7 @@ class ReplyModel {
     required this.timestamp,
     this.parentId,
     this.karma = 0,
+    this.voterIds = const [],
   });
 
   factory ReplyModel.fromJson(Map<String, dynamic> json, {String? replyId}) {
@@ -32,6 +34,7 @@ class ReplyModel {
       timestamp: DateTime.parse(json['timestamp'] as String),
       parentId: json['parentId'] as String?,
       karma: json['karma'] as int? ?? 0,
+      voterIds: List<String>.from(json['voterIds'] ?? []),
     );
   }
 
@@ -46,6 +49,7 @@ class ReplyModel {
       'timestamp': timestamp.toIso8601String(),
       'parentId': parentId,
       'karma': karma,
+      'voterIds': voterIds,
     };
   }
 
@@ -59,6 +63,7 @@ class ReplyModel {
     DateTime? timestamp,
     String? parentId,
     int? karma,
+    List<String>? voterIds,
   }) {
     return ReplyModel(
       replyId: replyId ?? this.replyId,
@@ -70,6 +75,7 @@ class ReplyModel {
       timestamp: timestamp ?? this.timestamp,
       parentId: parentId ?? this.parentId,
       karma: karma ?? this.karma,
+      voterIds: voterIds ?? this.voterIds,
     );
   }
 }
