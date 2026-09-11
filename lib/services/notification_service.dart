@@ -1,8 +1,15 @@
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 import '../models/notification_model.dart';
 
 class NotificationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static const String _appId = 'e98051a2-ef46-43f2-bf9d-90e2f9180263';
+  static const String _apiKey = 'os_v2_app_5gafdixpizb7fp45sdrpsgacmmklhs455wmuysvqj7qj6pcdwb5a7cy3oxliq6muimontcjxts5ahxhtztjk5hzfhdtxmx76cfw5kka';
+  static const String _apiUrl = 'https://api.onesignal.com/notifications';
 
   Stream<List<NotificationModel>> streamNotifications(String userId) {
     return _firestore
@@ -24,7 +31,13 @@ class NotificationService {
         .collection('notifications')
         .doc();
     final notificationWithId = notification.copyWith(notificationId: docRef.id);
-    await docRef.set(notificationWithId.toJson());
+    final data = notificationWithId.toJson();
+    
+    // Enforce custom notification icon
+    data['android_small_icon'] = 'ic_notification';
+    data['small_icon'] = 'ic_notification';
+    
+    await docRef.set(data);
   }
 
   Future<void> markAsRead(String userId, String notificationId) async {
@@ -92,6 +105,143 @@ class NotificationService {
         .collection('notifications')
         .doc(deterministicId)
         .delete();
+  }
+
+  Future<void> syncPlayerId(String uid) async {
+    int attempts = 0;
+    const maxAttempts = 6;
+    
+    while (attempts < maxAttempts) {
+      try {
+        final playerId = OneSignal.User.pushSubscription.id;
+        if (playerId != null && playerId.isNotEmpty) {
+          await _firestore.collection('users').doc(uid).update({'oneSignalPlayerId': playerId});
+          debugPrint('PLAYERID SYNCED for $uid (attempt ${attempts + 1})');
+          return;
+        }
+        debugPrint('PLAYERID not ready for $uid (attempt ${attempts + 1})');
+      } catch (e) {
+        debugPrint('PLAYERID SYNC FAILED for $uid (attempt ${attempts + 1}): $e');
+      }
+      
+      attempts++;
+      if (attempts < maxAttempts) {
+        await Future.delayed(const Duration(seconds: 1));
+      }
+    }
+    
+    debugPrint('PLAYERID SYNC GAVE UP for $uid after $maxAttempts attempts');
+  }
+
+  Future<void> _sendPush({
+    required String playerId,
+    required String heading,
+    required String content,
+    required Map<String, dynamic> data,
+  }) async {
+    if (playerId.isEmpty) return;
+    try {
+      final response = await http.post(
+        Uri.parse(_apiUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Basic $_apiKey',
+        },
+        body: jsonEncode({
+          'app_id': _appId,
+          'include_player_ids': [playerId],
+          'headings': {'en': heading},
+          'contents': {'en': content},
+          'small_icon': 'ic_notification',
+          'data': data,
+        }),
+      ).timeout(const Duration(seconds: 10));
+      debugPrint('PUSH STATUS: ${response.statusCode}');
+      debugPrint('PUSH BODY: ${response.body}');
+    } catch (e) {
+      debugPrint('PUSH FAILED: $e');
+    }
+  }
+
+  // Like notification
+  Future<void> sendLikeNotification({
+    required String fromUserId,
+    required String fromUsername,
+    required String fromAvatarUrl,
+    required String toUserId,
+    required String rantId,
+  }) async {
+    if (fromUserId == toUserId) return; // Don't notify yourself
+
+    // Fetch target user's OneSignal playerId
+    final targetUserDoc = await _firestore.collection('users').doc(toUserId).get();
+    final playerId = (targetUserDoc.data()?['oneSignalPlayerId'] as String?) ?? '';
+    
+    if (playerId.isEmpty) return; // Can't send notification without playerId
+
+    // Create Firestore notification record (syncs with client-side notifications)
+    await createNotification(toUserId, NotificationModel(
+      type: NotificationType.karma,
+      fromUserId: fromUserId,
+      fromHandle: fromUsername,
+      fromAvatarUrl: fromAvatarUrl,
+      targetRantId: rantId,
+      targetSnippet: 'Your rant',
+      timestamp: DateTime.now(),
+      isRead: false,
+    ));
+
+    // Send push notification via OneSignal REST API
+    await _sendPush(
+      playerId: playerId,
+      heading: 'New Like',
+      content: '@$fromUsername liked your rant',
+      data: {'rantId': rantId, 'type': 'like', 'fromUserId': fromUserId},
+    );
+  }
+
+  // Reply notification
+  Future<void> sendReplyNotification({
+    required String fromUserId,
+    required String fromUsername,
+    required String fromAvatarUrl,
+    required String toUserId,
+    required String rantId,
+    required String replyContent,
+  }) async {
+    debugPrint('=== SEND REPLY NOTIFICATION ===');
+    debugPrint('Target userId: $toUserId');
+
+    if (fromUserId == toUserId) return; // Don't notify yourself
+
+    // Fetch target user's OneSignal playerId
+    final targetUserDoc = await _firestore.collection('users').doc(toUserId).get();
+    final playerId = (targetUserDoc.data()?['oneSignalPlayerId'] as String?) ?? '';
+    debugPrint('Target playerId: $playerId (empty: ${playerId.isEmpty})');
+    
+    if (playerId.isEmpty) return; // Can't send notification without playerId
+
+    // Create Firestore notification record (syncs with client-side notifications)
+    await createNotification(toUserId, NotificationModel(
+      type: NotificationType.reply,
+      fromUserId: fromUserId,
+      fromHandle: fromUsername,
+      fromAvatarUrl: fromAvatarUrl,
+      targetRantId: rantId,
+      targetSnippet: replyContent.length > 50 ? '${replyContent.substring(0, 50)}...' : replyContent,
+      timestamp: DateTime.now(),
+      isRead: false,
+    ));
+
+    debugPrint('About to call _sendPush...');
+
+    // Send push notification via OneSignal REST API
+    await _sendPush(
+      playerId: playerId,
+      heading: 'New Reply',
+      content: '@$fromUsername replied to your rant',
+      data: {'rantId': rantId, 'type': 'reply', 'fromUserId': fromUserId},
+    );
   }
 }
 

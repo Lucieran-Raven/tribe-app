@@ -21,6 +21,18 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
   int _currentIndex = 0;
 
   @override
+  void initState() {
+    super.initState();
+    // Sync OneSignal playerId on home screen load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authState = ref.read(authProvider);
+      if (authState is AuthAuthenticated) {
+        NotificationService().syncPlayerId(authState.user.userId);
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final t = const TribeTheme(true);
     final unreadCount = ref.watch(unreadCountProvider);

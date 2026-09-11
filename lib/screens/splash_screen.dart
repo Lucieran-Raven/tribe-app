@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../design/tribe_design.dart';
 import '../services/auth_service.dart';
+import '../services/notification_service.dart';
 import '../providers/auth_provider.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
@@ -14,25 +15,13 @@ class SplashScreen extends ConsumerStatefulWidget {
   ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends ConsumerState<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
-
+class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(authProvider.notifier).initialize();
     });
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 1000),
-      vsync: this,
-    )..repeat(reverse: true);
-
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
 
     // Navigate after 2 seconds based on auth state
     Future.delayed(const Duration(seconds: 2), () async {
@@ -45,6 +34,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
           final authService = AuthService();
           await authService.ensureUserDoc();
           final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+
+          // Store OneSignal playerId in user document
+          await NotificationService().syncPlayerId(user.uid);
+
           if (!mounted) return;
           if (doc.exists && doc.data()?['handle'] != null && doc.data()?['handle'] != '') {
             context.go('/home');
@@ -60,12 +53,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final t = const TribeTheme(true);
     return TribeThemeScope(
@@ -77,27 +64,19 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                AnimatedBuilder(
-                  animation: _scaleAnimation,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: _scaleAnimation.value,
-                      child: child,
-                    );
-                  },
-                  child: Container(
-                    width: 84,
-                    height: 84,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: [t.milk, t.milkDim], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                      borderRadius: blobRadius(84, 84),
-                      boxShadow: t.clayMilkOut,
-                    ),
-                    alignment: Alignment.center,
-                    child: Text('T', style: t.display(size: 26, color: t.bg0)),
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(32),
+                    border: Border.all(color: t.lineStrong),
+                    boxShadow: [BoxShadow(color: t.gold.withValues(alpha: 0.18), blurRadius: 44, spreadRadius: 4)],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(28),
+                    child: Image.asset('assets/logo/tribe_logo.png', width: 148, height: 148, fit: BoxFit.cover),
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 20),
                 const Wordmark(size: 30),
                 const SizedBox(height: 6),
                 Text('v1.0.0', style: t.caption(size: 11)),

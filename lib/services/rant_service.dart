@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/rant_model.dart';
 import '../models/reply_model.dart';
 import '../models/notification_model.dart';
@@ -58,41 +59,6 @@ class RantService {
     await _firestore.collection('rants').doc(reply.rantId).update({
       'replyCount': FieldValue.increment(1),
     });
-
-    // Create notification for rant owner
-    try {
-      final rantDoc = await _firestore.collection('rants').doc(reply.rantId).get();
-      final ownerUserId = rantDoc.data()?['userId'];
-      if (ownerUserId != null && reply.userId != ownerUserId) {
-        // Fetch replier's user info
-        final replierDoc = await _firestore.collection('users').doc(reply.userId).get();
-        final replierHandle = replierDoc.data()?['handle'] ?? 'anonymous';
-        final replierAvatarUrl = replierDoc.data()?['avatarUrl'];
-
-        await NotificationService().createNotification(
-          ownerUserId,
-          NotificationModel(
-            type: NotificationType.reply,
-            fromUserId: reply.userId,
-            fromHandle: replierHandle,
-            fromAvatarUrl: replierAvatarUrl,
-            targetRantId: reply.rantId,
-            targetSnippet: reply.content,
-            timestamp: DateTime.now(),
-          ),
-        );
-        // Send push notification
-        await PushService().sendPush(
-          targetUserId: ownerUserId,
-          title: 'New Reply',
-          body: '@$replierHandle replied to your post',
-          targetRantId: reply.rantId,
-        );
-      }
-    } catch (e) {
-      // Notification failure should not break the reply
-      print('Failed to create notification: $e');
-    }
   }
 
   Stream<bool> streamUserVote(String rantId, String userId) {
@@ -149,7 +115,7 @@ class RantService {
 
         if (!wasVoted) {
           // Added vote - create notification
-          final deterministicId = 'karma_${rantId}_${userId}';
+          final deterministicId = 'karma_${rantId}_$userId';
           await NotificationService().upsertKarmaNotification(
             rantOwnerId,
             NotificationModel(
@@ -172,13 +138,13 @@ class RantService {
           );
         } else {
           // Removed vote - delete notification
-          final deterministicId = 'karma_${rantId}_${userId}';
+          final deterministicId = 'karma_${rantId}_$userId';
           await NotificationService().deleteKarmaNotification(rantOwnerId, deterministicId);
         }
       }
     } catch (e) {
       // Notification failure should not break the vote
-      print('Failed to handle notification: $e');
+      debugPrint('Failed to handle notification: $e');
     }
   }
 
@@ -249,7 +215,7 @@ class RantService {
 
         if (!wasVoted) {
           // Added vote - create notification
-          final deterministicId = 'replyKarma_${replyId}_${userId}';
+          final deterministicId = 'replyKarma_${replyId}_$userId';
           await NotificationService().upsertKarmaNotification(
             replyOwnerId,
             NotificationModel(
@@ -273,13 +239,13 @@ class RantService {
           );
         } else {
           // Removed vote - delete notification
-          final deterministicId = 'replyKarma_${replyId}_${userId}';
+          final deterministicId = 'replyKarma_${replyId}_$userId';
           await NotificationService().deleteKarmaNotification(replyOwnerId, deterministicId);
         }
       }
     } catch (e) {
       // Notification failure should not break the vote
-      print('Failed to handle notification: $e');
+      debugPrint('Failed to handle notification: $e');
     }
   }
 

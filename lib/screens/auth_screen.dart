@@ -49,15 +49,16 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 const SizedBox(),
                 Column(children: [
                   Container(
-                    width: 68,
-                    height: 68,
+                    padding: const EdgeInsets.all(5),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: [t.milk, t.milkDim], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                      borderRadius: blobRadius(68, 68),
-                      boxShadow: t.clayMilkOut,
+                      borderRadius: BorderRadius.circular(26),
+                      border: Border.all(color: t.lineStrong),
+                      boxShadow: [BoxShadow(color: t.gold.withValues(alpha: 0.16), blurRadius: 34, spreadRadius: 2)],
                     ),
-                    alignment: Alignment.center,
-                    child: Text('T', style: t.display(size: 22, color: t.bg0)),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(22),
+                      child: Image.asset('assets/logo/tribe_logo.png', width: 96, height: 96, fit: BoxFit.cover),
+                    ),
                   ),
                   const SizedBox(height: 14),
                   const Wordmark(size: 30),

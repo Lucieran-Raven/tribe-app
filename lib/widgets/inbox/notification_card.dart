@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/notification_model.dart';
 import '../../utils/time_utils.dart';
 import '../../design/tribe_design.dart';
+import '../../services/notification_service.dart';
+import '../../providers/auth_provider.dart';
 
 class NotificationCard extends ConsumerWidget {
   final NotificationModel notification;
@@ -13,6 +15,46 @@ class NotificationCard extends ConsumerWidget {
     required this.notification,
     required this.onTap,
   });
+
+  Future<void> _deleteNotification(BuildContext context, WidgetRef ref) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Delete notification?'),
+      content: const Text('This will remove the notification from your inbox.'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(false),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(true),
+          child: const Text('Delete'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true) return;
+  
+  final authState = ref.read(authProvider);
+  if (authState is AuthAuthenticated) {
+    try {
+      await NotificationService().deleteNotificationBySource(
+        authState.user.userId,
+        notification.type,
+        notification.fromUserId,
+        notification.targetRantId,
+      );
+      if (context.mounted) {
+        Toast.success(context, 'Notification deleted');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Toast.error(context, 'Failed to delete: $e');
+      }
+    }
+  }
+}
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -90,6 +132,12 @@ class NotificationCard extends ConsumerWidget {
                 ],
               ),
             ),
+            IconBtn(
+              icon: Icons.delete_outline,
+              size: 16,
+              onTap: () => _deleteNotification(context, ref),
+            ),
+            const SizedBox(width: 8),
             if (!notification.isRead)
               Container(
                 width: 8,

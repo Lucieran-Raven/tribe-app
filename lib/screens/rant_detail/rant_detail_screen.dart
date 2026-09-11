@@ -6,9 +6,11 @@ import '../../models/reply_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/replies_provider.dart';
 import '../../services/rant_service.dart';
+import '../../services/notification_service.dart';
 import '../../utils/time_utils.dart';
 import '../../widgets/feed/reply_card.dart';
 import '../../widgets/feed/full_image_viewer.dart';
+import '../../widgets/common/tap_scale.dart';
 import '../../design/tribe_design.dart';
 
 class RantDetailScreen extends ConsumerStatefulWidget {
@@ -24,6 +26,17 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
   final TextEditingController _replyController = TextEditingController();
   bool _isSending = false;
   bool _isPostAvailable = true;
+  bool _hasText = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _replyController.addListener(() {
+      setState(() {
+        _hasText = _replyController.text.trim().isNotEmpty;
+      });
+    });
+  }
 
   @override
   void dispose() {
@@ -57,6 +70,28 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
       if (mounted) {
         _replyController.clear();
         Toast.success(context, 'Reply sent');
+      }
+
+      // Fetch rant to get owner ID for notification
+      final rant = await RantService().getRant(widget.rantId);
+      if (user.userId != rant.userId) {
+        debugPrint('=== REPLY NOTIFICATION TRIGGER ===');
+        debugPrint('fromUserId: ${user.userId}');
+        debugPrint('fromUsername: ${user.handle}');
+        debugPrint('toUserId (rant owner): ${rant.userId}');
+        debugPrint('rantId: ${widget.rantId}');
+        debugPrint('Calling sendReplyNotification...');
+
+        await NotificationService().sendReplyNotification(
+          fromUserId: user.userId,
+          fromUsername: user.handle ?? 'anonymous',
+          fromAvatarUrl: user.avatarUrl ?? '',
+          toUserId: rant.userId,
+          rantId: widget.rantId,
+          replyContent: content,
+        );
+
+        debugPrint('sendReplyNotification completed');
       }
     } catch (e) {
       if (mounted) {
@@ -237,33 +272,23 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
                       ),
                     ),
                     const SizedBox(width: 10),
-                    ValueListenableBuilder(
-                      valueListenable: _replyController,
-                      builder: (context, text, child) {
-                        final isEmpty = text.toString().trim().isEmpty;
-                        return GestureDetector(
-                          onTap: isEmpty || _isSending ? null : _sendReply,
-                          child: Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: isEmpty ? t.bg2 : null,
-                              gradient: isEmpty ? null : LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [t.milk, t.milkDim],
-                              ),
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: t.line),
-                              boxShadow: isEmpty ? null : t.clayMilkOut,
-                            ),
-                            alignment: Alignment.center,
-                            child: _isSending
-                                ? const CupertinoActivityIndicator(radius: 8)
-                                : Icon(Icons.send, size: 17, color: isEmpty ? t.inkFaint : t.bg0),
+                    TapScale(
+                      onTap: _hasText && !_isSending ? _sendReply : null,
+                      child: Opacity(
+                        opacity: _hasText && !_isSending ? 1.0 : 0.35,
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: t.milk,
+                            shape: BoxShape.circle,
                           ),
-                        );
-                      },
+                          alignment: Alignment.center,
+                          child: _isSending
+                              ? const CupertinoActivityIndicator(radius: 8)
+                              : Icon(Icons.send_rounded, size: 18, color: t.bg0),
+                        ),
+                      ),
                     ),
                   ],
                 ),

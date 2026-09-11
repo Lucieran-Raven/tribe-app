@@ -1,9 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import '../models/user_model.dart';
-import 'push_service.dart';
+import 'notification_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -70,26 +71,12 @@ class AuthService {
         OneSignal.User.pushSubscription.optIn();
       }
 
-      Future.delayed(const Duration(seconds: 8), () async {
-        try {
-          print('=== ONESIGNAL SELF-TEST ===');
-          print('External ID used: ${userModel.userId}');
-          print('Subscription ID: ${OneSignal.User.pushSubscription.id}');
-          print('Opted In: ${OneSignal.User.pushSubscription.optedIn}');
-          await PushService().sendPush(
-            targetUserId: userModel.userId,
-            title: 'TRIBE Test',
-            body: 'Push system is working!',
-          );
-          print('=== SELF-TEST SENT ===');
-        } catch (e) {
-          print('SELF-TEST ERROR: $e');
-        }
-      });
+      // Sync OneSignal playerId for notifications
+      await NotificationService().syncPlayerId(userModel.userId);
 
       return userModel;
     } catch (e) {
-      print('Error signing in with Google: $e');
+      debugPrint('Error signing in with Google: $e');
       return null;
     }
   }
@@ -101,7 +88,7 @@ class AuthService {
       // Unlink OneSignal from this user
       OneSignal.logout();
     } catch (e) {
-      print('Error signing out: $e');
+      debugPrint('Error signing out: $e');
     }
   }
 

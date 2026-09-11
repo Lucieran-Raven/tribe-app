@@ -7,6 +7,7 @@ import '../../utils/time_utils.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/rant_service.dart';
 import '../../services/report_service.dart';
+import '../../services/notification_service.dart';
 import '../../design/tribe_design.dart';
 import '../../widgets/common/tap_scale.dart';
 import 'full_image_viewer.dart';
@@ -194,7 +195,17 @@ class _RantCardState extends ConsumerState<RantCard> {
                           _localKarma = _localLiked ? originalKarma + 1 : originalKarma - 1;
                         });
 
-                        RantService().toggleVote(widget.rant.rantId, authState.user.userId).catchError((e) {
+                        RantService().toggleVote(widget.rant.rantId, authState.user.userId).then((_) {
+                          if (_localLiked && !isOwnPost) {
+                            NotificationService().sendLikeNotification(
+                              fromUserId: authState.user.userId,
+                              fromUsername: authState.user.handle ?? 'anonymous',
+                              fromAvatarUrl: authState.user.avatarUrl ?? '',
+                              toUserId: widget.rant.userId,
+                              rantId: widget.rant.rantId,
+                            );
+                          }
+                        }).catchError((e) {
                           if (mounted) {
                             setState(() {
                               _localLiked = originalLiked;

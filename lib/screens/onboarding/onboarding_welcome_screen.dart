@@ -54,18 +54,18 @@ class _OnboardingWelcomeScreenState extends ConsumerState<OnboardingWelcomeScree
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Icon badge container
+                        // Logo container
                         Container(
-                          width: 76,
-                          height: 76,
+                          padding: const EdgeInsets.all(5),
                           decoration: BoxDecoration(
-                            color: t.bg2,
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(color: t.line),
-                            boxShadow: t.clayOut,
+                            borderRadius: BorderRadius.circular(26),
+                            border: Border.all(color: t.lineStrong),
+                            boxShadow: [BoxShadow(color: t.gold.withValues(alpha: 0.16), blurRadius: 34, spreadRadius: 2)],
                           ),
-                          alignment: Alignment.center,
-                          child: Icon(Icons.groups_rounded, size: 30, color: t.gold),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(22),
+                            child: Image.asset('assets/logo/tribe_logo.png', width: 104, height: 104, fit: BoxFit.cover),
+                          ),
                         ),
                         const SizedBox(height: 18),
                         // Headline
