@@ -121,12 +121,13 @@ class NotificationCard extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Text(
-                    notification.targetSnippet,
-                    style: t.body(size: 12.5, weight: FontWeight.w600, color: t.inkFaint),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  if (notification.type != NotificationType.karma)
+                    Text(
+                      notification.targetSnippet,
+                      style: t.body(size: 12.5, weight: FontWeight.w600, color: t.inkFaint),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   const SizedBox(height: 4),
                   Text(TimeUtils.formatRelativeTime(notification.timestamp), style: t.caption(size: 11)),
                 ],

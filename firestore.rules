@@ -2,74 +2,87 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function signedIn() {
+    function isAuthenticated() {
       return request.auth != null;
     }
-
-    function isSelf(uid) {
-      return signedIn() && request.auth.uid == uid;
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
     }
-
-    function onlyCountersChanged() {
-      return request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(['karma', 'replyCount']);
+    function changedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
     }
 
     match /users/{userId} {
-      allow read: if signedIn();
-      allow create, update, delete: if isSelf(userId);
+      allow read: if true;
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
 
       match /notifications/{notificationId} {
-        allow read: if isSelf(userId);
-        allow create: if signedIn();
-        allow update: if isSelf(userId) || resource.data.fromUserId == request.auth.uid;
-        allow delete: if isSelf(userId) || resource.data.fromUserId == request.auth.uid;
+        allow read: if isOwner(userId)
+          || (isAuthenticated() && resource.data.fromUserId == request.auth.uid);
+        allow create: if isAuthenticated();
+        allow update: if isOwner(userId)
+          || (isAuthenticated() && resource.data.fromUserId == request.auth.uid
+              && changedKeys().hasOnly(['fromAvatarUrl', 'fromHandle']));
+        allow delete: if isOwner(userId);
+      }
+
+      match /blocked/{blockedId} {
+        allow read, write: if isOwner(userId);
       }
     }
 
     match /rants/{rantId} {
-      allow read: if signedIn();
-      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
-      allow update: if signedIn() && onlyCountersChanged();
-      allow delete: if signedIn() && resource.data.userId == request.auth.uid;
+      allow read: if true;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isOwner(resource.data.userId)
+        || (isAuthenticated() && changedKeys().hasOnly(['voterIds', 'karma', 'replyCount']));
+      allow delete: if isOwner(resource.data.userId);
 
-      match /votes/{voterId} {
-        allow read: if signedIn();
-        allow create: if isSelf(voterId);
-        allow delete: if isSelf(voterId)
-          || get(/databases/$(database)/documents/rants/$(rantId)).data.userId
-             == request.auth.uid;
+      match /votes/{voteId} {
+        allow read: if true;
+        allow create: if isAuthenticated() && request.auth.uid == voteId;
+        allow delete: if isAuthenticated()
+          && (request.auth.uid == voteId || request.auth.uid == resource.data.userId);
       }
 
       match /replies/{replyId} {
-        allow read: if signedIn();
-        allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
-        allow update: if signedIn() && onlyCountersChanged();
-        allow delete: if signedIn()
-          && (resource.data.userId == request.auth.uid
-              || get(/databases/$(database)/documents/rants/$(rantId)).data.userId
-                 == request.auth.uid);
+        allow read: if true;
+        allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+        allow update: if isOwner(resource.data.userId)
+          || (isAuthenticated() && changedKeys().hasOnly(['voterIds', 'karma']));
+        allow delete: if isOwner(resource.data.userId);
 
-        match /votes/{voterId} {
-          allow read: if signedIn();
-          allow create: if isSelf(voterId);
-          allow delete: if isSelf(voterId)
-            || get(/databases/$(database)/documents/rants/$(rantId)/replies/$(replyId)).data.userId
-               == request.auth.uid
-            || get(/databases/$(database)/documents/rants/$(rantId)).data.userId
-               == request.auth.uid;
+        match /votes/{voteId} {
+          allow read: if true;
+          allow create: if isAuthenticated() && request.auth.uid == voteId;
+          allow delete: if isAuthenticated()
+            && (request.auth.uid == voteId || request.auth.uid == resource.data.userId);
         }
       }
     }
 
     match /reports/{reportId} {
-      allow create: if signedIn() && request.resource.data.reporter == request.auth.uid
-        || signedIn() && request.resource.data.reporterId == request.auth.uid;
+      allow create: if isAuthenticated();
       allow read, update, delete: if false;
     }
 
-    match /{document=**} {
-      allow read, write: if false;
+    // CollectionGroup queries for user's replies
+    match /{path=**}/replies/{replyId} {
+      allow read: if true;
+    }
+
+    // CollectionGroup queries for user's votes
+    match /{path=**}/votes/{voteId} {
+      allow read: if true;
+    }
+
+    // CollectionGroup query support: notifications (inbox + avatar sync)
+    match /{path=**}/notifications/{notificationId} {
+      allow read: if isAuthenticated()
+        && (resource.data.userId == request.auth.uid
+            || resource.data.fromUserId == request.auth.uid);
     }
   }
 }
