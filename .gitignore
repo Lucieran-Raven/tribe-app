@@ -31,7 +31,6 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
-/coverage/
 
 # Symbolication related
 app.*.symbols
@@ -54,6 +53,7 @@ android/app/upload-keystore.jks
 *.jks
 *.keystore
 /.dart_tool/
-/build/
+build/
 .env
 .env.local
+.firebase/
