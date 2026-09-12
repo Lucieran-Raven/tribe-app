@@ -244,6 +244,7 @@ class NotificationService {
     required String toUserId,
     required String rantId,
     required String replyContent,
+    required String replyId,
   }) async {
     debugPrint('=== SEND REPLY NOTIFICATION ===');
     debugPrint('Target userId: $toUserId');
@@ -254,11 +255,11 @@ class NotificationService {
     final targetUserDoc = await _firestore.collection('users').doc(toUserId).get();
     final playerId = (targetUserDoc.data()?['oneSignalPlayerId'] as String?) ?? '';
     debugPrint('Target playerId: $playerId (empty: ${playerId.isEmpty})');
-    
+
     if (playerId.isEmpty) return; // Can't send notification without playerId
 
-    // Use deterministic doc ID for upsert
-    final docId = 'reply_$fromUserId\_$toUserId\_$rantId';
+    // Use per-reply doc ID (unique per reply)
+    final docId = 'reply_$replyId';
     final docRef = _firestore
         .collection('users')
         .doc(toUserId)
@@ -290,12 +291,10 @@ class NotificationService {
   }
 
   Future<void> deleteReplyNotification({
-    required String fromUserId,
     required String toUserId,
-    required String rantId,
+    required String replyId,
   }) async {
-    if (fromUserId == toUserId) return;
-    final docId = 'reply_$fromUserId\_$toUserId\_$rantId';
+    final docId = 'reply_$replyId';
     await _firestore
         .collection('users')
         .doc(toUserId)

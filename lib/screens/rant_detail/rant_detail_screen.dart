@@ -65,7 +65,7 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
         timestamp: DateTime.now(),
       );
 
-      await RantService().createReply(reply);
+      final replyId = await RantService().createReply(reply);
 
       if (mounted) {
         _replyController.clear();
@@ -89,6 +89,7 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
           toUserId: rant.userId,
           rantId: widget.rantId,
           replyContent: content,
+          replyId: replyId,
         );
 
         debugPrint('sendReplyNotification completed');

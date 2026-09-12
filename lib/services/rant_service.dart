@@ -48,7 +48,7 @@ class RantService {
             .toList());
   }
 
-  Future<void> createReply(ReplyModel reply) async {
+  Future<String> createReply(ReplyModel reply) async {
     final docRef = _firestore
         .collection('rants')
         .doc(reply.rantId)
@@ -59,6 +59,7 @@ class RantService {
     await _firestore.collection('rants').doc(reply.rantId).update({
       'replyCount': FieldValue.increment(1),
     });
+    return docRef.id;
   }
 
   Stream<bool> streamUserVote(String rantId, String userId) {
