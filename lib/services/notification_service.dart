@@ -8,7 +8,9 @@ import '../models/notification_model.dart';
 class NotificationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static const String _appId = 'e98051a2-ef46-43f2-bf9d-90e2f9180263';
-  static const String _apiKey = 'os_v2_app_5gafdixpizb7fp45sdrpsgacmmklhs455wmuysvqj7qj6pcdwb5a7cy3oxliq6muimontcjxts5ahxhtztjk5hzfhdtxmx76cfw5kka';
+  // TODO: Move API key to environment variables for security
+  // For now, use the OneSignal REST API key from your OneSignal dashboard
+  static const String _apiKey = 'YOUR_ONESIGNAL_REST_API_KEY';
   static const String _apiUrl = 'https://api.onesignal.com/notifications';
 
   Stream<List<NotificationModel>> streamNotifications(String userId) {
