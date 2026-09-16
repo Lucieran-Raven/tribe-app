@@ -8,6 +8,7 @@ import '../../models/affiliation_model.dart';
 import '../../providers/onboarding_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../utils/affiliation_sort.dart';
+import '../../utils/custom_interest_utils.dart';
 import '../../widgets/onboarding/onboarding_page_indicator.dart';
 
 class OnboardingAffiliationsScreen extends ConsumerStatefulWidget {
@@ -275,7 +276,13 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
                                 child: TribeChip(
                                   label: a.name,
                                   active: true,
-                                  trailing: Icon(Icons.close, size: 11, color: t.gold),
+                                  trailing: a.id.startsWith('custom_')
+                                    ? Row(mainAxisSize: MainAxisSize.min, children: [
+                                        Icon(Icons.edit, size: 10, color: t.gold),
+                                        const SizedBox(width: 4),
+                                        Icon(Icons.close, size: 11, color: t.gold),
+                                      ])
+                                    : Icon(Icons.close, size: 11, color: t.gold),
                                   onTap: () {
                                     ref.read(onboardingProvider.notifier).toggleAffiliation(a);
                                   },
@@ -288,164 +295,198 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
                       const SizedBox(height: 8),
                       // 3. LIST — REAL SEED DATA
                       Expanded(
-                        child: _selectedCountryIso == 'OTHER' && _filteredAffiliations.isEmpty
-                            ? Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Container(
-                                      width: 72, height: 72,
-                                      decoration: BoxDecoration(
-                                        color: t.bg2,
-                                        borderRadius: BorderRadius.circular(24),
-                                        border: Border.all(color: t.line),
-                                        boxShadow: t.clayOutSm,
-                                      ),
-                                      child: Icon(Icons.public, size: 32, color: t.gold),
-                                    ),
-                                    const SizedBox(height: 18),
-                                    Text(
-                                      'TRIBE is expanding soon',
-                                      style: t.display(size: 16, color: t.milk),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      "We're growing across Southeast Asia. In the meantime, add your interests to connect with students nearby.",
-                                      style: t.body(size: 13, weight: FontWeight.w500, color: t.inkDim),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ],
-                                ),
-                              )
-                            : ListView(
-                          children: _filteredAffiliations.map((a) {
-                            final isSelected = selectedAffiliations.any((s) => s.id == a.id);
-                            final icon = _getIconForType(a.type);
-                            final universityCount = selectedAffiliations.where((s) => s.type == 'university').length;
-                            final cityCount = selectedAffiliations.where((s) => s.type == 'city').length;
-                            final interestCount = selectedAffiliations.where((s) => s.type == 'interest').length;
-                            final isAtTypeLimit = !isSelected && (
-                              (a.type == 'university' && universityCount >= 1) ||
-                              (a.type == 'city' && cityCount >= 1) ||
-                              (a.type == 'interest' && interestCount >= 6)
-                            );
-
-                            if (a.id == 'independent') {
-                              return Opacity(
-                                opacity: isAtTypeLimit ? 0.4 : 1.0,
-                                child: GestureDetector(
-                                  onTap: () {
-                                    final hasUni = _selectedAffiliationsOrState.any(
-                                      (aff) => aff.type == 'university' && aff.id != 'independent');
-                                    if (hasUni) {
-                                      _confirmSwap(a);
-                                    } else {
-                                      ref.read(onboardingProvider.notifier).toggleAffiliation(a);
-                                    }
-                                  },
-                                  behavior: HitTestBehavior.opaque,
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 6),
-                                    child: NoteCard(
-                                      margin: EdgeInsets.zero,
-                                      child: Row(
+                        child: Stack(
+                          children: [
+                            Positioned.fill(
+                              child: _selectedCountryIso == 'OTHER' && _filteredAffiliations.isEmpty
+                                  ? Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
                                         children: [
-                                          Icon(
-                                            Icons.person_outline,
-                                            size: 24,
-                                            color: isSelected ? t.gold : t.inkDim,
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  a.name,
-                                                  style: t.body(
-                                                    size: 13.5,
-                                                    weight: FontWeight.w700,
-                                                    color: t.ink,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 2),
-                                                Text(
-                                                  'Studying at a university not listed?',
-                                                  style: t.caption(size: 11, color: t.inkFaint),
-                                                ),
-                                              ],
+                                          Container(
+                                            width: 72, height: 72,
+                                            decoration: BoxDecoration(
+                                              color: t.bg2,
+                                              borderRadius: BorderRadius.circular(24),
+                                              border: Border.all(color: t.line),
+                                              boxShadow: t.clayOutSm,
                                             ),
+                                            child: Icon(Icons.public, size: 32, color: t.gold),
                                           ),
-                                          if (isSelected)
-                                            Icon(Icons.check_circle, size: 18, color: t.gold)
-                                          else
-                                            MiniCheckbox(checked: isSelected),
+                                          const SizedBox(height: 18),
+                                          Text(
+                                            'TRIBE is expanding soon',
+                                            style: t.display(size: 16, color: t.milk),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            "We're growing across Southeast Asia. In the meantime, add your interests to connect with students nearby.",
+                                            style: t.body(size: 13, weight: FontWeight.w500, color: t.inkDim),
+                                            textAlign: TextAlign.center,
+                                          ),
                                         ],
                                       ),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }
+                                    )
+                                  : ListView(
+                                      padding: const EdgeInsets.only(bottom: 64),
+                                      children: _filteredAffiliations.map((a) {
+                                        final isSelected = selectedAffiliations.any((s) => s.id == a.id);
+                                        final icon = _getIconForType(a.type);
+                                        final universityCount = selectedAffiliations.where((s) => s.type == 'university').length;
+                                        final cityCount = selectedAffiliations.where((s) => s.type == 'city').length;
+                                        final interestCount = selectedAffiliations.where((s) => s.type == 'interest').length;
+                                        final isAtTypeLimit = !isSelected && (
+                                          (a.type == 'university' && universityCount >= 1) ||
+                                          (a.type == 'city' && cityCount >= 1) ||
+                                          (a.type == 'interest' && interestCount >= 6)
+                                        );
 
-                            return Opacity(
-                              opacity: isAtTypeLimit ? 0.4 : 1.0,
-                              child: GestureDetector(
-                                onTap: () {
-                                  if (a.id == 'independent') {
-                                    final hasUni = _selectedAffiliationsOrState.any(
-                                      (aff) => aff.type == 'university' && aff.id != 'independent');
-                                    if (hasUni) {
-                                      _confirmSwap(a);
-                                    } else {
-                                      ref.read(onboardingProvider.notifier).toggleAffiliation(a);
-                                    }
-                                    return;
-                                  }
-                                  if (isAtTypeLimit && a.type == 'university') {
-                                    _confirmSwap(a);
-                                    return;
-                                  }
-                                  if (isAtTypeLimit) return;
-                                  ref.read(onboardingProvider.notifier).toggleAffiliation(a);
-                                },
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    border: Border(bottom: BorderSide(color: t.line, width: 1)),
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 10),
-                                    child: Row(
-                                      children: [
-                                        Icon(icon, size: 18, color: t.inkDim),
-                                        const SizedBox(width: 10),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                a.name,
-                                                style: t.body(size: 13.5, weight: FontWeight.w600, color: t.ink),
+                                        if (a.id == 'independent') {
+                                          return Opacity(
+                                            opacity: isAtTypeLimit ? 0.4 : 1.0,
+                                            child: GestureDetector(
+                                              onTap: () {
+                                                final hasUni = _selectedAffiliationsOrState.any(
+                                                  (aff) => aff.type == 'university' && aff.id != 'independent');
+                                                if (hasUni) {
+                                                  _confirmSwap(a);
+                                                } else {
+                                                  ref.read(onboardingProvider.notifier).toggleAffiliation(a);
+                                                }
+                                              },
+                                              behavior: HitTestBehavior.opaque,
+                                              child: Padding(
+                                                padding: const EdgeInsets.symmetric(vertical: 6),
+                                                child: NoteCard(
+                                                  margin: EdgeInsets.zero,
+                                                  child: Row(
+                                                    children: [
+                                                      Icon(
+                                                        Icons.person_outline,
+                                                        size: 24,
+                                                        color: isSelected ? t.gold : t.inkDim,
+                                                      ),
+                                                      const SizedBox(width: 12),
+                                                      Expanded(
+                                                        child: Column(
+                                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                                          children: [
+                                                            Text(
+                                                              a.name,
+                                                              style: t.body(
+                                                                size: 13.5,
+                                                                weight: FontWeight.w700,
+                                                                color: t.ink,
+                                                              ),
+                                                            ),
+                                                            const SizedBox(height: 2),
+                                                            Text(
+                                                              'Studying at a university not listed?',
+                                                              style: t.caption(size: 11, color: t.inkFaint),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                      if (isSelected)
+                                                        Icon(Icons.check_circle, size: 18, color: t.gold)
+                                                      else
+                                                        MiniCheckbox(checked: isSelected),
+                                                    ],
+                                                  ),
+                                                ),
                                               ),
-                                              Text(
-                                                a.type,
-                                                style: t.caption(size: 11),
+                                            ),
+                                          );
+                                        }
+
+                                        return Opacity(
+                                          opacity: isAtTypeLimit ? 0.4 : 1.0,
+                                          child: GestureDetector(
+                                            onTap: () {
+                                              if (a.id == 'independent') {
+                                                final hasUni = _selectedAffiliationsOrState.any(
+                                                  (aff) => aff.type == 'university' && aff.id != 'independent');
+                                                if (hasUni) {
+                                                  _confirmSwap(a);
+                                                } else {
+                                                  ref.read(onboardingProvider.notifier).toggleAffiliation(a);
+                                                }
+                                                return;
+                                              }
+                                              if (isAtTypeLimit && a.type == 'university') {
+                                                _confirmSwap(a);
+                                                return;
+                                              }
+                                              if (isAtTypeLimit) return;
+                                              ref.read(onboardingProvider.notifier).toggleAffiliation(a);
+                                            },
+                                            child: Container(
+                                              decoration: BoxDecoration(
+                                                border: Border(bottom: BorderSide(color: t.line, width: 1)),
                                               ),
-                                            ],
+                                              child: Padding(
+                                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                                child: Row(
+                                                  children: [
+                                                    Icon(icon, size: 18, color: t.inkDim),
+                                                    const SizedBox(width: 10),
+                                                    Expanded(
+                                                      child: Column(
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        children: [
+                                                          Text(
+                                                            a.name,
+                                                            style: t.body(size: 13.5, weight: FontWeight.w600, color: t.ink),
+                                                          ),
+                                                          Text(
+                                                            a.type,
+                                                            style: t.caption(size: 11),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    MiniCheckbox(checked: isSelected),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
                                           ),
-                                        ),
-                                        MiniCheckbox(checked: isSelected),
-                                      ],
+                                        );
+                                      }).toList(),
                                     ),
                                   ),
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ),
+                                if (_selectedCategory == 'Interests')
+                                  Positioned(
+                                    right: 16,
+                                    bottom: 8,
+                                    child: GestureDetector(
+                                      onTap: _openAddCustomInterestSheet,
+                                      behavior: HitTestBehavior.opaque,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                        decoration: BoxDecoration(
+                                          color: t.bg2,
+                                          borderRadius: BorderRadius.circular(100),
+                                          border: Border.all(color: t.gold.withValues(alpha: 0.45)),
+                                          boxShadow: t.clayOutSm,
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.add, size: 16, color: t.gold),
+                                            const SizedBox(width: 8),
+                                            Text('Add your own',
+                                              style: t.body(size: 13, weight: FontWeight.w700, color: t.gold)),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
                       // 4. BUTTONS PINNED BOTTOM
                       const SizedBox(height: 6),
                       ClayButtonPrimary(
@@ -630,6 +671,113 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
 
   void _applySwap(AffiliationModel target) {
     ref.read(onboardingProvider.notifier).swapUniversity(target);
+  }
+
+  Future<void> _openAddCustomInterestSheet() async {
+    final controller = TextEditingController();
+    final t = const TribeTheme(true);
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => TribeThemeScope(
+        theme: t,
+        child: Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Container(
+            decoration: BoxDecoration(
+              color: t.bg1,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              border: Border(top: BorderSide(color: t.lineStrong)),
+            ),
+            child: SafeArea(
+              top: false,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(width: 40, height: 4, margin: const EdgeInsets.only(top: 16, bottom: 12), decoration: BoxDecoration(color: t.line, borderRadius: BorderRadius.circular(4))),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                    child: Row(children: [
+                      Expanded(child: Text('Add your own', style: t.display(size: 16, color: t.milk))),
+                      IconBtn(icon: Icons.close, size: 18, onTap: () => Navigator.of(ctx).pop()),
+                    ]),
+                  ),
+                  Divider(height: 1, thickness: 1, color: t.line),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 18, 18, 8),
+                    child: ClayInput(controller: controller, hint: 'e.g. Scuba Diving', maxLength: 40),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 8, 18, 18),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: t.gold, foregroundColor: t.bg1),
+                        onPressed: () {
+                          final raw = controller.text;
+                          final error = CustomInterestUtils.validateName(raw);
+                          if (error != null) {
+                            Navigator.of(ctx).pop();
+                            Toast.warning(context, error);
+                            return;
+                          }
+                          final titleName = CustomInterestUtils.toTitleCase(raw);
+                          final customId = CustomInterestUtils.toCustomId(raw);
+                          Navigator.of(ctx).pop();
+                          _addCustomInterest(titleName, customId);
+                        },
+                        child: Text('Add interest', style: t.body(size: 14, weight: FontWeight.w700)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _addCustomInterest(String titleName, String customId) {
+    final currentList = ref.read(onboardingProvider).selectedAffiliations;
+    final interestCount = currentList.where((a) => a.type == 'interest').length;
+
+    if (interestCount >= 6) {
+      Toast.warning(context, 'Max 6 interests');
+      return;
+    }
+
+    final lowerName = titleName.toLowerCase();
+    final seedMatch = AffiliationsSeed.affiliations.firstWhere(
+      (a) => a.type == 'interest' && a.name.toLowerCase() == lowerName,
+      orElse: () => AffiliationModel(id: '', name: '', type: 'interest'),
+    );
+
+    if (seedMatch.id.isNotEmpty) {
+      final alreadySelected = currentList.any((a) => a.id == seedMatch.id);
+      if (alreadySelected) {
+        Toast.info(context, '"${seedMatch.name}" already selected');
+        return;
+      }
+      ref.read(onboardingProvider.notifier).toggleAffiliation(seedMatch);
+      return;
+    }
+
+    if (currentList.any((a) => a.id == customId)) {
+      Toast.info(context, '"$titleName" already added');
+      return;
+    }
+
+    final custom = AffiliationModel(
+      id: customId,
+      name: titleName,
+      type: 'interest',
+      verified: false,
+      country: null,
+    );
+    ref.read(onboardingProvider.notifier).toggleAffiliation(custom);
   }
 
   IconData _getIconForType(String type) {

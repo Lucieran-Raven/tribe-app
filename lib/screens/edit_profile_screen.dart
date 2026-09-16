@@ -15,6 +15,7 @@ import '../../services/storage_service.dart';
 import '../../design/tribe_design.dart';
 import '../../widgets/common/avatar_cropper.dart';
 import '../../utils/affiliation_sort.dart';
+import '../../utils/custom_interest_utils.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
@@ -348,6 +349,33 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       theme: t,
       child: Scaffold(
         backgroundColor: t.bg1,
+        floatingActionButton: _selectedCategory == 'Interests'
+            ? GestureDetector(
+                onTap: _openAddCustomInterestSheet,
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: t.bg2,
+                    borderRadius: BorderRadius.circular(100),
+                    border: Border.all(color: t.gold.withValues(alpha: 0.45)),
+                    boxShadow: t.clayOutSm,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.add, size: 16, color: t.gold),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Add your own',
+                        style: t.body(size: 13, weight: FontWeight.w700, color: t.gold),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            : null,
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
         body: SafeArea(
           child: Column(
             children: [
@@ -464,7 +492,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                                   icon: _getIconForType(affiliation.type),
                                   label: affiliation.name,
                                   active: true,
-                                  trailing: Icon(Icons.close, size: 11, color: t.gold),
+                                  trailing: affiliation.id.startsWith('custom_')
+                                    ? Row(mainAxisSize: MainAxisSize.min, children: [
+                                        Icon(Icons.edit, size: 10, color: t.gold),
+                                        const SizedBox(width: 4),
+                                        Icon(Icons.close, size: 11, color: t.gold),
+                                      ])
+                                    : Icon(Icons.close, size: 11, color: t.gold),
                                   onTap: () => _toggleAffiliation(affiliation),
                                 ),
                               );
@@ -673,6 +707,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                           );
                         },
                       ),
+                      if (_selectedCategory == 'Interests') const SizedBox(height: 72),
                     ],
                   ),
                 ),
@@ -796,5 +831,110 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         ]),
       ),
     );
+  }
+
+  Future<void> _openAddCustomInterestSheet() async {
+    final controller = TextEditingController();
+    final t = const TribeTheme(true);
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => TribeThemeScope(
+        theme: t,
+        child: Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Container(
+            decoration: BoxDecoration(
+              color: t.bg1,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              border: Border(top: BorderSide(color: t.lineStrong)),
+            ),
+            child: SafeArea(
+              top: false,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(width: 40, height: 4, margin: const EdgeInsets.only(top: 16, bottom: 12), decoration: BoxDecoration(color: t.line, borderRadius: BorderRadius.circular(4))),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                    child: Row(children: [
+                      Expanded(child: Text('Add your own', style: t.display(size: 16, color: t.milk))),
+                      IconBtn(icon: Icons.close, size: 18, onTap: () => Navigator.of(ctx).pop()),
+                    ]),
+                  ),
+                  Divider(height: 1, thickness: 1, color: t.line),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 18, 18, 8),
+                    child: ClayInput(controller: controller, hint: 'e.g. Scuba Diving', maxLength: 40),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 8, 18, 18),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: t.gold, foregroundColor: t.bg1),
+                        onPressed: () {
+                          final raw = controller.text;
+                          final error = CustomInterestUtils.validateName(raw);
+                          if (error != null) {
+                            Navigator.of(ctx).pop();
+                            Toast.warning(context, error);
+                            return;
+                          }
+                          final titleName = CustomInterestUtils.toTitleCase(raw);
+                          final customId = CustomInterestUtils.toCustomId(raw);
+                          Navigator.of(ctx).pop();
+                          _addCustomInterest(titleName, customId);
+                        },
+                        child: Text('Add interest', style: t.body(size: 14, weight: FontWeight.w700)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _addCustomInterest(String titleName, String customId) {
+    final interestCount = _selectedAffiliations.where((a) => a.type == 'interest').length;
+    if (interestCount >= 6) {
+      Toast.warning(context, 'Max 6 interests');
+      return;
+    }
+
+    final lowerName = titleName.toLowerCase();
+    final seedMatch = AffiliationsSeed.affiliations.firstWhere(
+      (a) => a.type == 'interest' && a.name.toLowerCase() == lowerName,
+      orElse: () => AffiliationModel(id: '', name: '', type: 'interest'),
+    );
+
+    if (seedMatch.id.isNotEmpty) {
+      final alreadySelected = _selectedAffiliations.any((a) => a.id == seedMatch.id);
+      if (alreadySelected) {
+        Toast.info(context, '"${seedMatch.name}" already selected');
+        return;
+      }
+      _toggleAffiliation(seedMatch);
+      return;
+    }
+
+    if (_selectedAffiliations.any((a) => a.id == customId)) {
+      Toast.info(context, '"$titleName" already added');
+      return;
+    }
+
+    final custom = AffiliationModel(
+      id: customId,
+      name: titleName,
+      type: 'interest',
+      verified: false,
+      country: null,
+    );
+    _toggleAffiliation(custom);
   }
 }
