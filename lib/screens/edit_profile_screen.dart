@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import '../../config/affiliations_seed.dart';
@@ -8,9 +9,11 @@ import '../../models/affiliation_model.dart';
 import '../../models/user_model.dart';
 import '../../providers/onboarding_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/user_profile_provider.dart';
 import '../../services/storage_service.dart';
 import '../../design/tribe_design.dart';
 import '../../widgets/common/avatar_cropper.dart';
+import '../../utils/affiliation_sort.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
@@ -152,8 +155,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         _selectedAffiliations = _selectedAffiliations.where((a) => a.id != affiliation.id).toList();
       });
     } else {
-      if (_selectedAffiliations.length >= 5) {
-        Toast.warning(context, 'Max 5 affiliations');
+      if (_selectedAffiliations.length >= 8) {
+        Toast.warning(context, 'Max 8 affiliations');
         return;
       }
 
@@ -171,8 +174,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         return;
       }
 
-      if (affiliation.type == 'interest' && interestCount >= 3) {
-        Toast.warning(context, 'Max 3 interests');
+      if (affiliation.type == 'interest' && interestCount >= 6) {
+        Toast.warning(context, 'Max 6 interests');
         return;
       }
 
@@ -259,7 +262,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       final currentState = ref.read(onboardingProvider);
       if (currentState.errorMsg == null && mounted) {
         Toast.success(context, 'Profile updated');
-        Navigator.of(context).pop();
+        ref.invalidate(userProfileProvider(user?.userId ?? ''));
+        context.go('/user/${user?.userId}');
       }
     } catch (e) {
       if (mounted) {
@@ -390,21 +394,26 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       const SizedBox(height: 8),
                       // Selected chips
                       if (_selectedAffiliations.isNotEmpty)
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: _selectedAffiliations.map((affiliation) {
-                            return Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(_getIconForType(affiliation.type), size: 16, color: t.inkDim),
-                                const SizedBox(width: 8),
-                                Text(affiliation.name, style: t.body(size: 13.5, weight: FontWeight.w600, color: t.ink)),
-                                const SizedBox(width: 8),
-                                IconBtn(icon: Icons.close, size: 14, onTap: () => _toggleAffiliation(affiliation)),
-                              ],
-                            );
-                          }).toList(),
+                        SizedBox(
+                          height: 52,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            physics: const BouncingScrollPhysics(),
+                            itemCount: sortAffiliationsByType(_selectedAffiliations).length,
+                            itemBuilder: (context, index) {
+                              final affiliation = sortAffiliationsByType(_selectedAffiliations)[index];
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: TribeChip(
+                                  icon: _getIconForType(affiliation.type),
+                                  label: affiliation.name,
+                                  active: true,
+                                  trailing: Icon(Icons.close, size: 11, color: t.gold),
+                                  onTap: () => _toggleAffiliation(affiliation),
+                                ),
+                              );
+                            },
+                          ),
                         ),
                       const SizedBox(height: 16),
                       // Search field
@@ -440,41 +449,53 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       ),
                       const SizedBox(height: 16),
                       // Selected count
-                      Text('${_selectedAffiliations.length}/5 selected', style: t.caption(size: 11)),
+                      Text('Interests ${_selectedAffiliations.where((a) => a.type == 'interest').length}/6 selected', style: t.caption(size: 11)),
                       const SizedBox(height: 8),
                       // Affiliations list
                       ListView.builder(
                         shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
+                        physics: const BouncingScrollPhysics(),
                         itemCount: _filteredAffiliations.length,
                         itemBuilder: (context, index) {
                           final affiliation = _filteredAffiliations[index];
                           final isSelected = _selectedAffiliations.any((a) => a.id == affiliation.id);
                           final icon = _getIconForType(affiliation.type);
+                          final universityCount = _selectedAffiliations.where((a) => a.type == 'university').length;
+                          final cityCount = _selectedAffiliations.where((a) => a.type == 'city').length;
+                          final interestCount = _selectedAffiliations.where((a) => a.type == 'interest').length;
+                          final isAtTypeLimit = !isSelected && (
+                            (affiliation.type == 'university' && universityCount >= 1) ||
+                            (affiliation.type == 'city' && cityCount >= 1) ||
+                            (affiliation.type == 'interest' && interestCount >= 6)
+                          );
 
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Row(
-                              children: [
-                                Icon(icon, size: 20, color: t.inkDim),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(affiliation.name, style: t.body(size: 14, weight: FontWeight.w500, color: t.ink)),
-                                      Text(affiliation.type, style: t.caption(size: 11)),
-                                    ],
-                                  ),
+                          return Opacity(
+                            opacity: isAtTypeLimit ? 0.4 : 1.0,
+                            child: GestureDetector(
+                              onTap: isAtTypeLimit ? null : () => _toggleAffiliation(affiliation),
+                              behavior: HitTestBehavior.opaque,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                child: Row(
+                                  children: [
+                                    Icon(icon, size: 20, color: t.inkDim),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(affiliation.name, style: t.body(size: 14, weight: FontWeight.w500, color: t.ink)),
+                                          Text(affiliation.type, style: t.caption(size: 11)),
+                                        ],
+                                      ),
+                                    ),
+                                    if (isSelected)
+                                      Icon(Icons.check_circle, size: 20, color: t.gold)
+                                    else
+                                      MiniCheckbox(checked: isSelected),
+                                  ],
                                 ),
-                                if (isSelected)
-                                  Icon(Icons.check_circle, size: 20, color: t.gold)
-                                else
-                                  GestureDetector(
-                                    onTap: () => _toggleAffiliation(affiliation),
-                                    child: MiniCheckbox(checked: isSelected),
-                                  ),
-                              ],
+                              ),
                             ),
                           );
                         },

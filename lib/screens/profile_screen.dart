@@ -7,6 +7,7 @@ import '../providers/user_profile_provider.dart';
 import '../widgets/profile/profile_reply_card.dart';
 import '../widgets/common/skeletons.dart';
 import '../design/tribe_design.dart';
+import '../utils/affiliation_sort.dart';
 import 'settings_screen.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -125,20 +126,28 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           Text(user.bio!, style: t.body(size: 13, weight: FontWeight.w500, color: t.inkDim)),
                         const SizedBox(height: 12),
                         if (user.affiliations.isNotEmpty)
-                          Wrap(
-                            spacing: 6,
-                            runSpacing: 6,
-                            children: user.affiliations.map((affiliation) {
-                              IconData icon;
-                              if (affiliation.type == 'university') {
-                                icon = Icons.school;
-                              } else if (affiliation.type == 'city') {
-                                icon = Icons.location_city;
-                              } else {
-                                icon = Icons.star;
-                              }
-                              return TribeChip(icon: icon, label: affiliation.name);
-                            }).toList(),
+                          SizedBox(
+                            height: 36,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              physics: const BouncingScrollPhysics(),
+                              itemCount: sortAffiliationsByType(user.affiliations).length,
+                              itemBuilder: (context, index) {
+                                final affiliation = sortAffiliationsByType(user.affiliations)[index];
+                                IconData icon;
+                                if (affiliation.type == 'university') {
+                                  icon = Icons.school;
+                                } else if (affiliation.type == 'city') {
+                                  icon = Icons.location_city;
+                                } else {
+                                  icon = Icons.star;
+                                }
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 6),
+                                  child: TribeChip(icon: icon, label: affiliation.name),
+                                );
+                              },
+                            ),
                           ),
                         const SizedBox(height: 14),
                         ClayButtonSecondary(

@@ -6,6 +6,7 @@ import '../../design/tribe_design.dart';
 import '../../models/affiliation_model.dart';
 import '../../providers/onboarding_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../utils/affiliation_sort.dart';
 import '../../widgets/onboarding/onboarding_page_indicator.dart';
 
 class OnboardingAffiliationsScreen extends ConsumerStatefulWidget {
@@ -32,50 +33,50 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
     // Filter by search with intelligent matching
     if (_searchQuery.isNotEmpty) {
       final lowerQuery = _searchQuery.toLowerCase().trim();
-      
+
       filtered = filtered.where((a) {
         final lowerName = a.name.toLowerCase();
         final lowerId = a.id.toLowerCase();
-        
+
         // Exact match on name or ID
         if (lowerName == lowerQuery || lowerId == lowerQuery) return true;
-        
+
         // Starts with
         if (lowerName.startsWith(lowerQuery) || lowerId.startsWith(lowerQuery)) return true;
-        
+
         // Check each word in the name
         final words = lowerName.split(RegExp(r'[\s/-]+'));
         for (final word in words) {
           if (word.startsWith(lowerQuery)) return true;
         }
-        
+
         // Check if query matches any word in the name (contains)
         for (final word in words) {
           if (word.contains(lowerQuery)) return true;
         }
-        
+
         // Fallback to contains on full name
         return lowerName.contains(lowerQuery);
       }).toList();
-      
+
       // Sort by relevance: exact match > starts with > word starts with > contains
       filtered.sort((a, b) {
         final lowerNameA = a.name.toLowerCase();
         final lowerNameB = b.name.toLowerCase();
         final lowerIdA = a.id.toLowerCase();
         final lowerIdB = b.id.toLowerCase();
-        
+
         int scoreA = 0;
         int scoreB = 0;
-        
+
         // Exact match
         if (lowerNameA == lowerQuery || lowerIdA == lowerQuery) scoreA = 100;
         if (lowerNameB == lowerQuery || lowerIdB == lowerQuery) scoreB = 100;
-        
+
         // Starts with
         if (scoreA == 0 && (lowerNameA.startsWith(lowerQuery) || lowerIdA.startsWith(lowerQuery))) scoreA = 80;
         if (scoreB == 0 && (lowerNameB.startsWith(lowerQuery) || lowerIdB.startsWith(lowerQuery))) scoreB = 80;
-        
+
         // Word starts with
         if (scoreA == 0) {
           final wordsA = lowerNameA.split(RegExp(r'[\s/-]+'));
@@ -85,7 +86,7 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
           final wordsB = lowerNameB.split(RegExp(r'[\s/-]+'));
           if (wordsB.any((w) => w.startsWith(lowerQuery))) scoreB = 60;
         }
-        
+
         // Word contains
         if (scoreA == 0) {
           final wordsA = lowerNameA.split(RegExp(r'[\s/-]+'));
@@ -95,11 +96,11 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
           final wordsB = lowerNameB.split(RegExp(r'[\s/-]+'));
           if (wordsB.any((w) => w.contains(lowerQuery))) scoreB = 40;
         }
-        
+
         // Contains full name
         if (scoreA == 0 && lowerNameA.contains(lowerQuery)) scoreA = 20;
         if (scoreB == 0 && lowerNameB.contains(lowerQuery)) scoreB = 20;
-        
+
         // Sort by score descending, then alphabetically
         if (scoreA != scoreB) return scoreB.compareTo(scoreA);
         return lowerNameA.compareTo(lowerNameB);
@@ -129,6 +130,7 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
   Widget build(BuildContext context) {
     final state = ref.watch(onboardingProvider);
     final selectedAffiliations = state.selectedAffiliations;
+    final sortedSelected = sortAffiliationsByType(selectedAffiliations);
     final t = const TribeTheme(true);
 
     // Show error snackbar
@@ -230,7 +232,7 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          '${selectedAffiliations.length}/5 selected',
+                          'Interests ${selectedAffiliations.where((a) => a.type == 'interest').length}/6 selected',
                           style: t.caption(size: 11.5),
                         ),
                       ),
@@ -241,7 +243,7 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
                           height: 36,
                           child: ListView(
                             scrollDirection: Axis.horizontal,
-                            children: selectedAffiliations.map((a) {
+                            children: sortedSelected.map((a) {
                               return Padding(
                                 padding: const EdgeInsets.only(right: 6),
                                 child: TribeChip(
@@ -264,37 +266,50 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
                           children: _filteredAffiliations.map((a) {
                             final isSelected = selectedAffiliations.any((s) => s.id == a.id);
                             final icon = _getIconForType(a.type);
-                            return Container(
-                              decoration: BoxDecoration(
-                                border: Border(bottom: BorderSide(color: t.line, width: 1)),
-                              ),
+                            final universityCount = selectedAffiliations.where((s) => s.type == 'university').length;
+                            final cityCount = selectedAffiliations.where((s) => s.type == 'city').length;
+                            final interestCount = selectedAffiliations.where((s) => s.type == 'interest').length;
+                            final isAtTypeLimit = !isSelected && (
+                              (a.type == 'university' && universityCount >= 1) ||
+                              (a.type == 'city' && cityCount >= 1) ||
+                              (a.type == 'interest' && interestCount >= 6)
+                            );
+                            return Opacity(
+                              opacity: isAtTypeLimit ? 0.4 : 1.0,
                               child: GestureDetector(
-                                onTap: () {
-                                  ref.read(onboardingProvider.notifier).toggleAffiliation(a);
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 10),
-                                  child: Row(
-                                    children: [
-                                      Icon(icon, size: 18, color: t.inkDim),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              a.name,
-                                              style: t.body(size: 13.5, weight: FontWeight.w600, color: t.ink),
-                                            ),
-                                            Text(
-                                              a.type,
-                                              style: t.caption(size: 11),
-                                            ),
-                                          ],
+                                onTap: isAtTypeLimit
+                                    ? null
+                                    : () {
+                                        ref.read(onboardingProvider.notifier).toggleAffiliation(a);
+                                      },
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    border: Border(bottom: BorderSide(color: t.line, width: 1)),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                    child: Row(
+                                      children: [
+                                        Icon(icon, size: 18, color: t.inkDim),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                a.name,
+                                                style: t.body(size: 13.5, weight: FontWeight.w600, color: t.ink),
+                                              ),
+                                              Text(
+                                                a.type,
+                                                style: t.caption(size: 11),
+                                              ),
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                      MiniCheckbox(checked: isSelected),
-                                    ],
+                                        MiniCheckbox(checked: isSelected),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),

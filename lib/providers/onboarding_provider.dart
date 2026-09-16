@@ -1,11 +1,11 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/affiliation_model.dart';
 import '../models/user_model.dart';
 import '../utils/validators.dart';
+import '../utils/affiliation_sort.dart';
 import 'auth_provider.dart';
 
 enum HandleAvailability {
@@ -148,8 +148,8 @@ class OnboardingProvider extends StateNotifier<OnboardingState> {
       );
     } else {
       // Adding new affiliation
-      if (current.length >= 5) {
-        state = state.copyWith(errorMsg: 'Max 5 affiliations');
+      if (current.length >= 8) {
+        state = state.copyWith(errorMsg: 'Max 8 affiliations');
         return;
       }
 
@@ -168,8 +168,8 @@ class OnboardingProvider extends StateNotifier<OnboardingState> {
         return;
       }
 
-      if (affiliation.type == 'interest' && interestCount >= 3) {
-        state = state.copyWith(errorMsg: 'Max 3 interests');
+      if (affiliation.type == 'interest' && interestCount >= 6) {
+        state = state.copyWith(errorMsg: 'Max 6 interests');
         return;
       }
 
@@ -258,6 +258,8 @@ class OnboardingProvider extends StateNotifier<OnboardingState> {
         return;
       }
 
+      final sortedAffiliations = sortAffiliationsByType(affiliations);
+
       await _firestore.runTransaction((transaction) async {
         final docRef = _firestore.collection('users').doc(uid);
         final doc = await transaction.get(docRef);
@@ -265,14 +267,14 @@ class OnboardingProvider extends StateNotifier<OnboardingState> {
         if (doc.exists) {
           // DOC EXISTS: ONLY write affiliations and country. DO NOT spread _baseUserMap.
           transaction.set(docRef, {
-            'affiliations': affiliations.map((a) => a.toMap()).toList(),
+            'affiliations': sortedAffiliations.map((a) => a.toMap()).toList(),
             if (selectedCountry != null) 'country': selectedCountry,
           }, SetOptions(merge: true));
         } else {
           // DOC MISSING: Recreate doc with base map + affiliations + country.
           transaction.set(docRef, {
             ..._baseUserMap(uid),
-            'affiliations': affiliations.map((a) => a.toMap()).toList(),
+            'affiliations': sortedAffiliations.map((a) => a.toMap()).toList(),
             if (selectedCountry != null) 'country': selectedCountry,
           }, SetOptions(merge: true));
         }
@@ -315,11 +317,13 @@ class OnboardingProvider extends StateNotifier<OnboardingState> {
         return;
       }
 
+      final sortedAffiliations = sortAffiliationsByType(affiliations);
+
       await _firestore.runTransaction((transaction) async {
         final docRef = _firestore.collection('users').doc(uid);
         final updateMap = {
           'bio': bio,
-          'affiliations': affiliations.map((a) => a.toMap()).toList(),
+          'affiliations': sortedAffiliations.map((a) => a.toMap()).toList(),
         };
         if (displayName != null) {
           updateMap['displayName'] = displayName;
