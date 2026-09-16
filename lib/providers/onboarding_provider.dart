@@ -181,6 +181,16 @@ class OnboardingProvider extends StateNotifier<OnboardingState> {
     }
   }
 
+  void swapUniversity(AffiliationModel target) {
+    final withoutUniversity = state.selectedAffiliations
+        .where((a) => a.type != 'university')
+        .toList();
+    state = state.copyWith(
+      selectedAffiliations: [...withoutUniversity, target],
+      errorMsg: null,
+    );
+  }
+
   void setCountry(String country) {
     selectedCountry = country;
     state = state.copyWith(selectedCountry: country, errorMsg: null);

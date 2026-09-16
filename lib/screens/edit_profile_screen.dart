@@ -35,6 +35,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   File? _pickedAvatar;
   bool _isSavingAvatar = false;
 
+  List<AffiliationModel> get _selectedAffiliationsOrState => _selectedAffiliations;
+
   List<AffiliationModel> get _filteredAffiliations {
     var filtered = AffiliationsSeed.affiliations;
 
@@ -44,10 +46,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                           'Cities': 'city', 'Interests': 'interest'}[_selectedCategory];
       if (mappedType == 'university' || mappedType == 'city' || mappedType == null) {
         if (_selectedCountryIso == 'OTHER') {
-          filtered = filtered.where((a) => a.type == 'interest').toList();
+          filtered = filtered.where((a) => a.type == 'interest' || a.id == 'independent').toList();
         } else {
           filtered = filtered.where((a) =>
-            a.type == 'interest' || a.country == _selectedCountryIso
+            a.type == 'interest' || a.id == 'independent' || a.country == _selectedCountryIso
           ).toList();
         }
       }
@@ -200,6 +202,43 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         _selectedAffiliations = [..._selectedAffiliations, affiliation];
       });
     }
+  }
+
+  Future<void> _confirmSwap(AffiliationModel target) async {
+    final current = _selectedAffiliationsOrState.firstWhere(
+      (a) => a.type == 'university',
+      orElse: () => target,
+    );
+    if (current.id == target.id) return;
+
+    bool shouldSwap = false;
+    await showDialog<void>(
+      context: context,
+      barrierColor: Colors.transparent,
+      builder: (ctx) => TribeThemeScope(
+        theme: const TribeTheme(true),
+        child: ConfirmModal(
+          title: 'Change affiliation?',
+          body: 'Remove "${current.name}" and set your university to "${target.name}"?',
+          confirmLabel: 'Change',
+          onClose: () => Navigator.of(ctx).pop(),
+          onConfirm: () { shouldSwap = true; },
+        ),
+      ),
+    );
+
+    if (!shouldSwap) return;
+    if (!mounted) return;
+    _applySwap(target);
+  }
+
+  void _applySwap(AffiliationModel target) {
+    setState(() {
+      _selectedAffiliations = _selectedAffiliations
+          .where((a) => a.type != 'university')
+          .toList();
+      _selectedAffiliations = [..._selectedAffiliations, target];
+    });
   }
 
   IconData _getIconForType(String type) {
@@ -479,10 +518,35 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       if (_selectedCountryIso == 'OTHER' && _filteredAffiliations.isEmpty)
                         SizedBox(
                           height: 240,
-                          child: const EmptyState(
-                            icon: Icons.public,
-                            headline: 'TRIBE is expanding to your region soon!',
-                            sub: 'Meanwhile, explore interests and connect with SEA students.',
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  width: 72, height: 72,
+                                  decoration: BoxDecoration(
+                                    color: t.bg2,
+                                    borderRadius: BorderRadius.circular(24),
+                                    border: Border.all(color: t.line),
+                                    boxShadow: t.clayOutSm,
+                                  ),
+                                  child: Icon(Icons.public, size: 32, color: t.gold),
+                                ),
+                                const SizedBox(height: 18),
+                                Text(
+                                  'TRIBE is expanding soon',
+                                  style: t.display(size: 16, color: t.milk),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  "We're growing across Southeast Asia. In the meantime, add your interests to connect with students nearby.",
+                                  style: t.body(size: 13, weight: FontWeight.w500, color: t.inkDim),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
                           ),
                         )
                       else
@@ -503,10 +567,85 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                             (affiliation.type == 'interest' && interestCount >= 6)
                           );
 
+                          if (affiliation.id == 'independent') {
+                            return Opacity(
+                              opacity: isAtTypeLimit ? 0.4 : 1.0,
+                              child: GestureDetector(
+                                onTap: () {
+                                  final hasUni = _selectedAffiliationsOrState.any(
+                                    (a) => a.type == 'university' && a.id != 'independent');
+                                  if (hasUni) {
+                                    _confirmSwap(affiliation);
+                                  } else {
+                                    _toggleAffiliation(affiliation);
+                                  }
+                                },
+                                behavior: HitTestBehavior.opaque,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 6),
+                                  child: NoteCard(
+                                    margin: EdgeInsets.zero,
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.person_outline,
+                                          size: 24,
+                                          color: isSelected ? t.gold : t.inkDim,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                affiliation.name,
+                                                style: t.body(
+                                                  size: 14,
+                                                  weight: FontWeight.w700,
+                                                  color: t.ink,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                'Studying at a university not listed?',
+                                                style: t.caption(size: 11, color: t.inkFaint),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        if (isSelected)
+                                          Icon(Icons.check_circle, size: 20, color: t.gold)
+                                        else
+                                          MiniCheckbox(checked: isSelected),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+
                           return Opacity(
                             opacity: isAtTypeLimit ? 0.4 : 1.0,
                             child: GestureDetector(
-                              onTap: isAtTypeLimit ? null : () => _toggleAffiliation(affiliation),
+                              onTap: () {
+                                if (affiliation.id == 'independent') {
+                                  final hasUni = _selectedAffiliationsOrState.any(
+                                    (a) => a.type == 'university' && a.id != 'independent');
+                                  if (hasUni) {
+                                    _confirmSwap(affiliation);
+                                  } else {
+                                    _toggleAffiliation(affiliation);
+                                  }
+                                  return;
+                                }
+                                if (isAtTypeLimit && affiliation.type == 'university') {
+                                  _confirmSwap(affiliation);
+                                  return;
+                                }
+                                if (isAtTypeLimit) return;
+                                _toggleAffiliation(affiliation);
+                              },
                               behavior: HitTestBehavior.opaque,
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(vertical: 8),
@@ -586,7 +725,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 // Drag handle
                 Container(
                   width: 40, height: 4,
-                  margin: const EdgeInsets.only(top: 10, bottom: 8),
+                  margin: const EdgeInsets.only(top: 16, bottom: 12),
                   decoration: BoxDecoration(
                     color: t.line,
                     borderRadius: BorderRadius.circular(4),
@@ -594,7 +733,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 ),
                 // Header
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                   child: Row(children: [
                     Expanded(child: Text('Select country',
                       style: t.display(size: 16, color: t.milk))),
@@ -602,7 +741,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       onTap: () => Navigator.of(ctx).pop()),
                   ]),
                 ),
-                const SizedBox(height: 4),
+                Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: t.line,
+                ),
                 // Options (scrollable if screen is short)
                 Flexible(
                   child: SingleChildScrollView(

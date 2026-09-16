@@ -2,6 +2,12 @@ import '../models/affiliation_model.dart';
 
 class AffiliationsSeed {
   static const List<AffiliationModel> affiliations = [
+    AffiliationModel(
+      id: 'independent',
+      name: 'Independent / Not Affiliated',
+      type: 'university',
+      country: null,
+    ),
     // Malaysia — Public
     AffiliationModel(id: 'um', name: 'University of Malaya', type: 'university', country: 'MY'),
     AffiliationModel(id: 'usm', name: 'Universiti Sains Malaysia', type: 'university', country: 'MY'),
