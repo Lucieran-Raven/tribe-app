@@ -3,12 +3,14 @@ class AffiliationModel {
   final String name;
   final String type; // 'university', 'city', 'interest'
   final bool verified;
+  final String? country; // ISO 2-letter uppercase ('MY','ID'...). Null for interests.
 
   const AffiliationModel({
     required this.id,
     required this.name,
     required this.type,
     this.verified = false,
+    this.country,
   });
 
   factory AffiliationModel.fromJson(Map<String, dynamic> json) {
@@ -17,6 +19,7 @@ class AffiliationModel {
       name: json['name'] as String,
       type: json['type'] as String,
       verified: json['verified'] as bool? ?? false,
+      country: json['country'] as String?,
     );
   }
 
@@ -26,6 +29,7 @@ class AffiliationModel {
       'name': name,
       'type': type,
       'verified': verified,
+      'country': country,
     };
   }
 
@@ -38,12 +42,14 @@ class AffiliationModel {
     String? name,
     String? type,
     bool? verified,
+    String? country,
   }) {
     return AffiliationModel(
       id: id ?? this.id,
       name: name ?? this.name,
       type: type ?? this.type,
       verified: verified ?? this.verified,
+      country: country ?? this.country,
     );
   }
 }

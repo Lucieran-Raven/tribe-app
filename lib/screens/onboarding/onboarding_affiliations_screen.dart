@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/affiliations_seed.dart';
+import '../../config/country_constants.dart';
 import '../../design/tribe_design.dart';
 import '../../models/affiliation_model.dart';
 import '../../providers/onboarding_provider.dart';
@@ -20,9 +21,25 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String _selectedCategory = 'All';
+  String _selectedCountryIso = 'ALL';
 
   List<AffiliationModel> get _filteredAffiliations {
     var filtered = AffiliationsSeed.affiliations;
+
+    // Country filter — applies to universities + cities only (interests global)
+    if (_selectedCountryIso != 'ALL') {
+      final mappedType = {'All': null, 'Universities': 'university',
+                          'Cities': 'city', 'Interests': 'interest'}[_selectedCategory];
+      if (mappedType == 'university' || mappedType == 'city' || mappedType == null) {
+        if (_selectedCountryIso == 'OTHER') {
+          filtered = filtered.where((a) => a.type == 'interest').toList();
+        } else {
+          filtered = filtered.where((a) =>
+            a.type == 'interest' || a.country == _selectedCountryIso
+          ).toList();
+        }
+      }
+    }
 
     // Filter by category with mapping
     final mappedType = {'All': null, 'Universities': 'university', 'Cities': 'city', 'Interests': 'interest'}[_selectedCategory];
@@ -211,21 +228,28 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
                         height: 34,
                         child: ListView(
                           scrollDirection: Axis.horizontal,
-                          children: ['All', 'Universities', 'Cities', 'Interests'].map((cat) {
-                            final isSelected = _selectedCategory == cat;
-                            return Padding(
+                          children: [
+                            Padding(
                               padding: const EdgeInsets.only(right: 8),
-                              child: TribeChip(
-                                label: cat,
-                                active: isSelected,
-                                onTap: () {
-                                  setState(() {
-                                    _selectedCategory = cat;
-                                  });
-                                },
-                              ),
-                            );
-                          }).toList(),
+                              child: _buildCountryChip(t),
+                            ),
+                            ...['All', 'Universities', 'Cities', 'Interests'].map((cat) {
+                              final isSelected = _selectedCategory == cat;
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: TribeChip(
+                                  label: cat,
+                                  active: isSelected,
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedCategory = cat;
+                                      if (cat == 'Interests') _selectedCountryIso = 'ALL';
+                                    });
+                                  },
+                                ),
+                              );
+                            }).toList(),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -262,7 +286,13 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
                       const SizedBox(height: 8),
                       // 3. LIST — REAL SEED DATA
                       Expanded(
-                        child: ListView(
+                        child: _selectedCountryIso == 'OTHER' && _filteredAffiliations.isEmpty
+                            ? const EmptyState(
+                                icon: Icons.public,
+                                headline: 'TRIBE is expanding to your region soon!',
+                                sub: 'Meanwhile, explore interests and connect with SEA students.',
+                              )
+                            : ListView(
                           children: _filteredAffiliations.map((a) {
                             final isSelected = selectedAffiliations.any((s) => s.id == a.id);
                             final icon = _getIconForType(a.type);
@@ -353,6 +383,116 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildCountryChip(TribeTheme t) {
+    final label = _selectedCountryIso == 'ALL'
+        ? '🌍 All Countries'
+        : _selectedCountryIso == 'OTHER'
+            ? '🌐 Other'
+            : '${CountryConstants.isoToFlag[_selectedCountryIso] ?? ''} '
+              '${CountryConstants.isoToName[_selectedCountryIso] ?? ''}';
+    return TribeChip(
+      label: label,
+      active: _selectedCountryIso != 'ALL',
+      trailing: Icon(
+        Icons.expand_more,
+        size: 12,
+        color: _selectedCountryIso != 'ALL' ? t.gold : t.inkDim,
+      ),
+      onTap: () => _openCountrySheet(context),
+    );
+  }
+
+  void _openCountrySheet(BuildContext context) {
+    final t = const TribeTheme(true);
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => TribeThemeScope(
+        theme: t,
+        child: Container(
+          decoration: BoxDecoration(
+            color: t.bg1,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            border: Border(top: BorderSide(color: t.lineStrong)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Drag handle
+                Container(
+                  width: 40, height: 4,
+                  margin: const EdgeInsets.only(top: 10, bottom: 8),
+                  decoration: BoxDecoration(
+                    color: t.line,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                // Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                  child: Row(children: [
+                    Expanded(child: Text('Select country',
+                      style: t.display(size: 16, color: t.milk))),
+                    IconBtn(icon: Icons.close, size: 18,
+                      onTap: () => Navigator.of(ctx).pop()),
+                  ]),
+                ),
+                const SizedBox(height: 4),
+                // Options (scrollable if screen is short)
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _countryOption(ctx, t, 'ALL', '🌍', 'All Countries'),
+                        ...CountryConstants.nameToIso.entries.map((e) =>
+                          _countryOption(ctx, t, e.value,
+                            CountryConstants.isoToFlag[e.value] ?? '', e.key)),
+                        _countryOption(ctx, t, 'OTHER', '🌐', 'Other / Not listed'),
+                        const SizedBox(height: 12),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _countryOption(BuildContext sheetCtx, TribeTheme t, String iso,
+      String flag, String name) {
+    final selected = _selectedCountryIso == iso;
+    return GestureDetector(
+      onTap: () {
+        setState(() => _selectedCountryIso = iso);
+        Navigator.of(sheetCtx).pop();
+      },
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        decoration: BoxDecoration(
+          color: selected ? t.goldTint : Colors.transparent,
+          border: Border(bottom: BorderSide(color: t.line, width: 1)),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        child: Row(children: [
+          Text(flag, style: const TextStyle(fontSize: 20)),
+          const SizedBox(width: 12),
+          Expanded(child: Text(name,
+            style: t.body(size: 14,
+              weight: selected ? FontWeight.w700 : FontWeight.w600,
+              color: t.ink))),
+          if (selected) Icon(Icons.check_circle, size: 18, color: t.gold),
+        ]),
       ),
     );
   }
