@@ -9,6 +9,7 @@ import 'push_service.dart';
 
 class RantService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final Set<String> _pendingVotes = {};
 
   Future<void> createRant(RantModel rant) async {
     final docRef = _firestore.collection('rants').doc();
@@ -73,69 +74,76 @@ class RantService {
   }
 
   Future<void> toggleVote(String rantId, String userId) async {
-    final rantRef = _firestore.collection('rants').doc(rantId);
-    final voteRef = _firestore.collection('rants').doc(rantId).collection('votes').doc(userId);
-    
-    final rantDoc = await rantRef.get();
-    if (!rantDoc.exists) {
-      throw Exception('Rant not found');
-    }
-    final rantOwnerId = rantDoc.data()?['userId'];
-    final rantContent = rantDoc.data()?['content'] ?? '';
-    final voterIds = List<String>.from(rantDoc.data()?['voterIds'] ?? []);
-    final hasVoted = voterIds.contains(userId);
-
-    final batch = _firestore.batch();
-    if (hasVoted) {
-      batch.update(rantRef, {
-        'voterIds': FieldValue.arrayRemove([userId]),
-        'karma': FieldValue.increment(-1),
-      });
-      batch.delete(voteRef);
-    } else {
-      batch.update(rantRef, {
-        'voterIds': FieldValue.arrayUnion([userId]),
-        'karma': FieldValue.increment(1),
-      });
-      batch.set(voteRef, {'userId': userId, 'timestamp': FieldValue.serverTimestamp()});
-    }
-    await batch.commit();
-
-    // Handle notifications
+    final taskKey = 'rant-$rantId-$userId';
+    if (_pendingVotes.contains(taskKey)) return;
+    _pendingVotes.add(taskKey);
     try {
-      if (rantOwnerId != null && userId != rantOwnerId) {
-        final voterDoc = await _firestore.collection('users').doc(userId).get();
-        final voterHandle = voterDoc.data()?['handle'] ?? 'anonymous';
-        final voterAvatarUrl = voterDoc.data()?['avatarUrl'];
-
-        if (!hasVoted) {
-          final deterministicId = 'karma_${rantId}_$userId';
-          await NotificationService().upsertKarmaNotification(
-            rantOwnerId,
-            NotificationModel(
-              type: NotificationType.karma,
-              fromUserId: userId,
-              fromHandle: voterHandle,
-              fromAvatarUrl: voterAvatarUrl,
-              targetRantId: rantId,
-              targetSnippet: rantContent,
-              timestamp: DateTime.now(),
-            ),
-            deterministicId,
-          );
-          await PushService().sendPush(
-            targetUserId: rantOwnerId,
-            title: 'New Like',
-            body: '@$voterHandle liked your post',
-            targetRantId: rantId,
-          );
-        } else {
-          final deterministicId = 'karma_${rantId}_$userId';
-          await NotificationService().deleteKarmaNotification(rantOwnerId, deterministicId);
-        }
+      final rantRef = _firestore.collection('rants').doc(rantId);
+      final voteRef = _firestore.collection('rants').doc(rantId).collection('votes').doc(userId);
+      
+      final rantDoc = await rantRef.get();
+      if (!rantDoc.exists) {
+        throw Exception('Rant not found');
       }
-    } catch (e) {
-      debugPrint('Failed to handle notification: $e');
+      final rantOwnerId = rantDoc.data()?['userId'];
+      final rantContent = rantDoc.data()?['content'] ?? '';
+      final voterIds = List<String>.from(rantDoc.data()?['voterIds'] ?? []);
+      final hasVoted = voterIds.contains(userId);
+
+      final batch = _firestore.batch();
+      if (hasVoted) {
+        batch.update(rantRef, {
+          'voterIds': FieldValue.arrayRemove([userId]),
+          'karma': FieldValue.increment(-1),
+        });
+        batch.delete(voteRef);
+      } else {
+        batch.update(rantRef, {
+          'voterIds': FieldValue.arrayUnion([userId]),
+          'karma': FieldValue.increment(1),
+        });
+        batch.set(voteRef, {'userId': userId, 'timestamp': FieldValue.serverTimestamp()});
+      }
+      await batch.commit();
+
+      // Handle notifications
+      try {
+        if (rantOwnerId != null && userId != rantOwnerId) {
+          final voterDoc = await _firestore.collection('users').doc(userId).get();
+          final voterHandle = voterDoc.data()?['handle'] ?? 'anonymous';
+          final voterAvatarUrl = voterDoc.data()?['avatarUrl'];
+
+          if (!hasVoted) {
+            final deterministicId = 'karma_${rantId}_$userId';
+            await NotificationService().upsertKarmaNotification(
+              rantOwnerId,
+              NotificationModel(
+                type: NotificationType.karma,
+                fromUserId: userId,
+                fromHandle: voterHandle,
+                fromAvatarUrl: voterAvatarUrl,
+                targetRantId: rantId,
+                targetSnippet: rantContent,
+                timestamp: DateTime.now(),
+              ),
+              deterministicId,
+            );
+            await PushService().sendPush(
+              targetUserId: rantOwnerId,
+              title: 'New Like',
+              body: '@$voterHandle liked your post',
+              targetRantId: rantId,
+            );
+          } else {
+            final deterministicId = 'karma_${rantId}_$userId';
+            await NotificationService().deleteKarmaNotification(rantOwnerId, deterministicId);
+          }
+        }
+      } catch (e) {
+        debugPrint('Failed to handle notification: $e');
+      }
+    } finally {
+      _pendingVotes.remove(taskKey);
     }
   }
 
@@ -152,70 +160,77 @@ class RantService {
   }
 
   Future<void> toggleReplyVote(String rantId, String replyId, String userId) async {
-    final replyRef = _firestore.collection('rants').doc(rantId).collection('replies').doc(replyId);
-    final voteRef = _firestore.collection('rants').doc(rantId).collection('replies').doc(replyId).collection('votes').doc(userId);
-    
-    final replyDoc = await replyRef.get();
-    if (!replyDoc.exists) {
-      throw Exception('Reply not found');
-    }
-    final replyOwnerId = replyDoc.data()?['userId'];
-    final replyContent = replyDoc.data()?['content'] ?? '';
-    final voterIds = List<String>.from(replyDoc.data()?['voterIds'] ?? []);
-    final hasVoted = voterIds.contains(userId);
-
-    final batch = _firestore.batch();
-    if (hasVoted) {
-      batch.update(replyRef, {
-        'voterIds': FieldValue.arrayRemove([userId]),
-        'karma': FieldValue.increment(-1),
-      });
-      batch.delete(voteRef);
-    } else {
-      batch.update(replyRef, {
-        'voterIds': FieldValue.arrayUnion([userId]),
-        'karma': FieldValue.increment(1),
-      });
-      batch.set(voteRef, {'userId': userId, 'timestamp': FieldValue.serverTimestamp()});
-    }
-    await batch.commit();
-
-    // Handle notifications
+    final taskKey = 'reply-$replyId-$userId';
+    if (_pendingVotes.contains(taskKey)) return;
+    _pendingVotes.add(taskKey);
     try {
-      if (replyOwnerId != null && userId != replyOwnerId) {
-        final voterDoc = await _firestore.collection('users').doc(userId).get();
-        final voterHandle = voterDoc.data()?['handle'] ?? 'anonymous';
-        final voterAvatarUrl = voterDoc.data()?['avatarUrl'];
-
-        if (!hasVoted) {
-          final deterministicId = 'replyKarma_${replyId}_$userId';
-          await NotificationService().upsertKarmaNotification(
-            replyOwnerId,
-            NotificationModel(
-              type: NotificationType.replyKarma,
-              fromUserId: userId,
-              fromHandle: voterHandle,
-              fromAvatarUrl: voterAvatarUrl,
-              targetRantId: rantId,
-              targetReplyId: replyId,
-              targetSnippet: replyContent,
-              timestamp: DateTime.now(),
-            ),
-            deterministicId,
-          );
-          await PushService().sendPush(
-            targetUserId: replyOwnerId,
-            title: 'New Like',
-            body: '@$voterHandle liked your reply',
-            targetRantId: rantId,
-          );
-        } else {
-          final deterministicId = 'replyKarma_${replyId}_$userId';
-          await NotificationService().deleteKarmaNotification(replyOwnerId, deterministicId);
-        }
+      final replyRef = _firestore.collection('rants').doc(rantId).collection('replies').doc(replyId);
+      final voteRef = _firestore.collection('rants').doc(rantId).collection('replies').doc(replyId).collection('votes').doc(userId);
+      
+      final replyDoc = await replyRef.get();
+      if (!replyDoc.exists) {
+        throw Exception('Reply not found');
       }
-    } catch (e) {
-      debugPrint('Failed to handle notification: $e');
+      final replyOwnerId = replyDoc.data()?['userId'];
+      final replyContent = replyDoc.data()?['content'] ?? '';
+      final voterIds = List<String>.from(replyDoc.data()?['voterIds'] ?? []);
+      final hasVoted = voterIds.contains(userId);
+
+      final batch = _firestore.batch();
+      if (hasVoted) {
+        batch.update(replyRef, {
+          'voterIds': FieldValue.arrayRemove([userId]),
+          'karma': FieldValue.increment(-1),
+        });
+        batch.delete(voteRef);
+      } else {
+        batch.update(replyRef, {
+          'voterIds': FieldValue.arrayUnion([userId]),
+          'karma': FieldValue.increment(1),
+        });
+        batch.set(voteRef, {'userId': userId, 'timestamp': FieldValue.serverTimestamp()});
+      }
+      await batch.commit();
+
+      // Handle notifications
+      try {
+        if (replyOwnerId != null && userId != replyOwnerId) {
+          final voterDoc = await _firestore.collection('users').doc(userId).get();
+          final voterHandle = voterDoc.data()?['handle'] ?? 'anonymous';
+          final voterAvatarUrl = voterDoc.data()?['avatarUrl'];
+
+          if (!hasVoted) {
+            final deterministicId = 'replyKarma_${replyId}_$userId';
+            await NotificationService().upsertKarmaNotification(
+              replyOwnerId,
+              NotificationModel(
+                type: NotificationType.replyKarma,
+                fromUserId: userId,
+                fromHandle: voterHandle,
+                fromAvatarUrl: voterAvatarUrl,
+                targetRantId: rantId,
+                targetReplyId: replyId,
+                targetSnippet: replyContent,
+                timestamp: DateTime.now(),
+              ),
+              deterministicId,
+            );
+            await PushService().sendPush(
+              targetUserId: replyOwnerId,
+              title: 'New Like',
+              body: '@$voterHandle liked your reply',
+              targetRantId: rantId,
+            );
+          } else {
+            final deterministicId = 'replyKarma_${replyId}_$userId';
+            await NotificationService().deleteKarmaNotification(replyOwnerId, deterministicId);
+          }
+        }
+      } catch (e) {
+        debugPrint('Failed to handle notification: $e');
+      }
+    } finally {
+      _pendingVotes.remove(taskKey);
     }
   }
 
@@ -260,16 +275,19 @@ class RantService {
         .asyncMap((snapshot) async {
           final rantIds = snapshot.docs.map((doc) => doc.reference.parent.parent!.id).toSet();
           if (rantIds.isEmpty) return <RantModel>[];
-          final rants = <RantModel>[];
-          for (final rantId in rantIds) {
-            final rantDoc = await _firestore.collection('rants').doc(rantId).get();
-            if (rantDoc.exists) {
-              final rant = RantModel.fromJson(rantDoc.data()!, rantId: rantDoc.id);
-              if (rant.isVisible) rants.add(rant);
-            }
+          
+          final List<RantModel> likedRants = [];
+          for (var i = 0; i < rantIds.length; i += 10) {
+            final chunk = rantIds.skip(i).take(10).toList();
+            if (chunk.isEmpty) continue;
+            final snapshot = await _firestore.collection('rants')
+                .where('__name__', whereIn: chunk).get();
+            likedRants.addAll(snapshot.docs.map((d) => RantModel.fromJson(d.data(), rantId: d.id)));
           }
-          rants.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-          return rants;
+          
+          final visibleRants = likedRants.where((rant) => rant.isVisible).toList();
+          visibleRants.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+          return visibleRants;
         });
   }
 

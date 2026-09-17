@@ -197,6 +197,7 @@ class OnboardingProvider extends StateNotifier<OnboardingState> {
   }
 
   Future<void> saveHandle(WidgetRef ref) async {
+    if (state.saving) return;
     if (state.availability != HandleAvailability.available) {
       return;
     }
@@ -256,6 +257,7 @@ class OnboardingProvider extends StateNotifier<OnboardingState> {
   }
 
   Future<void> finish(WidgetRef ref, List<AffiliationModel> affiliations) async {
+    if (state.saving) return;
     state = state.copyWith(saving: true);
 
     try {

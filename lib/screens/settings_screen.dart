@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../providers/auth_provider.dart';
+import '../providers/feed_provider.dart';
+import '../providers/notification_provider.dart';
 import '../services/auth_service.dart';
 import '../design/tribe_design.dart';
 
@@ -123,6 +125,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _signOut() async {
     await ref.read(authProvider.notifier).signOut();
+    ref.invalidate(feedProvider);
+    ref.invalidate(inboxProvider);
     if (mounted) GoRouter.of(context).go('/auth');
   }
 

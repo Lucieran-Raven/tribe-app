@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/rant_model.dart';
 import '../services/rant_service.dart';
@@ -7,8 +8,10 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<RantModel>>> {
     _init();
   }
 
+  StreamSubscription? _subscription;
+
   void _init() {
-    RantService().streamFeed().listen(
+    _subscription = RantService().streamFeed().listen(
       (rants) {
         state = AsyncValue.data(rants);
       },
@@ -16,6 +19,12 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<RantModel>>> {
         state = AsyncValue.error(error, stack);
       },
     );
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
   }
 
   void updateRant(RantModel updatedRant) {
