@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'home_screen.dart';
 import 'search_screen.dart';
 import 'inbox_screen.dart';
@@ -9,6 +10,7 @@ import '../services/notification_service.dart';
 import '../providers/auth_provider.dart';
 import '../providers/notification_provider.dart';
 import '../design/tribe_design.dart';
+import '../main.dart';
 
 class MainScaffold extends ConsumerStatefulWidget {
   const MainScaffold({super.key});
@@ -28,6 +30,13 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
       final authState = ref.read(authProvider);
       if (authState is AuthAuthenticated) {
         NotificationService().syncPlayerId(authState.user.userId);
+      }
+      
+      // Consume pending notification route from cold start
+      if (pendingNotificationRoute != null && mounted) {
+        final route = pendingNotificationRoute!;
+        pendingNotificationRoute = null;
+        GoRouter.of(context).push(route);
       }
     });
   }

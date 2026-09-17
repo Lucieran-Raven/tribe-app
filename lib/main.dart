@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'app.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+String? pendingNotificationRoute;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,12 +30,14 @@ Future<void> main() async {
     final additionalData = event.notification.additionalData;
     if (additionalData != null && additionalData['targetRantId'] != null) {
       final rantId = additionalData['targetRantId'] as String;
-      // Use a global navigator key or GoRouter to navigate
-      // We'll use a post-frame callback to ensure the app is ready
+      pendingNotificationRoute = '/rant/$rantId';
+      
+      // Try immediate navigation if context is ready
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final context = navigatorKey.currentContext;
-        if (context != null) {
-          GoRouter.of(context).push('/rant/$rantId');
+        if (context != null && pendingNotificationRoute != null) {
+          GoRouter.of(context).push(pendingNotificationRoute!);
+          pendingNotificationRoute = null;
         }
       });
     }

@@ -281,7 +281,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ),
                 ref.watch(userLikesProvider(userId)).when(
                   loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => const Center(child: Text('Failed to load likes')),
+                  error: (e, _) => Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text('Failed to load likes'),
+                        const SizedBox(height: 16),
+                        TextButton(
+                          onPressed: () => ref.invalidate(userLikesProvider(userId)),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
                   data: (likedRants) {
                     if (likedRants.isEmpty) return const Center(child: Text('No likes yet.'));
                     return GridView.builder(

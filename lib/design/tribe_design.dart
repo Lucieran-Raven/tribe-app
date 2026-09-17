@@ -635,12 +635,15 @@ class IconBtn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = TribeThemeScope.of(context);
-    return TapScale(
-      onTap: onTap,
-      haptic: onTap != null,
-      child: Padding(
-        padding: const EdgeInsets.all(6),
-        child: Icon(icon, size: size, color: color ?? t.inkDim),
+    return SizedBox(
+      width: 48,
+      height: 48,
+      child: TapScale(
+        onTap: onTap,
+        haptic: onTap != null,
+        child: Center(
+          child: Icon(icon, size: size, color: color ?? t.inkDim),
+        ),
       ),
     );
   }

@@ -173,10 +173,13 @@ class AuthService {
       await batch.commit();
     }
 
-    // 6. USER DOC
+    // 6. ONESIGNAL LOGOUT (sever push notification tie before deletion)
+    await OneSignal.logout();
+
+    // 7. USER DOC
     await _firestore.collection('users').doc(uid).delete();
 
-    // 7. AUTH ACCOUNT (LAST)
+    // 8. AUTH ACCOUNT (LAST)
     await _auth.currentUser!.delete();
   }
 }

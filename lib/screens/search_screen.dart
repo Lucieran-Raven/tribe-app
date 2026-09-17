@@ -31,6 +31,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   bool _isLoading = false;
   List<String> _searchHistory = [];
   String _resultTab = 'users';
+  String? _searchError;
 
   @override
   void initState() {
@@ -135,7 +136,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      setState(() => _isLoading = false);
+      setState(() {
+        _isLoading = false;
+        _searchError = e.toString();
+      });
     }
   }
 
@@ -171,9 +175,26 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             Expanded(
               child: _isLoading
                   ? const Center(child: CupertinoActivityIndicator())
-                  : visibleUsers.isEmpty && visibleRants.isEmpty && _controller.text.isNotEmpty
-                      ? Center(child: Text('No results for "${_controller.text}"', style: t.body(size: 13, weight: FontWeight.w600, color: t.inkFaint)))
-                      : ListView(
+                  : _searchError != null
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text('Search failed: $_searchError', style: t.body(size: 13, weight: FontWeight.w600, color: t.inkFaint)),
+                              const SizedBox(height: 16),
+                              TextButton(
+                                onPressed: () {
+                                  setState(() => _searchError = null);
+                                  _performSearch(_controller.text);
+                                },
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                        )
+                      : visibleUsers.isEmpty && visibleRants.isEmpty && _controller.text.isNotEmpty
+                          ? Center(child: Text('No results for "${_controller.text}"', style: t.body(size: 13, weight: FontWeight.w600, color: t.inkFaint)))
+                          : ListView(
                           children: [
                             if (_controller.text.isEmpty && _searchHistory.isNotEmpty) ...[
                               Padding(

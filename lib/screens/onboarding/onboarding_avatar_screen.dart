@@ -116,35 +116,39 @@ class _OnboardingAvatarScreenState extends ConsumerState<OnboardingAvatarScreen>
                               Positioned(
                                 bottom: -4,
                                 right: -4,
-                                child: GestureDetector(
-                                  onTap: () async {
-                                    final picker = ImagePicker();
-                                    final pickedFile = await picker.pickImage(
-                                      source: ImageSource.gallery,
-                                    );
-                                    if (pickedFile != null) {
-                                      try {
-                                        final cropped = await AvatarCropper.crop(File(pickedFile.path), context);
-                                        if (cropped != null && mounted) {
-                                          setState(() => _pickedImage = cropped);
-                                        }
-                                      } catch (e) {
-                                        if (mounted) {
-                                          Toast.error(context, 'Failed to crop image: $e');
+                                child: SizedBox(
+                                  width: 48,
+                                  height: 48,
+                                  child: GestureDetector(
+                                    onTap: () async {
+                                      final picker = ImagePicker();
+                                      final pickedFile = await picker.pickImage(
+                                        source: ImageSource.gallery,
+                                      );
+                                      if (pickedFile != null) {
+                                        try {
+                                          final cropped = await AvatarCropper.crop(File(pickedFile.path), context);
+                                          if (cropped != null && mounted) {
+                                            setState(() => _pickedImage = cropped);
+                                          }
+                                        } catch (e) {
+                                          if (mounted) {
+                                            Toast.error(context, 'Failed to crop image: $e');
+                                          }
                                         }
                                       }
-                                    }
-                                  },
-                                  child: Container(
-                                    width: 30,
-                                    height: 30,
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(colors: [t.milk, t.milkDim], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                                      shape: BoxShape.circle,
-                                      boxShadow: t.clayMilkOut,
+                                    },
+                                    child: Container(
+                                      width: 30,
+                                      height: 30,
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(colors: [t.milk, t.milkDim], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                                        shape: BoxShape.circle,
+                                        boxShadow: t.clayMilkOut,
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Icon(Icons.camera_alt, size: 13, color: t.bg0),
                                     ),
-                                    alignment: Alignment.center,
-                                    child: Icon(Icons.camera_alt, size: 13, color: t.bg0),
                                   ),
                                 ),
                               ),

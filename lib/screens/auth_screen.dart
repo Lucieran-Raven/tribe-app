@@ -25,6 +25,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     // Listen to auth state changes and navigate accordingly
     ref.listen<AuthState>(authProvider, (previous, next) {
       if (next is AuthAuthenticated) {
+        if (!context.mounted) return;
         // Manually navigate based on onboarding status
         if (next.user.handle == null || next.user.handle!.isEmpty) {
           context.go('/onboarding/1');

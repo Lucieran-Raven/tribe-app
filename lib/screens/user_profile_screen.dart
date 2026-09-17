@@ -135,7 +135,19 @@ class UserProfileScreen extends ConsumerWidget {
               Expanded(
                 child: userAsync.when(
                   loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => const Center(child: Text('Failed to load profile')),
+                  error: (e, _) => Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text('Failed to load profile'),
+                        const SizedBox(height: 16),
+                        TextButton(
+                          onPressed: () => ref.invalidate(userProfileProvider(userId)),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
                   data: (user) {
             final rants = rantsAsync.value ?? [];
             final replies = repliesAsync.value ?? [];
