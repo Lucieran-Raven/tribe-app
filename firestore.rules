@@ -11,11 +11,16 @@ service cloud.firestore {
     function changedKeys() {
       return request.resource.data.diff(resource.data).affectedKeys();
     }
+    function isValidAffiliationsArray(affiliations) {
+      return affiliations.size() <= 8;
+    }
 
     match /users/{userId} {
       allow read: if true;
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
+      allow create: if isOwner(userId)
+        && (!('affiliations' in request.resource.data) || isValidAffiliationsArray(request.resource.data.affiliations));
+      allow update: if isOwner(userId)
+        && (!changedKeys().hasAny(['affiliations']) || isValidAffiliationsArray(request.resource.data.affiliations));
       allow delete: if isOwner(userId);
 
       match /notifications/{notificationId} {
