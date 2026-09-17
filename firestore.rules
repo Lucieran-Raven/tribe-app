@@ -25,7 +25,8 @@ service cloud.firestore {
         allow update: if isOwner(userId)
           || (isAuthenticated() && resource.data.fromUserId == request.auth.uid
               && changedKeys().hasOnly(['fromAvatarUrl', 'fromHandle']));
-        allow delete: if isOwner(userId);
+        allow delete: if isOwner(userId)
+          || (isAuthenticated() && resource.data.fromUserId == request.auth.uid);
       }
 
       match /blocked/{blockedId} {

@@ -114,7 +114,10 @@ class AuthService {
         final voteRef = votesQuery.docs[j].reference;
         final parentRef = voteRef.parent.parent;
         if (parentRef != null) {
-          batch.update(_firestore.doc(parentRef.path), {'karma': FieldValue.increment(-1)});
+          batch.update(_firestore.doc(parentRef.path), {
+            'karma': FieldValue.increment(-1),
+            'voterIds': FieldValue.arrayRemove([uid]),
+          });
         }
         batch.delete(voteRef);
       }
