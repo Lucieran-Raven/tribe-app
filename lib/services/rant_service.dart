@@ -292,19 +292,39 @@ class RantService {
   }
 
   Future<UserModel> blockUser(String blockerId, String blockedId) async {
-    await _firestore.collection('users').doc(blockerId).update({
-      'blockedUsers': FieldValue.arrayUnion([blockedId]),
-    });
-    final doc = await _firestore.collection('users').doc(blockerId).get();
-    return UserModel.fromJson(doc.data() as Map<String, dynamic>);
+    final taskKey = 'block-$blockerId-$blockedId';
+    if (_pendingVotes.contains(taskKey)) {
+      final doc = await _firestore.collection('users').doc(blockerId).get();
+      return UserModel.fromJson(doc.data() as Map<String, dynamic>);
+    }
+    _pendingVotes.add(taskKey);
+    try {
+      await _firestore.collection('users').doc(blockerId).update({
+        'blockedUsers': FieldValue.arrayUnion([blockedId]),
+      });
+      final doc = await _firestore.collection('users').doc(blockerId).get();
+      return UserModel.fromJson(doc.data() as Map<String, dynamic>);
+    } finally {
+      _pendingVotes.remove(taskKey);
+    }
   }
 
   Future<UserModel> unblockUser(String blockerId, String blockedId) async {
-    await _firestore.collection('users').doc(blockerId).update({
-      'blockedUsers': FieldValue.arrayRemove([blockedId]),
-    });
-    final doc = await _firestore.collection('users').doc(blockerId).get();
-    return UserModel.fromJson(doc.data() as Map<String, dynamic>);
+    final taskKey = 'unblock-$blockerId-$blockedId';
+    if (_pendingVotes.contains(taskKey)) {
+      final doc = await _firestore.collection('users').doc(blockerId).get();
+      return UserModel.fromJson(doc.data() as Map<String, dynamic>);
+    }
+    _pendingVotes.add(taskKey);
+    try {
+      await _firestore.collection('users').doc(blockerId).update({
+        'blockedUsers': FieldValue.arrayRemove([blockedId]),
+      });
+      final doc = await _firestore.collection('users').doc(blockerId).get();
+      return UserModel.fromJson(doc.data() as Map<String, dynamic>);
+    } finally {
+      _pendingVotes.remove(taskKey);
+    }
   }
 
   Future<void> deletePost(String rantId) async {

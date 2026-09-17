@@ -17,6 +17,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _isDeleting = false;
+  bool _isSigningOut = false;
 
   @override
   Widget build(BuildContext context) {
@@ -48,13 +49,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     row(
                       icon: Icons.logout,
                       label: 'Sign out',
-                      onTap: _signOut,
+                      onTap: _isSigningOut ? null : _signOut,
                       t: t,
                     ),
                     row(
                       icon: Icons.switch_account,
                       label: 'Switch Account',
-                      onTap: () async {
+                      onTap: _isSigningOut ? null : () async {
                         final confirmed = await showDialog<bool>(
                           context: context,
                           builder: (ctx) => TribeThemeScope(
@@ -124,10 +125,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       );
 
   Future<void> _signOut() async {
-    await ref.read(authProvider.notifier).signOut();
-    ref.invalidate(feedProvider);
-    ref.invalidate(inboxProvider);
-    if (mounted) GoRouter.of(context).go('/auth');
+    setState(() => _isSigningOut = true);
+    try {
+      await ref.read(authProvider.notifier).signOut();
+      ref.invalidate(feedProvider);
+      ref.invalidate(inboxProvider);
+      if (mounted) GoRouter.of(context).go('/auth');
+    } finally {
+      if (mounted) setState(() => _isSigningOut = false);
+    }
   }
 
   void _confirmDeleteAccount() {

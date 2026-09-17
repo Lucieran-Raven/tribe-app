@@ -893,6 +893,7 @@ class ReportModal extends StatefulWidget {
 
 class _ReportModalState extends State<ReportModal> {
   String? _choice;
+  bool _isSubmitting = false;
   static const _options = ['Spam', 'Harassment', 'Hate speech', 'Nudity', 'Other'];
 
   @override
@@ -929,16 +930,22 @@ class _ReportModalState extends State<ReportModal> {
                 ),
               const SizedBox(height: 14),
               Row(children: [
-                Expanded(child: ClayButtonSecondary(label: 'Cancel', onTap: widget.onClose)),
+                Expanded(child: ClayButtonSecondary(label: 'Cancel', onTap: _isSubmitting ? null : widget.onClose)),
                 const SizedBox(width: 10),
                 Expanded(
                   child: ClayButtonPrimary(
-                    label: 'Submit',
-                    onTap: _choice == null
+                    label: _isSubmitting ? 'Submitting...' : 'Submit',
+                    loading: _isSubmitting,
+                    onTap: _choice == null || _isSubmitting
                         ? null
-                        : () {
-                            widget.onSubmit(_choice!);
-                            widget.onClose();
+                        : () async {
+                            setState(() => _isSubmitting = true);
+                            try {
+                              widget.onSubmit(_choice!);
+                              widget.onClose();
+                            } finally {
+                              if (mounted) setState(() => _isSubmitting = false);
+                            }
                           },
                   ),
                 ),
