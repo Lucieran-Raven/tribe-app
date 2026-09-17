@@ -460,7 +460,7 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
                                 if (_selectedCategory == 'Interests')
                                   Positioned(
                                     right: 16,
-                                    bottom: 8,
+                                    bottom: 32,
                                     child: GestureDetector(
                                       onTap: _openAddCustomInterestSheet,
                                       behavior: HitTestBehavior.opaque,
