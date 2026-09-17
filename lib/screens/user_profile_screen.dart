@@ -151,8 +151,8 @@ class UserProfileScreen extends ConsumerWidget {
                   data: (user) {
             final rants = rantsAsync.value ?? [];
             final replies = repliesAsync.value ?? [];
-            final totalKarma = rants.fold<int>(0, (acc, r) => acc + r.karma) +
-                replies.fold<int>(0, (acc, r) => acc + r.karma);
+            final totalKarma = rants.fold<int>(0, (acc, r) => acc + r.voterIds.length) +
+                replies.fold<int>(0, (acc, r) => acc + r.voterIds.length);
 
             return DefaultTabController(
               length: 3,
@@ -308,7 +308,7 @@ class UserProfileScreen extends ConsumerWidget {
                                           children: [
                                             Icon(Icons.thumb_up, size: 11, color: t.inkFaint),
                                             const SizedBox(width: 5),
-                                            Text('${rant.karma}', style: t.body(size: 10.5, weight: FontWeight.w700, color: t.inkFaint)),
+                                            Text('${rant.voterIds.length}', style: t.body(size: 10.5, weight: FontWeight.w700, color: t.inkFaint)),
                                           ],
                                         ),
                                       ],
@@ -407,7 +407,7 @@ class UserProfileScreen extends ConsumerWidget {
                                         children: [
                                           Icon(Icons.thumb_up, size: 11, color: t.like),
                                           const SizedBox(width: 5),
-                                          Text('${rant.karma}', style: t.body(size: 10.5, weight: FontWeight.w700, color: t.like)),
+                                          Text('${rant.voterIds.length}', style: t.body(size: 10.5, weight: FontWeight.w700, color: t.like)),
                                         ],
                                       ),
                                     ],

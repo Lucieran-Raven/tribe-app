@@ -83,10 +83,9 @@ class AuthService {
 
   Future<void> signOut() async {
     try {
+      await OneSignal.logout();
       await _auth.signOut();
       await _googleSignIn.signOut();
-      // Unlink OneSignal from this user
-      OneSignal.logout();
     } catch (e) {
       debugPrint('Error signing out: $e');
     }

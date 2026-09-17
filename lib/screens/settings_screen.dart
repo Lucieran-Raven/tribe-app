@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../providers/auth_provider.dart';
 import '../providers/feed_provider.dart';
 import '../providers/notification_provider.dart';
@@ -50,32 +49,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       icon: Icons.logout,
                       label: 'Sign out',
                       onTap: _isSigningOut ? null : _signOut,
-                      t: t,
-                    ),
-                    row(
-                      icon: Icons.switch_account,
-                      label: 'Switch Account',
-                      onTap: _isSigningOut ? null : () async {
-                        final confirmed = await showDialog<bool>(
-                          context: context,
-                          builder: (ctx) => TribeThemeScope(
-                            theme: const TribeTheme(true),
-                            child: ConfirmModal(
-                              title: 'Switch Account?',
-                              body: 'You will be signed out and can sign in with a different account.',
-                              confirmLabel: 'Switch',
-                              onClose: () => Navigator.of(ctx).pop(),
-                              onConfirm: () => Navigator.of(ctx).pop(true),
-                            ),
-                          ),
-                        );
-                        if (confirmed == true && mounted) {
-                          await FirebaseAuth.instance.signOut();
-                          if (mounted) {
-                            GoRouter.of(context).go('/auth');
-                          }
-                        }
-                      },
                       t: t,
                     ),
                     row(

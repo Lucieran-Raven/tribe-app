@@ -28,8 +28,7 @@ service cloud.firestore {
           || (isAuthenticated() && resource.data.fromUserId == request.auth.uid);
         allow create: if isAuthenticated();
         allow update: if isOwner(userId)
-          || (isAuthenticated() && resource.data.fromUserId == request.auth.uid
-              && changedKeys().hasOnly(['fromAvatarUrl', 'fromHandle']));
+          || (isAuthenticated() && resource.data.fromUserId == request.auth.uid);
         allow delete: if isOwner(userId)
           || (isAuthenticated() && resource.data.fromUserId == request.auth.uid);
       }

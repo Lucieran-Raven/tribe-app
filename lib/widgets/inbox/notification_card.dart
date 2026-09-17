@@ -17,23 +17,23 @@ class NotificationCard extends ConsumerWidget {
   });
 
   Future<void> _deleteNotification(BuildContext context, WidgetRef ref) async {
-  final confirmed = await showDialog<bool>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text('Delete notification?'),
-      content: const Text('This will remove the notification from your inbox.'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(ctx).pop(false),
-          child: const Text('Cancel'),
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.transparent,
+      builder: (ctx) => SizedBox.expand(
+        child: TribeThemeScope(
+          theme: const TribeTheme(true),
+          child: ConfirmModal(
+            title: 'Delete notification?',
+            body: 'This will remove the notification from your inbox.',
+            confirmLabel: 'Delete',
+            onClose: () => Navigator.of(ctx).pop(),
+            onConfirm: () => Navigator.of(ctx).pop(true),
+          ),
         ),
-        TextButton(
-          onPressed: () => Navigator.of(ctx).pop(true),
-          child: const Text('Delete'),
-        ),
-      ],
-    ),
-  );
+      ),
+    );
   if (confirmed != true) return;
   
   final authState = ref.read(authProvider);

@@ -41,8 +41,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final userReplies = userRepliesAsync.value ?? [];
     final rantCount = userRants.length;
     final replyCount = userReplies.length;
-    final totalKarma = userRants.fold<int>(0, (acc, r) => acc + r.karma) +
-        userReplies.fold<int>(0, (acc, r) => acc + r.karma);
+    final totalKarma = userRants.fold<int>(0, (acc, r) => acc + r.voterIds.length) +
+        userReplies.fold<int>(0, (acc, r) => acc + r.voterIds.length);
 
     return TribeThemeScope(
       theme: t,
@@ -225,7 +225,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                         children: [
                                           Icon(Icons.thumb_up, size: 11, color: t.inkFaint),
                                           const SizedBox(width: 5),
-                                          Text('${rant.karma}', style: t.body(size: 10.5, weight: FontWeight.w700, color: t.inkFaint)),
+                                          Text('${rant.voterIds.length}', style: t.body(size: 10.5, weight: FontWeight.w700, color: t.inkFaint)),
                                         ],
                                       ),
                                     ],
@@ -339,7 +339,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                       children: [
                                         Icon(Icons.thumb_up, size: 11, color: t.like),
                                         const SizedBox(width: 5),
-                                        Text('${rant.karma}', style: t.body(size: 10.5, weight: FontWeight.w700, color: t.like)),
+                                        Text('${rant.voterIds.length}', style: t.body(size: 10.5, weight: FontWeight.w700, color: t.like)),
                                       ],
                                     ),
                                   ],

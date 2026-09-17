@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 import '../design/tribe_design.dart';
 import '../services/auth_service.dart';
 import '../services/notification_service.dart';
@@ -36,6 +37,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
           final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
 
           // Store OneSignal playerId in user document
+          await OneSignal.login(user.uid);
           await NotificationService().syncPlayerId(user.uid);
 
           if (!mounted) return;
