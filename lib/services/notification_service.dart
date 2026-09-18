@@ -4,11 +4,12 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import '../models/notification_model.dart';
+import '../config/onesignal_keys.dart';
 
 class NotificationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static const String _appId = 'e98051a2-ef46-43f2-bf9d-90e2f9180263';
-  static const String _apiKey = String.fromEnvironment('ONESIGNAL_API_KEY', defaultValue: 'YOUR_ONESIGNAL_API_KEY_HERE');
+  static const String _apiKey = OneSignalKeys.restApiKey;
   static const String _apiUrl = 'https://api.onesignal.com/notifications';
 
   Stream<List<NotificationModel>> streamNotifications(String userId) {
@@ -281,6 +282,7 @@ class NotificationService {
     ).toJson());
 
     debugPrint('About to call _sendPush...');
+    debugPrint('=== TRIGGERING NEW REPLY PUSH to $toUserId ===');
 
     // Send push notification via OneSignal REST API
     await _sendPush(

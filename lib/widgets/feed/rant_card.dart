@@ -80,8 +80,10 @@ class _RantCardState extends ConsumerState<RantCard> {
                               confirmLabel: 'Delete',
                               onClose: () => Navigator.of(ctx).pop(),
                               onConfirm: () async {
+                                Navigator.of(ctx).pop();
                                 try {
                                   await RantService().deletePost(widget.rant.rantId);
+                                  if (context.mounted) Toast.success(context, 'Post deleted');
                                 } catch (e) {
                                   if (context.mounted) {
                                     Toast.error(context, 'Failed to delete: $e');

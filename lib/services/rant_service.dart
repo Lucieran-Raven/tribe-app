@@ -5,7 +5,7 @@ import '../models/reply_model.dart';
 import '../models/notification_model.dart';
 import '../models/user_model.dart';
 import '../services/notification_service.dart';
-import 'push_service.dart';
+import '../services/push_service.dart';
 
 class RantService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -215,6 +215,7 @@ class RantService {
               ),
               deterministicId,
             );
+            debugPrint('=== TRIGGERING REPLY LIKE PUSH to $replyOwnerId ===');
             await PushService().sendPush(
               targetUserId: replyOwnerId,
               title: 'New Like',

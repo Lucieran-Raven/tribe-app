@@ -71,8 +71,10 @@ class ReplyCard extends ConsumerWidget {
                               confirmLabel: 'Delete',
                               onClose: () => Navigator.of(ctx).pop(),
                               onConfirm: () async {
+                                Navigator.of(ctx).pop();
                                 try {
                                   await RantService().deleteReply(reply.rantId, reply.replyId);
+                                  if (context.mounted) Toast.success(context, 'Reply deleted');
                                 } catch (e) {
                                   if (context.mounted) {
                                     Toast.error(context, 'Failed to delete: $e');

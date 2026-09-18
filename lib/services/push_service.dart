@@ -1,10 +1,13 @@
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
+import '../config/onesignal_keys.dart';
 
 class PushService {
   static const String _appId = 'e98051a2-ef46-43f2-bf9d-90e2f9180263';
-  static const String _apiKey = 'os_v2_app_5gafdixpizb7fp45sdrpsgacmmklhs455wmuysvqj7qj6pcdwb5a7cy3oxliq6muimontcjxts5ahxhtztjk5hzfhdtxmx76cfw5kka';
+  static const String _apiKey = OneSignalKeys.restApiKey;
   static const String _apiUrl = 'https://api.onesignal.com/notifications';
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   Future<void> sendPush({
     required String targetUserId,
@@ -15,6 +18,15 @@ class PushService {
     // Don't send push if target is empty or invalid
     if (targetUserId.isEmpty) return;
 
+    // Fetch target user's OneSignal playerId from Firestore
+    final targetUserDoc = await _firestore.collection('users').doc(targetUserId).get();
+    final playerId = (targetUserDoc.data()?['oneSignalPlayerId'] as String?) ?? '';
+
+    if (playerId.isEmpty) {
+      print('Push skipped: No playerId found for user $targetUserId');
+      return;
+    }
+
     try {
       final response = await http.post(
         Uri.parse(_apiUrl),
@@ -24,10 +36,7 @@ class PushService {
         },
         body: jsonEncode({
           'app_id': _appId,
-          'include_aliases': {
-            'external_id': [targetUserId]
-          },
-          'target_channel': 'push',
+          'include_player_ids': [playerId],
           'contents': {'en': body},
           'headings': {'en': title},
           'data': {

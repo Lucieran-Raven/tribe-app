@@ -75,13 +75,7 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
       // Fetch rant to get owner ID for notification
       final rant = await RantService().getRant(widget.rantId);
       if (user.userId != rant.userId) {
-        debugPrint('=== REPLY NOTIFICATION TRIGGER ===');
-        debugPrint('fromUserId: ${user.userId}');
-        debugPrint('fromUsername: ${user.handle}');
-        debugPrint('toUserId (rant owner): ${rant.userId}');
-        debugPrint('rantId: ${widget.rantId}');
-        debugPrint('Calling sendReplyNotification...');
-
+        debugPrint('=== TRIGGERING NEW REPLY PUSH to ${rant.userId} ===');
         await NotificationService().sendReplyNotification(
           fromUserId: user.userId,
           fromUsername: user.handle ?? 'anonymous',
@@ -91,8 +85,6 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
           replyContent: content,
           replyId: replyId,
         );
-
-        debugPrint('sendReplyNotification completed');
       }
     } catch (e) {
       if (mounted) {
