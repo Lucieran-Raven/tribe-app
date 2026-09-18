@@ -15,7 +15,6 @@ Future<void> main() async {
   // Initialize OneSignal
   OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
   OneSignal.initialize('e98051a2-ef46-43f2-bf9d-90e2f9180263');
-  OneSignal.Notifications.requestPermission(true);
   
   // Diagnostic Observer
   OneSignal.User.pushSubscription.addObserver((state) {

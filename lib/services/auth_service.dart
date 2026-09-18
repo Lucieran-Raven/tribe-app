@@ -65,11 +65,6 @@ class AuthService {
       // Link OneSignal to this Firebase user
       OneSignal.login(userModel.userId);
       OneSignal.User.addAlias("external_id", userModel.userId);
-      // Request notification permission and subscribe if granted
-      final accepted = await OneSignal.Notifications.requestPermission(false);
-      if (accepted) {
-        OneSignal.User.pushSubscription.optIn();
-      }
 
       // Sync OneSignal playerId for notifications
       await NotificationService().syncPlayerId(userModel.userId);
@@ -105,80 +100,192 @@ class AuthService {
     final uid = _auth.currentUser!.uid;
 
     // 1. VOTES ON OTHERS' CONTENT (decrement parent karma)
-    final votesQuery = await _firestore.collectionGroup('votes').where('userId', isEqualTo: uid).get();
-    for (var i = 0; i < votesQuery.docs.length; i += 500) {
-      final batch = _firestore.batch();
-      final end = (i + 500 < votesQuery.docs.length) ? i + 500 : votesQuery.docs.length;
-      for (var j = i; j < end; j++) {
-        final voteRef = votesQuery.docs[j].reference;
-        final parentRef = voteRef.parent.parent;
-        if (parentRef != null) {
-          batch.update(_firestore.doc(parentRef.path), {
-            'karma': FieldValue.increment(-1),
-            'voterIds': FieldValue.arrayRemove([uid]),
-          });
+    try {
+      final votesQuery = await _firestore.collectionGroup('votes').where('userId', isEqualTo: uid).get();
+      for (var i = 0; i < votesQuery.docs.length; i += 500) {
+        final batch = _firestore.batch();
+        final end = (i + 500 < votesQuery.docs.length) ? i + 500 : votesQuery.docs.length;
+        for (var j = i; j < end; j++) {
+          final voteRef = votesQuery.docs[j].reference;
+          final parentRef = voteRef.parent.parent;
+          if (parentRef != null) {
+            batch.update(_firestore.doc(parentRef.path), {
+              'karma': FieldValue.increment(-1),
+              'voterIds': FieldValue.arrayRemove([uid]),
+            });
+          }
+          batch.delete(voteRef);
         }
-        batch.delete(voteRef);
+        try {
+          await batch.commit();
+        } catch (e) {
+          debugPrint('DELETE-STEP-FAIL step=1-batch-$i error=$e');
+        }
       }
-      await batch.commit();
+      debugPrint('DELETE-STEP-OK step=1');
+    } catch (e) {
+      debugPrint('DELETE-STEP-FAIL step=1 error=$e');
     }
 
     // 2. REPLIES (decrement parent replyCount)
-    final repliesQuery = await _firestore.collectionGroup('replies').where('userId', isEqualTo: uid).get();
-    for (var i = 0; i < repliesQuery.docs.length; i += 500) {
-      final batch = _firestore.batch();
-      final end = (i + 500 < repliesQuery.docs.length) ? i + 500 : repliesQuery.docs.length;
-      for (var j = i; j < end; j++) {
-        final replyRef = repliesQuery.docs[j].reference;
-        final parentRef = replyRef.parent.parent;
-        if (parentRef != null) {
-          batch.update(_firestore.doc(parentRef.path), {'replyCount': FieldValue.increment(-1)});
+    try {
+      final repliesQuery = await _firestore.collectionGroup('replies').where('userId', isEqualTo: uid).get();
+      for (var i = 0; i < repliesQuery.docs.length; i += 500) {
+        final batch = _firestore.batch();
+        final end = (i + 500 < repliesQuery.docs.length) ? i + 500 : repliesQuery.docs.length;
+        for (var j = i; j < end; j++) {
+          final replyRef = repliesQuery.docs[j].reference;
+          final parentRef = replyRef.parent.parent;
+          if (parentRef != null) {
+            batch.update(_firestore.doc(parentRef.path), {'replyCount': FieldValue.increment(-1)});
+          }
+          batch.delete(replyRef);
         }
-        batch.delete(replyRef);
+        try {
+          await batch.commit();
+        } catch (e) {
+          debugPrint('DELETE-STEP-FAIL step=2-batch-$i error=$e');
+        }
       }
-      await batch.commit();
+      debugPrint('DELETE-STEP-OK step=2');
+    } catch (e) {
+      debugPrint('DELETE-STEP-FAIL step=2 error=$e');
     }
 
     // 3. NOTIFICATIONS TRIGGERED BY USER (in others' inboxes)
-    final trigNotifsQuery = await _firestore.collectionGroup('notifications').where('fromUserId', isEqualTo: uid).get();
-    for (var i = 0; i < trigNotifsQuery.docs.length; i += 500) {
-      final batch = _firestore.batch();
-      final end = (i + 500 < trigNotifsQuery.docs.length) ? i + 500 : trigNotifsQuery.docs.length;
-      for (var j = i; j < end; j++) {
-        batch.delete(trigNotifsQuery.docs[j].reference);
+    try {
+      final trigNotifsQuery = await _firestore.collectionGroup('notifications').where('fromUserId', isEqualTo: uid).get();
+      for (var i = 0; i < trigNotifsQuery.docs.length; i += 500) {
+        final batch = _firestore.batch();
+        final end = (i + 500 < trigNotifsQuery.docs.length) ? i + 500 : trigNotifsQuery.docs.length;
+        for (var j = i; j < end; j++) {
+          batch.delete(trigNotifsQuery.docs[j].reference);
+        }
+        try {
+          await batch.commit();
+        } catch (e) {
+          debugPrint('DELETE-STEP-FAIL step=3-batch-$i error=$e');
+        }
       }
-      await batch.commit();
+      debugPrint('DELETE-STEP-OK step=3');
+    } catch (e) {
+      debugPrint('DELETE-STEP-FAIL step=3 error=$e');
     }
 
-    // 4. USER'S OWN POSTS
-    final postsQuery = await _firestore.collection('rants').where('userId', isEqualTo: uid).get();
-    for (var i = 0; i < postsQuery.docs.length; i += 500) {
-      final batch = _firestore.batch();
-      final end = (i + 500 < postsQuery.docs.length) ? i + 500 : postsQuery.docs.length;
-      for (var j = i; j < end; j++) {
-        batch.delete(postsQuery.docs[j].reference);
+    // 4. USER'S OWN POSTS (with cascade cleanup)
+    try {
+      final postsQuery = await _firestore.collection('rants').where('userId', isEqualTo: uid).get();
+      for (var rantIdx = 0; rantIdx < postsQuery.docs.length; rantIdx++) {
+        final rantDoc = postsQuery.docs[rantIdx];
+        final rantId = rantDoc.id;
+        final rantPath = 'rants/$rantId';
+
+        try {
+          // 4a. Delete replies and their votes under this rant
+          final repliesQuery = await _firestore.collection('rants').doc(rantId).collection('replies').get();
+          for (var i = 0; i < repliesQuery.docs.length; i += 500) {
+            final batch = _firestore.batch();
+            final end = (i + 500 < repliesQuery.docs.length) ? i + 500 : repliesQuery.docs.length;
+            for (var j = i; j < end; j++) {
+              final replyDoc = repliesQuery.docs[j];
+              final replyId = replyDoc.id;
+              
+              // Delete votes under this reply
+              final replyVotesQuery = await _firestore.collection('rants').doc(rantId).collection('replies').doc(replyId).collection('votes').get();
+              for (var k = 0; k < replyVotesQuery.docs.length; k += 500) {
+                final voteBatch = _firestore.batch();
+                final voteEnd = (k + 500 < replyVotesQuery.docs.length) ? k + 500 : replyVotesQuery.docs.length;
+                for (var l = k; l < voteEnd; l++) {
+                  voteBatch.delete(replyVotesQuery.docs[l].reference);
+                }
+                try {
+                  await voteBatch.commit();
+                } catch (e) {
+                  debugPrint('DELETE-STEP-FAIL step=4a-reply-votes-$rantId-$replyId-$k error=$e');
+                }
+              }
+              
+              batch.delete(replyDoc.reference);
+            }
+            try {
+              await batch.commit();
+            } catch (e) {
+              debugPrint('DELETE-STEP-FAIL step=4a-replies-$rantId-$i error=$e');
+            }
+          }
+
+          // 4b. Delete votes directly under this rant
+          final votesQuery = await _firestore.collection('rants').doc(rantId).collection('votes').get();
+          for (var i = 0; i < votesQuery.docs.length; i += 500) {
+            final batch = _firestore.batch();
+            final end = (i + 500 < votesQuery.docs.length) ? i + 500 : votesQuery.docs.length;
+            for (var j = i; j < end; j++) {
+              batch.delete(votesQuery.docs[j].reference);
+            }
+            try {
+              await batch.commit();
+            } catch (e) {
+              debugPrint('DELETE-STEP-FAIL step=4b-votes-$rantId-$i error=$e');
+            }
+          }
+
+          // 4c. Delete the rant doc itself
+          try {
+            await _firestore.collection('rants').doc(rantId).delete();
+          } catch (e) {
+            debugPrint('DELETE-STEP-FAIL step=4c-rant-$rantPath error=$e');
+          }
+        } catch (e) {
+          debugPrint('DELETE-STEP-FAIL step=4-rant-$rantPath error=$e');
+        }
       }
-      await batch.commit();
+      debugPrint('DELETE-STEP-OK step=4');
+    } catch (e) {
+      debugPrint('DELETE-STEP-FAIL step=4 error=$e');
     }
 
     // 5. USER'S OWN NOTIFICATIONS
-    final userNotifsQuery = await _firestore.collection('users').doc(uid).collection('notifications').get();
-    for (var i = 0; i < userNotifsQuery.docs.length; i += 500) {
-      final batch = _firestore.batch();
-      final end = (i + 500 < userNotifsQuery.docs.length) ? i + 500 : userNotifsQuery.docs.length;
-      for (var j = i; j < end; j++) {
-        batch.delete(userNotifsQuery.docs[j].reference);
+    try {
+      final userNotifsQuery = await _firestore.collection('users').doc(uid).collection('notifications').get();
+      for (var i = 0; i < userNotifsQuery.docs.length; i += 500) {
+        final batch = _firestore.batch();
+        final end = (i + 500 < userNotifsQuery.docs.length) ? i + 500 : userNotifsQuery.docs.length;
+        for (var j = i; j < end; j++) {
+          batch.delete(userNotifsQuery.docs[j].reference);
+        }
+        try {
+          await batch.commit();
+        } catch (e) {
+          debugPrint('DELETE-STEP-FAIL step=5-batch-$i error=$e');
+        }
       }
-      await batch.commit();
+      debugPrint('DELETE-STEP-OK step=5');
+    } catch (e) {
+      debugPrint('DELETE-STEP-FAIL step=5 error=$e');
     }
 
     // 6. ONESIGNAL LOGOUT (sever push notification tie before deletion)
-    await OneSignal.logout();
+    try {
+      await OneSignal.logout();
+      debugPrint('DELETE-STEP-OK step=6');
+    } catch (e) {
+      debugPrint('DELETE-STEP-FAIL step=6 error=$e');
+    }
 
     // 7. USER DOC
-    await _firestore.collection('users').doc(uid).delete();
+    try {
+      await _firestore.collection('users').doc(uid).delete();
+      debugPrint('DELETE-STEP-OK step=7');
+    } catch (e) {
+      debugPrint('DELETE-STEP-FAIL step=7 error=$e');
+    }
 
     // 8. AUTH ACCOUNT (LAST)
-    await _auth.currentUser!.delete();
+    try {
+      await _auth.currentUser!.delete();
+      debugPrint('DELETE-STEP-OK step=8');
+    } catch (e) {
+      debugPrint('DELETE-STEP-FAIL step=8 error=$e');
+    }
   }
 }

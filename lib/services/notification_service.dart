@@ -23,7 +23,8 @@ class NotificationService {
           // One-time legacy cleanup: delete docs with non-deterministic IDs
           for (final doc in snapshot.docs) {
             final id = doc.id;
-            if (!id.startsWith('like_') && !id.startsWith('reply_')) {
+            if (!id.startsWith('like_') && !id.startsWith('reply_')
+                && !id.startsWith('karma_') && !id.startsWith('replyKarma_')) {
               try {
                 doc.reference.delete();
               } catch (_) {}
@@ -106,7 +107,7 @@ class NotificationService {
         .collection('notifications')
         .doc(deterministicId);
     final notificationWithId = notification.copyWith(notificationId: docRef.id);
-    await docRef.set(notificationWithId.toJson());
+    await docRef.set(notificationWithId.toJson(), SetOptions(merge: true));
   }
 
   Future<void> deleteKarmaNotification(String userId, String deterministicId) async {

@@ -52,7 +52,6 @@ class CountriesSeed {
     'Morocco 🇲🇦',
     'Saudi Arabia 🇸🇦',
     'UAE 🇦🇪',
-    'Israel 🇮🇱',
     'Iran 🇮🇷',
     'Iraq 🇮🇶',
   ];

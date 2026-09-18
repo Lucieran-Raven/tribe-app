@@ -164,7 +164,23 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
                               setState(() => _isPostAvailable = false);
                             }
                           });
-                          return const Center(child: CircularProgressIndicator());
+                          return Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.error_outline, size: 64, color: t.inkFaint),
+                                const SizedBox(height: 16),
+                                Text('Post Unavailable', style: t.display(size: 18, color: t.ink)),
+                                const SizedBox(height: 8),
+                                Text('This post may have been deleted.', style: t.body(size: 14, color: t.inkDim)),
+                                const SizedBox(height: 24),
+                                ClayButtonSecondary(
+                                  label: 'Go Back',
+                                  onTap: () => Navigator.of(context).pop(),
+                                ),
+                              ],
+                            ),
+                          );
                         }
                         final rant = snapshot.data!;
                         final currentUserId = authState is AuthAuthenticated ? authState.user.userId : null;
@@ -224,24 +240,8 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
                                         Toast.warning(context, "You can't like your own post");
                                         return;
                                       }
-                                      final wasLiked = isLiked;
                                       try {
                                         await RantService().toggleVote(rant.rantId, currentUserId);
-                                        if (wasLiked) {
-                                          await NotificationService().deleteLikeNotification(
-                                            fromUserId: currentUserId,
-                                            toUserId: rant.userId,
-                                            rantId: rant.rantId,
-                                          );
-                                        } else if (authState is AuthAuthenticated) {
-                                          await NotificationService().sendLikeNotification(
-                                            fromUserId: currentUserId,
-                                            fromUsername: authState.user.handle ?? 'anonymous',
-                                            fromAvatarUrl: authState.user.avatarUrl ?? '',
-                                            toUserId: rant.userId,
-                                            rantId: rant.rantId,
-                                          );
-                                        }
                                       } catch (e) {
                                         if (context.mounted) {
                                           Toast.error(context, 'Failed to like: $e');

@@ -79,17 +79,52 @@ class InboxScreen extends ConsumerWidget {
               itemCount: notifications.length,
               itemBuilder: (context, index) {
                 final notification = notifications[index];
-                return NotificationCard(
-                  notification: notification,
-                  onTap: () {
-                    GoRouter.of(context).push('/rant/${notification.targetRantId}');
-                    if (!notification.isRead) {
-                      NotificationService().markAsRead(
-                        authState.user.userId,
-                        notification.notificationId,
-                      );
-                    }
+                return Dismissible(
+                  key: ValueKey(notification.notificationId),
+                  direction: DismissDirection.endToStart,
+                  background: Container(
+                    color: Colors.red,
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.only(right: 20),
+                    child: const Icon(Icons.delete, color: Colors.white),
+                  ),
+                  confirmDismiss: (direction) async {
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => TribeThemeScope(
+                        theme: const TribeTheme(true),
+                        child: ConfirmModal(
+                          title: 'Delete notification?',
+                          body: 'This will remove the notification from your inbox.',
+                          confirmLabel: 'Delete',
+                          onClose: () => Navigator.of(ctx).pop(false),
+                          onConfirm: () => Navigator.of(ctx).pop(true),
+                        ),
+                      ),
+                    );
+                    return confirmed ?? false;
                   },
+                  onDismissed: (direction) async {
+                    await NotificationService().deleteNotificationBySource(
+                      authState.user.userId,
+                      notification.type,
+                      notification.fromUserId,
+                      notification.targetRantId,
+                    );
+                    if (context.mounted) Toast.success(context, 'Notification deleted');
+                  },
+                  child: NotificationCard(
+                    notification: notification,
+                    onTap: () {
+                      GoRouter.of(context).push('/rant/${notification.targetRantId}');
+                      if (!notification.isRead) {
+                        NotificationService().markAsRead(
+                          authState.user.userId,
+                          notification.notificationId,
+                        );
+                      }
+                    },
+                  ),
                 );
               },
             );

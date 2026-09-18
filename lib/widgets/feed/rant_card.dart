@@ -8,7 +8,6 @@ import '../../providers/auth_provider.dart';
 import '../../providers/feed_provider.dart';
 import '../../services/rant_service.dart';
 import '../../services/report_service.dart';
-import '../../services/notification_service.dart';
 import '../../design/tribe_design.dart';
 import '../../widgets/common/tap_scale.dart';
 import 'full_image_viewer.dart';
@@ -184,7 +183,6 @@ class _RantCardState extends ConsumerState<RantCard> {
                     Toast.warning(context, "You can't like your own post");
                     return;
                   }
-                  final wasLiked = isLiked;
                   final optimisticRant = widget.rant.copyWith(
                     voterIds: isLiked
                       ? widget.rant.voterIds.where((id) => id != currentUserId).toList()
@@ -193,21 +191,6 @@ class _RantCardState extends ConsumerState<RantCard> {
                   ref.read(feedProvider.notifier).updateRant(optimisticRant);
                   try {
                     await RantService().toggleVote(widget.rant.rantId, currentUserId);
-                    if (wasLiked) {
-                      await NotificationService().deleteLikeNotification(
-                        fromUserId: currentUserId,
-                        toUserId: widget.rant.userId,
-                        rantId: widget.rant.rantId,
-                      );
-                    } else if (authState is AuthAuthenticated) {
-                      await NotificationService().sendLikeNotification(
-                        fromUserId: currentUserId,
-                        fromUsername: authState.user.handle ?? 'anonymous',
-                        fromAvatarUrl: authState.user.avatarUrl ?? '',
-                        toUserId: widget.rant.userId,
-                        rantId: widget.rant.rantId,
-                      );
-                    }
                   } catch (e) {
                     ref.read(feedProvider.notifier).updateRant(widget.rant);
                     if (context.mounted) {

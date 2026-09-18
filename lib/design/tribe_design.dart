@@ -1002,7 +1002,6 @@ class ConfirmModal extends StatelessWidget {
                       ? GestureDetector(
                           onTap: () {
                             onConfirm();
-                            onClose();
                           },
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 15),
@@ -1015,7 +1014,6 @@ class ConfirmModal extends StatelessWidget {
                           label: confirmLabel,
                           onTap: () {
                             onConfirm();
-                            onClose();
                           },
                         ),
                 ),

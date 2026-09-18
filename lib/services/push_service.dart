@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 
 class PushService {
   static const String _appId = 'e98051a2-ef46-43f2-bf9d-90e2f9180263';
-  static const String _apiKey = String.fromEnvironment('ONESIGNAL_API_KEY', defaultValue: 'YOUR_ONESIGNAL_API_KEY_HERE');
+  static const String _apiKey = 'os_v2_app_5gafdixpizb7fp45sdrpsgacmmklhs455wmuysvqj7qj6pcdwb5a7cy3oxliq6muimontcjxts5ahxhtztjk5hzfhdtxmx76cfw5kka';
   static const String _apiUrl = 'https://api.onesignal.com/notifications';
 
   Future<void> sendPush({
@@ -36,8 +36,9 @@ class PushService {
         }),
       ).timeout(const Duration(seconds: 10));
 
-      print('PUSH RESPONSE STATUS: ${response.statusCode}');
-      print('PUSH RESPONSE BODY: ${response.body}');
+      print('=== PUSH SERVICE RESPONSE ===');
+      print('Status: ${response.statusCode}');
+      print('Body: ${response.body}');
       
       if (response.statusCode != 200) {
         print('Push failed (${response.statusCode}): ${response.body}');
