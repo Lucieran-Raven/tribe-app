@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
+import '../../design/tribe_design.dart';
 
 class ShimmerBox extends StatelessWidget {
   final double width, height, radius;
@@ -7,14 +8,15 @@ class ShimmerBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = TribeThemeScope.of(context);
     return Shimmer.fromColors(
-      baseColor: const Color(0xFF2A2A2E),
-      highlightColor: const Color(0xFF3A3A40),
+      baseColor: t.isDark ? const Color(0xFF16181C) : const Color(0xFFEFF3F4),
+      highlightColor: t.isDark ? const Color(0xFF1D1F23) : const Color(0xFFFFFFFF),
       child: Container(
         width: width,
         height: height,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: t.bg1,
           borderRadius: BorderRadius.circular(radius),
         ),
       ),

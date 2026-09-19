@@ -8,6 +8,7 @@ class FullImageViewer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // INTENTIONAL: forced dark scope — image viewer is always black.
     final theme = const TribeTheme(true);
     return TribeThemeScope(
       theme: theme,
@@ -46,7 +47,7 @@ class FullImageViewer extends StatelessWidget {
                         shape: BoxShape.circle,
                         border: Border.all(color: theme.lineStrong),
                       ),
-                      child: const Icon(Icons.close, size: 20, color: Colors.white),
+                      child: Icon(Icons.close, size: 20, color: theme.ink),
                     ),
                   ),
                 ),

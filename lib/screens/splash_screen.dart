@@ -56,8 +56,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final t = TribeTheme(isDark);
+    // INTENTIONAL: forced dark scope — splash screen is always black (brand screen).
+    final t = const TribeTheme(true);
     return TribeThemeScope(
       theme: t,
       child: Scaffold(

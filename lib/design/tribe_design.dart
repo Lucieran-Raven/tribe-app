@@ -348,12 +348,13 @@ class TribeToast extends StatelessWidget {
     IconData icon = Icons.check_circle,
     Color iconColor = const Color(0xFF4CAF50),
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog<void>(
       context: context,
       barrierDismissible: true,
       barrierColor: Colors.transparent,
       builder: (ctx) => TribeThemeScope(
-        theme: const TribeTheme(true),
+        theme: TribeTheme(isDark),
         child: TribeToast(
           message: message,
           icon: icon,

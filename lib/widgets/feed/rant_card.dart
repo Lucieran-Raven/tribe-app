@@ -71,10 +71,12 @@ class _RantCardState extends ConsumerState<RantCard> {
                         context: context,
                         barrierDismissible: false,
                         barrierColor: Colors.transparent,
-                        builder: (ctx) => SizedBox.expand(
-                          child: TribeThemeScope(
-                            theme: const TribeTheme(true),
-                            child: ConfirmModal(
+                        builder: (ctx) {
+                          final isDark = Theme.of(ctx).brightness == Brightness.dark;
+                          return SizedBox.expand(
+                            child: TribeThemeScope(
+                              theme: TribeTheme(isDark),
+                              child: ConfirmModal(
                               title: 'Delete Post?',
                               body: "This can't be undone.",
                               confirmLabel: 'Delete',
@@ -93,17 +95,20 @@ class _RantCardState extends ConsumerState<RantCard> {
                               danger: true,
                             ),
                           ),
-                        ),
+                          );
+                        },
                       );
                     } else {
                       showDialog<void>(
                         context: context,
                         barrierDismissible: false,
                         barrierColor: Colors.transparent,
-                        builder: (ctx) => SizedBox.expand(
-                          child: TribeThemeScope(
-                            theme: const TribeTheme(true),
-                            child: ReportModal(
+                        builder: (ctx) {
+                          final isDark = Theme.of(ctx).brightness == Brightness.dark;
+                          return SizedBox.expand(
+                            child: TribeThemeScope(
+                              theme: TribeTheme(isDark),
+                              child: ReportModal(
                               onClose: () => Navigator.of(ctx).pop(),
                               onSubmit: (String reason) async {
                                 final authState = ref.read(authProvider);
@@ -122,7 +127,8 @@ class _RantCardState extends ConsumerState<RantCard> {
                               },
                             ),
                           ),
-                        ),
+                          );
+                        },
                       );
                     }
                   },

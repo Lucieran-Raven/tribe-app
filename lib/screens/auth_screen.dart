@@ -21,8 +21,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final t = TribeTheme(isDark);
+    // INTENTIONAL: forced dark scope — auth screen is always black (brand screen).
+    final t = const TribeTheme(true);
 
     // Listen to auth state changes and navigate accordingly
     ref.listen<AuthState>(authProvider, (previous, next) {
@@ -42,7 +42,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     return TribeThemeScope(
       theme: t,
       child: Scaffold(
-        backgroundColor: t.bg1,
+        backgroundColor: t.bg0,
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(26, 54, 26, 34),

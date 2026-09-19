@@ -6,7 +6,8 @@ import '../../design/tribe_design.dart';
 class AvatarCropper {
   static Future<File?> crop(File sourceFile, BuildContext context) async {
     try {
-      final t = const TribeTheme(true);
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      final t = TribeTheme(isDark);
       final CroppedFile? cropped = await ImageCropper().cropImage(
         sourcePath: sourceFile.path,
         aspectRatio: const CropAspectRatio(ratioX: 1.0, ratioY: 1.0),
