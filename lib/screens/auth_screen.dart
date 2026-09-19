@@ -21,7 +21,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
-    final t = const TribeTheme(true);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final t = TribeTheme(isDark);
 
     // Listen to auth state changes and navigate accordingly
     ref.listen<AuthState>(authProvider, (previous, next) {

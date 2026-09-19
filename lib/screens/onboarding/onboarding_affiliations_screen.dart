@@ -151,7 +151,8 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
     final state = ref.watch(onboardingProvider);
     final selectedAffiliations = state.selectedAffiliations;
     final sortedSelected = sortAffiliationsByType(selectedAffiliations);
-    final t = const TribeTheme(true);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final t = TribeTheme(isDark);
 
     // Show error snackbar
     ref.listen<OnboardingState>(onboardingProvider, (previous, next) {
@@ -547,13 +548,15 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
   }
 
   void _openCountrySheet(BuildContext context) {
-    final t = const TribeTheme(true);
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (ctx) => TribeThemeScope(
-        theme: t,
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        final t = TribeTheme(isDark);
+        return TribeThemeScope(
+          theme: t,
         child: Container(
           decoration: BoxDecoration(
             color: t.bg1,
@@ -609,7 +612,8 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
             ),
           ),
         ),
-      ),
+        );
+      },
     );
   }
 
@@ -652,16 +656,19 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
     await showDialog<void>(
       context: context,
       barrierColor: Colors.transparent,
-      builder: (ctx) => TribeThemeScope(
-        theme: const TribeTheme(true),
-        child: ConfirmModal(
-          title: 'Change affiliation?',
-          body: 'Remove "${current.name}" and set your university to "${target.name}"?',
-          confirmLabel: 'Change',
-          onClose: () => Navigator.of(ctx).pop(),
-          onConfirm: () { shouldSwap = true; },
-        ),
-      ),
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        return TribeThemeScope(
+          theme: TribeTheme(isDark),
+          child: ConfirmModal(
+            title: 'Change affiliation?',
+            body: 'Remove "${current.name}" and set your university to "${target.name}"?',
+            confirmLabel: 'Change',
+            onClose: () => Navigator.of(ctx).pop(),
+            onConfirm: () { shouldSwap = true; },
+          ),
+        );
+      },
     );
 
     if (!shouldSwap) return;
@@ -675,13 +682,15 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
 
   Future<void> _openAddCustomInterestSheet() async {
     final controller = TextEditingController();
-    final t = const TribeTheme(true);
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (ctx) => TribeThemeScope(
-        theme: t,
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        final t = TribeTheme(isDark);
+        return TribeThemeScope(
+          theme: t,
         child: Padding(
           padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
           child: Container(
@@ -736,7 +745,8 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
             ),
           ),
         ),
-      ),
+        );
+      },
     );
   }
 

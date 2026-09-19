@@ -43,7 +43,8 @@ class _OnboardingHandleScreenState extends ConsumerState<OnboardingHandleScreen>
       }
     });
 
-    final t = const TribeTheme(true);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final t = TribeTheme(isDark);
 
     return TribeThemeScope(
       theme: t,

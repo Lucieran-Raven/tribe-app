@@ -58,7 +58,8 @@ class _OnboardingCountryScreenState extends ConsumerState<OnboardingCountryScree
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(onboardingProvider);
-    final t = const TribeTheme(true);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final t = TribeTheme(isDark);
 
     ref.listen<OnboardingState>(onboardingProvider, (previous, next) {
       if (next.errorMsg != null && next.errorMsg != previous?.errorMsg) {

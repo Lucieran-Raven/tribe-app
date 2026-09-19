@@ -25,7 +25,8 @@ class _OnboardingAvatarScreenState extends ConsumerState<OnboardingAvatarScreen>
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final user = authState is AuthAuthenticated ? authState.user : null;
-    final t = const TribeTheme(true);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final t = TribeTheme(isDark);
 
     return TribeThemeScope(
       theme: t,
