@@ -26,11 +26,11 @@ class TribeTheme {
   const TribeTheme(this.isDark);
 
   // ---- Backgrounds ----
-  Color get bg0 => isDark ? const Color(0xFF08080A) : const Color(0xFFF4EFE4);
-  Color get bg1 => isDark ? const Color(0xFF121214) : const Color(0xFFF0EADC);
-  Color get bg2 => isDark ? const Color(0xFF1A1A1D) : const Color(0xFFF1ECE1);
-  Color get bg3 => isDark ? const Color(0xFF222226) : const Color(0xFFE7E0D0);
-  Color get bg4 => isDark ? const Color(0xFF2B2B30) : const Color(0xFFDCD2BC);
+  Color get bg0 => isDark ? const Color(0xFF000000) : const Color(0xFFFFFFFF);
+  Color get bg1 => isDark ? const Color(0xFF000000) : const Color(0xFFFFFFFF);
+  Color get bg2 => isDark ? const Color(0xFF16181C) : const Color(0xFFF7F9F9);
+  Color get bg3 => isDark ? const Color(0xFF1D1F23) : const Color(0xFFEFF3F4);
+  Color get bg4 => isDark ? const Color(0xFF1D1F23) : const Color(0xFFEFF3F4);
 
   // ---- Milk / neutrals ----
   Color get milk => isDark ? const Color(0xFFF3F0E8) : const Color(0xFF1C1A16);
@@ -43,24 +43,24 @@ class TribeTheme {
   Color get grey700 => isDark ? const Color(0xFF47454A) : const Color(0xFFB7AF9C);
 
   // ---- Ink ----
-  Color get ink => isDark ? const Color(0xFFF3F1EC) : const Color(0xFF201D18);
-  Color get inkDim => isDark ? const Color(0xFFA9A7A2) : const Color(0xFF5C574C);
-  Color get inkFaint => isDark ? const Color(0xFF6F6D6C) : const Color(0xFF837E70);
+  Color get ink => isDark ? const Color(0xFFE7E9EA) : const Color(0xFF0F1419);
+  Color get inkDim => isDark ? const Color(0xFF71767B) : const Color(0xFF536471);
+  Color get inkFaint => isDark ? const Color(0xFF71767B) : const Color(0xFF536471);
 
   // ---- Lines ----
-  Color get line => isDark ? const Color(0x12FFFFFF) : const Color(0x38141008);
-  Color get lineStrong => isDark ? const Color(0x24FFFFFF) : const Color(0x57141008);
+  Color get line => isDark ? const Color(0xFF2F3336) : const Color(0xFFEFF3F4);
+  Color get lineStrong => isDark ? const Color(0xFF2F3336) : const Color(0xFFEFF3F4);
 
   // ---- Accents ----
-  Color get gold => isDark ? const Color(0xFFD9AE6E) : const Color(0xFF9C6B37);
-  Color get goldDim => isDark ? const Color(0xFFB9925A) : const Color(0xFF7E5528);
-  Color get goldTint => isDark ? const Color(0x24D9AE6E) : const Color(0x249C6B37);
+  Color get gold => isDark ? const Color(0xFF0FA3A3) : const Color(0xFF0FA3A3);
+  Color get goldDim => isDark ? const Color(0xFF0FA3A3).withValues(alpha: 0.6) : const Color(0xFF0FA3A3).withValues(alpha: 0.6);
+  Color get goldTint => isDark ? const Color(0xFF0FA3A3).withValues(alpha: 0.1) : const Color(0xFF0FA3A3).withValues(alpha: 0.1);
 
-  Color get danger => isDark ? const Color(0xFFE96A5C) : const Color(0xFFB5402F);
-  Color get dangerTint => isDark ? const Color(0x29E96A5C) : const Color(0x21B5402F);
-  Color get success => isDark ? const Color(0xFF74C79A) : const Color(0xFF1E8256);
-  Color get like => isDark ? const Color(0xFF34D399) : const Color(0xFF0E8F63);
-  Color get likeTint => isDark ? const Color(0x2434D399) : const Color(0x240E8F63);
+  Color get danger => isDark ? const Color(0xFFF4212E) : const Color(0xFFF4212E);
+  Color get dangerTint => isDark ? const Color(0xFFF4212E).withValues(alpha: 0.1) : const Color(0xFFF4212E).withValues(alpha: 0.1);
+  Color get success => isDark ? const Color(0xFF0FA3A3) : const Color(0xFF0FA3A3);
+  Color get like => isDark ? const Color(0xFF0FA3A3) : const Color(0xFF0FA3A3);
+  Color get likeTint => isDark ? const Color(0xFF0FA3A3).withValues(alpha: 0.1) : const Color(0xFF0FA3A3).withValues(alpha: 0.1);
 
   // ---- Glass ----
   Color get glassBg => isDark ? const Color(0x0BFFFFFF) : const Color(0x8CFFFFFF);

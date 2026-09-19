@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../design/tribe_design.dart';
 import '../providers/auth_provider.dart';
 import 'legal/terms_screen.dart';
@@ -49,26 +50,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               children: [
                 const SizedBox(),
                 Column(children: [
-                  Container(
-                    padding: const EdgeInsets.all(5),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(26),
-                      border: Border.all(color: t.lineStrong),
-                      boxShadow: [BoxShadow(color: t.gold.withValues(alpha: 0.16), blurRadius: 34, spreadRadius: 2)],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(22),
-                      child: Image.asset('assets/logo/tribe_logo.png', width: 96, height: 96, fit: BoxFit.cover),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  const Wordmark(size: 30),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
-                    decoration: BoxDecoration(color: t.bg2, border: Border.all(color: t.line), borderRadius: BorderRadius.circular(100), boxShadow: t.clayOutSm),
-                    child: Text('Where honesty is the algorithm', style: t.body(size: 12.5, weight: FontWeight.w700, color: t.inkDim)),
-                  ),
+                  Image.asset('assets/logo/tribe_logo.png', width: 180, height: 180, fit: BoxFit.cover),
+                  const SizedBox(height: 24),
+                  Text('Where honesty is the algorithm', style: GoogleFonts.montserrat(fontSize: 16, fontWeight: FontWeight.w300, color: Colors.white)),
                 ]),
                 Column(children: [
                   ClayButtonPrimary(

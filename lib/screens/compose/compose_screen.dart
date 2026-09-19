@@ -91,7 +91,8 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final t = const TribeTheme(true);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final t = TribeTheme(isDark);
     return TribeThemeScope(
       theme: t,
       child: Container(

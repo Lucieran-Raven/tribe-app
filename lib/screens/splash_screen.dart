@@ -66,18 +66,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(32),
-                    border: Border.all(color: t.lineStrong),
-                    boxShadow: [BoxShadow(color: t.gold.withValues(alpha: 0.18), blurRadius: 44, spreadRadius: 4)],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(28),
-                    child: Image.asset('assets/logo/tribe_logo.png', width: 148, height: 148, fit: BoxFit.cover),
-                  ),
-                ),
+                Image.asset('assets/logo/tribe_logo.png', width: 200, height: 200, fit: BoxFit.cover),
                 const SizedBox(height: 20),
                 const Wordmark(size: 30),
                 const SizedBox(height: 6),

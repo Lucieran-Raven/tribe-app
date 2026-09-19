@@ -15,7 +15,8 @@ class InboxScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final notificationsAsync = ref.watch(inboxProvider);
     final authState = ref.watch(authProvider);
-    final t = const TribeTheme(true);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final t = TribeTheme(isDark);
 
     if (authState is! AuthAuthenticated) {
       return TribeThemeScope(
@@ -91,16 +92,19 @@ class InboxScreen extends ConsumerWidget {
                   confirmDismiss: (direction) async {
                     final confirmed = await showDialog<bool>(
                       context: context,
-                      builder: (ctx) => TribeThemeScope(
-                        theme: const TribeTheme(true),
-                        child: ConfirmModal(
-                          title: 'Delete notification?',
-                          body: 'This will remove the notification from your inbox.',
-                          confirmLabel: 'Delete',
-                          onClose: () => Navigator.of(ctx).pop(false),
-                          onConfirm: () => Navigator.of(ctx).pop(true),
-                        ),
-                      ),
+                      builder: (ctx) {
+                        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+                        return TribeThemeScope(
+                          theme: TribeTheme(isDark),
+                          child: ConfirmModal(
+                            title: 'Delete notification?',
+                            body: 'This will remove the notification from your inbox.',
+                            confirmLabel: 'Delete',
+                            onClose: () => Navigator.of(ctx).pop(false),
+                            onConfirm: () => Navigator.of(ctx).pop(true),
+                          ),
+                        );
+                      },
                     );
                     return confirmed ?? false;
                   },

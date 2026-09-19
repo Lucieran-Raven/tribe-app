@@ -20,28 +20,31 @@ class UserProfileScreen extends ConsumerWidget {
       context: context,
       barrierDismissible: false,
       barrierColor: Colors.transparent,
-      builder: (ctx) => SizedBox.expand(
-        child: TribeThemeScope(
-          theme: const TribeTheme(true),
-          child: ReportModal(
-            onClose: () => Navigator.of(ctx).pop(),
-            onSubmit: (String reason) async {
-              final authState = ref.read(authProvider);
-              if (authState is AuthAuthenticated) {
-                await ReportService().reportContent(
-                  targetType: 'user',
-                  targetId: userId,
-                  reporterId: authState.user.userId,
-                  reason: reason,
-                );
-                if (context.mounted) {
-                  Toast.success(context, 'Report submitted. Thank you.');
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        return SizedBox.expand(
+          child: TribeThemeScope(
+            theme: TribeTheme(isDark),
+            child: ReportModal(
+              onClose: () => Navigator.of(ctx).pop(),
+              onSubmit: (String reason) async {
+                final authState = ref.read(authProvider);
+                if (authState is AuthAuthenticated) {
+                  await ReportService().reportContent(
+                    targetType: 'user',
+                    targetId: userId,
+                    reporterId: authState.user.userId,
+                    reason: reason,
+                  );
+                  if (context.mounted) {
+                    Toast.success(context, 'Report submitted. Thank you.');
+                  }
                 }
-              }
-            },
+              },
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -70,7 +73,8 @@ class UserProfileScreen extends ConsumerWidget {
     final repliesAsync = ref.watch(userRepliesProvider(userId));
     final authState = ref.watch(authProvider);
     final isBlocked = authState is AuthAuthenticated && authState.user.blockedUsers.contains(userId);
-    final t = const TribeTheme(true);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final t = TribeTheme(isDark);
 
     if (isBlocked) {
       return TribeThemeScope(
@@ -434,14 +438,16 @@ class UserProfileScreen extends ConsumerWidget {
   }
 
   void _showMenu(BuildContext context, WidgetRef ref, bool isBlocked) {
-    final t = const TribeTheme(true);
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => TribeThemeScope(
-        theme: t,
-        child: Container(
-          decoration: BoxDecoration(
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        final t = TribeTheme(isDark);
+        return TribeThemeScope(
+          theme: t,
+          child: Container(
+            decoration: BoxDecoration(
             color: t.bg2,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
             border: Border(top: BorderSide(color: t.lineStrong)),
@@ -473,7 +479,8 @@ class UserProfileScreen extends ConsumerWidget {
             ]),
           ),
         ),
-      ),
+        );
+      },
     );
   }
 }

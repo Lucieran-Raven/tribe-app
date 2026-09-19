@@ -101,7 +101,8 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final blocked = authState is AuthAuthenticated ? authState.user.blockedUsers : const <String>[];
-    final t = const TribeTheme(true);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final t = TribeTheme(isDark);
 
     if (!_isPostAvailable) {
       return TribeThemeScope(

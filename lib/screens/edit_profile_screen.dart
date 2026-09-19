@@ -216,16 +216,19 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     await showDialog<void>(
       context: context,
       barrierColor: Colors.transparent,
-      builder: (ctx) => TribeThemeScope(
-        theme: const TribeTheme(true),
-        child: ConfirmModal(
-          title: 'Change affiliation?',
-          body: 'Remove "${current.name}" and set your university to "${target.name}"?',
-          confirmLabel: 'Change',
-          onClose: () => Navigator.of(ctx).pop(),
-          onConfirm: () { shouldSwap = true; },
-        ),
-      ),
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        return TribeThemeScope(
+          theme: TribeTheme(isDark),
+          child: ConfirmModal(
+            title: 'Change affiliation?',
+            body: 'Remove "${current.name}" and set your university to "${target.name}"?',
+            confirmLabel: 'Change',
+            onClose: () => Navigator.of(ctx).pop(),
+            onConfirm: () { shouldSwap = true; },
+          ),
+        );
+      },
     );
 
     if (!shouldSwap) return;
@@ -335,7 +338,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final user = authState is AuthAuthenticated ? authState.user : null;
-    final t = const TribeTheme(true);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final t = TribeTheme(isDark);
 
     ref.listen<OnboardingState>(onboardingProvider, (previous, next) {
       if (next.errorMsg != null && next.errorMsg != previous?.errorMsg) {
@@ -739,13 +743,15 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 
   void _openCountrySheet(BuildContext context) {
-    final t = const TribeTheme(true);
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (ctx) => TribeThemeScope(
-        theme: t,
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        final t = TribeTheme(isDark);
+        return TribeThemeScope(
+          theme: t,
         child: Container(
           decoration: BoxDecoration(
             color: t.bg1,
@@ -801,7 +807,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             ),
           ),
         ),
-      ),
+        );
+      },
     );
   }
 
@@ -835,13 +842,15 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   Future<void> _openAddCustomInterestSheet() async {
     final controller = TextEditingController();
-    final t = const TribeTheme(true);
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (ctx) => TribeThemeScope(
-        theme: t,
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        final t = TribeTheme(isDark);
+        return TribeThemeScope(
+          theme: t,
         child: Padding(
           padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
           child: Container(
@@ -896,7 +905,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             ),
           ),
         ),
-      ),
+        );
+      },
     );
   }
 

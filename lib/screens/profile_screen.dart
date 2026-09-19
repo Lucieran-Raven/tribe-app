@@ -21,7 +21,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
-    final t = const TribeTheme(true);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final t = TribeTheme(isDark);
 
     if (authState is! AuthAuthenticated) {
       return TribeThemeScope(
@@ -381,7 +382,7 @@ class _PinnedTabBarDelegate extends SliverPersistentHeaderDelegate {
   }
 
   @override
-  bool shouldRebuild(covariant _PinnedTabBarDelegate oldDelegate) => false;
+  bool shouldRebuild(covariant _PinnedTabBarDelegate oldDelegate) => true;
 }
 
 

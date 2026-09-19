@@ -54,7 +54,8 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
 
   @override
   Widget build(BuildContext context) {
-    final t = const TribeTheme(true);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final t = TribeTheme(isDark);
     final unreadCount = ref.watch(unreadCountProvider);
 
     // Map _selectedIndex to TribeTab

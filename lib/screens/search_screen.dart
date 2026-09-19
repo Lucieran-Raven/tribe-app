@@ -149,7 +149,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final blocked = authState is AuthAuthenticated ? authState.user.blockedUsers : const <String>[];
     final visibleUsers = _users.where((u) => !blocked.contains(u.userId)).toList();
     final visibleRants = _rants.where((r) => !blocked.contains(r.userId)).toList();
-    final t = const TribeTheme(true);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final t = TribeTheme(isDark);
 
     return TribeThemeScope(
       theme: t,

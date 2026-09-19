@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../providers/feed_provider.dart';
 import '../providers/notification_provider.dart';
+import '../providers/theme_provider.dart';
 import '../services/auth_service.dart';
 import '../design/tribe_design.dart';
 
@@ -20,7 +21,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final t = const TribeTheme(true);
+    final isDarkProvider = ref.watch(themeProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final t = TribeTheme(isDark);
 
     return TribeThemeScope(
       theme: t,
@@ -36,6 +39,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               Expanded(
                 child: ListView(
                   children: [
+                    group('Appearance', t),
+                    row(
+                      icon: Icons.dark_mode_outlined,
+                      label: isDarkProvider ? 'Dark mode' : 'Light mode',
+                      trailing: Switch(
+                        value: isDarkProvider,
+                        onChanged: (value) => ref.read(themeProvider.notifier).toggleTheme(),
+                        activeTrackColor: t.inkDim,
+                        activeThumbColor: t.ink,
+                        inactiveThumbColor: t.inkFaint,
+                        inactiveTrackColor: t.line,
+                      ),
+                      t: t,
+                    ),
                     group('Privacy', t),
                     row(
                       icon: Icons.block,
@@ -91,7 +108,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               Icon(icon, size: 17, color: color ?? t.ink),
               const SizedBox(width: 13),
               Expanded(child: Text(label, style: t.body(size: 14, weight: FontWeight.w700, color: color ?? t.ink))),
-              trailing ?? const SizedBox.shrink(),
+              if (trailing != null) trailing,
             ],
           ),
         ),
@@ -113,10 +130,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     showDialog<void>(
       context: context,
       barrierColor: Colors.transparent,
-      builder: (ctx) => SizedBox.expand(
-        child: TribeThemeScope(
-          theme: const TribeTheme(true),
-          child: ConfirmModal(
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        return SizedBox.expand(
+          child: TribeThemeScope(
+            theme: TribeTheme(isDark),
+            child: ConfirmModal(
             title: 'Delete account?',
             body: 'This will permanently delete your account, your posts, and your replies. This cannot be undone.',
             confirmLabel: 'Delete forever',
@@ -140,7 +159,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             },
           ),
         ),
-      ),
+        );
+      },
     );
   }
 }

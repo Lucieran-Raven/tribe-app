@@ -14,7 +14,8 @@ class HomeScreen extends ConsumerWidget {
     final feedAsync = ref.watch(feedProvider);
     final authState = ref.watch(authProvider);
     final blocked = authState is AuthAuthenticated ? authState.user.blockedUsers : const <String>[];
-    final t = const TribeTheme(true);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final t = TribeTheme(isDark);
 
     return TribeThemeScope(
       theme: t,
