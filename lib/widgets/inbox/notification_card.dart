@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/notification_model.dart';
 import '../../utils/time_utils.dart';
 import '../../design/tribe_design.dart';
+import '../../widgets/feed/full_image_viewer.dart';
 
 class NotificationCard extends ConsumerWidget {
   final NotificationModel notification;
@@ -34,6 +35,13 @@ class NotificationCard extends ConsumerWidget {
 
     return GestureDetector(
       onTap: onTap,
+      onLongPress: notification.fromAvatarUrl != null && notification.fromAvatarUrl!.isNotEmpty
+          ? () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => FullImageViewer(imageUrl: notification.fromAvatarUrl!),
+                ),
+              )
+          : null,
       child: Container(
         decoration: BoxDecoration(border: Border(bottom: BorderSide(color: t.line))),
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),

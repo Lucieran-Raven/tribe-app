@@ -39,6 +39,13 @@ class _RantCardState extends ConsumerState<RantCard> {
           // Header with avatar and info
           TapScale(
             onTap: () => GoRouter.of(context).push('/user/${widget.rant.userId}'),
+            onLongPress: widget.rant.avatarUrl != null && widget.rant.avatarUrl!.isNotEmpty
+                ? () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => FullImageViewer(imageUrl: widget.rant.avatarUrl!),
+                      ),
+                    )
+                : null,
             haptic: true,
             child: Row(
               children: [

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../design/tribe_design.dart';
 
 class FullImageViewer extends StatelessWidget {
@@ -20,16 +21,18 @@ class FullImageViewer extends StatelessWidget {
               child: InteractiveViewer(
                 minScale: 1.0,
                 maxScale: 4.0,
-                child: Image.network(
-                  imageUrl,
+                child: CachedNetworkImage(
+                  imageUrl: imageUrl,
                   fit: BoxFit.contain,
                   width: double.infinity,
-                  loadingBuilder: (context, child, progress) =>
-                      progress == null
-                          ? child
-                          : const CupertinoActivityIndicator(color: Colors.white),
-                  errorBuilder: (context, error, stack) =>
-                      const Icon(Icons.broken_image_outlined, size: 40, color: Colors.white38),
+                  placeholder: (context, url) => const Center(
+                    child: CupertinoActivityIndicator(color: Colors.white),
+                  ),
+                  errorWidget: (context, url, error) => const Icon(
+                    Icons.broken_image_outlined,
+                    size: 40,
+                    color: Colors.white38,
+                  ),
                 ),
               ),
             ),

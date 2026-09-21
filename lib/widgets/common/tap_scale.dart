@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 class TapScale extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
   final bool haptic;
   final double scale;
 
@@ -11,6 +12,7 @@ class TapScale extends StatefulWidget {
     super.key,
     required this.child,
     this.onTap,
+    this.onLongPress,
     this.haptic = true,
     this.scale = 0.96,
   });
@@ -53,6 +55,7 @@ class _TapScaleState extends State<TapScale> with SingleTickerProviderStateMixin
       onTapUp: _onTapUp,
       onTapCancel: _onTapCancel,
       onTap: widget.onTap,
+      onLongPress: widget.onLongPress,
       child: ScaleTransition(scale: _scaleAnim, child: widget.child),
     );
   }

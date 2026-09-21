@@ -7,6 +7,7 @@ import '../../services/rant_service.dart';
 import '../../services/report_service.dart';
 import '../../design/tribe_design.dart';
 import '../../widgets/common/tap_scale.dart';
+import 'full_image_viewer.dart';
 
 class ReplyCard extends ConsumerWidget {
   final ReplyModel reply;
@@ -37,7 +38,16 @@ class ReplyCard extends ConsumerWidget {
           children: [
             Row(
               children: [
-                Avatar(handle: reply.handle, imageUrl: reply.avatarUrl, size: 30),
+                GestureDetector(
+                  onLongPress: reply.avatarUrl != null && reply.avatarUrl!.isNotEmpty
+                      ? () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => FullImageViewer(imageUrl: reply.avatarUrl!),
+                            ),
+                          )
+                      : null,
+                  child: Avatar(handle: reply.handle, imageUrl: reply.avatarUrl, size: 30),
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(

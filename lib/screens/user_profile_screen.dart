@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../providers/user_profile_provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/profile/profile_reply_card.dart';
+import '../widgets/feed/full_image_viewer.dart';
 import '../services/report_service.dart';
 import '../services/rant_service.dart';
 import '../design/tribe_design.dart';
@@ -171,7 +172,16 @@ class UserProfileScreen extends ConsumerWidget {
                           children: [
                             Row(
                               children: [
-                                Avatar(handle: user.handle ?? 'anonymous', imageUrl: user.avatarUrl, size: 78),
+                                GestureDetector(
+                                  onTap: user.avatarUrl != null && user.avatarUrl!.isNotEmpty
+                                      ? () => Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (_) => FullImageViewer(imageUrl: user.avatarUrl!),
+                                            ),
+                                          )
+                                      : null,
+                                  child: Avatar(handle: user.handle ?? 'anonymous', imageUrl: user.avatarUrl, size: 78),
+                                ),
                                 const SizedBox(width: 18),
                                 Expanded(
                                   child: Row(
