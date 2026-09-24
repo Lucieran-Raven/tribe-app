@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../models/rant_model.dart';
 import '../../models/reply_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/replies_provider.dart';
 import '../../services/rant_service.dart';
 import '../../services/notification_service.dart';
+import '../../services/search_service.dart';
 import '../../utils/time_utils.dart';
 import '../../widgets/feed/reply_card.dart';
 import '../../widgets/feed/full_image_viewer.dart';
 import '../../widgets/common/tap_scale.dart';
+import '../../widgets/common/mention_autocomplete.dart';
+import '../../widgets/common/mention_text.dart';
 import '../../design/tribe_design.dart';
 
 class RantDetailScreen extends ConsumerStatefulWidget {
@@ -24,6 +28,7 @@ class RantDetailScreen extends ConsumerStatefulWidget {
 
 class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
   final TextEditingController _replyController = TextEditingController();
+  final ValueNotifier<List<String>> _mentionedUserIds = ValueNotifier([]);
   bool _isSending = false;
   bool _isPostAvailable = true;
   bool _hasText = false;
@@ -41,6 +46,7 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
   @override
   void dispose() {
     _replyController.dispose();
+    _mentionedUserIds.dispose();
     super.dispose();
   }
 
@@ -63,12 +69,14 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
         avatarUrl: user.avatarUrl,
         content: content,
         timestamp: DateTime.now(),
+        mentionedUserIds: _mentionedUserIds.value,
       );
 
       final replyId = await RantService().createReply(reply);
 
       if (mounted) {
         _replyController.clear();
+        _mentionedUserIds.value = [];
         Toast.success(context, 'Reply sent');
       }
 
@@ -206,7 +214,18 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
                                 ],
                               ),
                               const SizedBox(height: 12),
-                              Text(rant.content, style: t.body(size: 16.5, weight: FontWeight.w500, color: t.ink)),
+                              MentionText(
+                                content: rant.content,
+                                style: t.body(size: 16.5, weight: FontWeight.w500, color: t.ink),
+                                mentionStyle: t.body(size: 16.5, weight: FontWeight.w600, color: t.gold),
+                                onMentionTap: (handle) async {
+                                  final users = await SearchService().searchUsers(handle);
+                                  final exactMatch = users.where((u) => u.handle == handle).toList();
+                                  if (exactMatch.isNotEmpty) {
+                                    if (context.mounted) GoRouter.of(context).push('/user/${exactMatch.first.userId}');
+                                  }
+                                },
+                              ),
                               if (rant.imageUrl != null) ...[
                                 const SizedBox(height: 12),
                                 GestureDetector(
@@ -299,10 +318,14 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
                 child: Row(
                   children: [
                     Expanded(
-                      child: ClayInput(
+                      child: MentionAutocomplete(
                         controller: _replyController,
-                        hint: 'Write a reply…',
-                        maxLength: 300,
+                        mentionedUserIds: _mentionedUserIds,
+                        child: ClayInput(
+                          controller: _replyController,
+                          hint: 'Write a reply…',
+                          maxLength: 300,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 10),

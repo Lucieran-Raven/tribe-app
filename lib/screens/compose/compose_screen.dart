@@ -7,6 +7,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/rant_service.dart';
 import '../../services/storage_service.dart';
 import '../../design/tribe_design.dart';
+import '../../widgets/common/mention_autocomplete.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ComposeScreen extends ConsumerStatefulWidget {
@@ -18,6 +19,7 @@ class ComposeScreen extends ConsumerStatefulWidget {
 
 class _ComposeScreenState extends ConsumerState<ComposeScreen> {
   final TextEditingController _controller = TextEditingController();
+  final ValueNotifier<List<String>> _mentionedUserIds = ValueNotifier([]);
   String _rantText = '';
   bool _isPosting = false;
   File? _pickedImage;
@@ -33,6 +35,7 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
   @override
   void dispose() {
     _controller.dispose();
+    _mentionedUserIds.dispose();
     super.dispose();
   }
 
@@ -71,11 +74,13 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
         content: content,
         imageUrl: imageUrl,
         timestamp: DateTime.now(),
+        mentionedUserIds: _mentionedUserIds.value,
       );
 
       await RantService().createRant(rant);
 
       if (mounted) {
+        _mentionedUserIds.value = [];
         Navigator.pop(context);
       }
     } catch (e) {
@@ -116,11 +121,15 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
                 IconBtn(icon: Icons.close, onTap: () => Navigator.pop(context)),
               ]),
               const SizedBox(height: 14),
-              ClayInput(
+              MentionAutocomplete(
                 controller: _controller,
-                hint: "What's on your mind?",
-                maxLines: 4,
-                maxLength: 500,
+                mentionedUserIds: _mentionedUserIds,
+                child: ClayInput(
+                  controller: _controller,
+                  hint: "What's on your mind?",
+                  maxLines: 4,
+                  maxLength: 500,
+                ),
               ),
               Align(alignment: Alignment.centerRight, child: Padding(
                 padding: const EdgeInsets.only(top: 4, bottom: 12),

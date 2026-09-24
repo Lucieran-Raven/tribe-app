@@ -1,4 +1,4 @@
-enum NotificationType { reply, karma, replyKarma }
+enum NotificationType { reply, karma, replyKarma, mention }
 
 class NotificationModel {
   final String notificationId;

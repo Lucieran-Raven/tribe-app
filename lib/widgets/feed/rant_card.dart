@@ -8,8 +8,10 @@ import '../../providers/auth_provider.dart';
 import '../../providers/feed_provider.dart';
 import '../../services/rant_service.dart';
 import '../../services/report_service.dart';
+import '../../services/search_service.dart';
 import '../../design/tribe_design.dart';
 import '../../widgets/common/tap_scale.dart';
+import '../../widgets/common/mention_text.dart';
 import 'full_image_viewer.dart';
 
 class RantCard extends ConsumerStatefulWidget {
@@ -149,9 +151,17 @@ class _RantCardState extends ConsumerState<RantCard> {
             onTap: () => GoRouter.of(context).push('/rant/${widget.rant.rantId}'),
             haptic: true,
             scale: 0.98,
-            child: Text(
-              widget.rant.content,
+            child: MentionText(
+              content: widget.rant.content,
               style: t.body(size: 14.5, weight: FontWeight.w500, color: t.ink),
+              mentionStyle: t.body(size: 14.5, weight: FontWeight.w600, color: t.gold),
+              onMentionTap: (handle) async {
+                final users = await SearchService().searchUsers(handle);
+                final exactMatch = users.where((u) => u.handle == handle).toList();
+                if (exactMatch.isNotEmpty) {
+                  if (context.mounted) GoRouter.of(context).push('/user/${exactMatch.first.userId}');
+                }
+              },
             ),
           ),
           if (widget.rant.imageUrl != null) ...[

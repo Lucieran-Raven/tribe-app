@@ -9,6 +9,7 @@ class ReplyModel {
   final String? parentId;
   final int karma;
   final List<String> voterIds;
+  final List<String> mentionedUserIds;
 
   ReplyModel({
     required this.replyId,
@@ -21,6 +22,7 @@ class ReplyModel {
     this.parentId,
     this.karma = 0,
     this.voterIds = const [],
+    this.mentionedUserIds = const [],
   });
 
   factory ReplyModel.fromJson(Map<String, dynamic> json, {String? replyId}) {
@@ -35,6 +37,7 @@ class ReplyModel {
       parentId: json['parentId'] as String?,
       karma: json['karma'] as int? ?? 0,
       voterIds: List<String>.from(json['voterIds'] ?? []),
+      mentionedUserIds: List<String>.from(json['mentionedUserIds'] ?? []),
     );
   }
 
@@ -50,6 +53,7 @@ class ReplyModel {
       'parentId': parentId,
       'karma': karma,
       'voterIds': voterIds,
+      'mentionedUserIds': mentionedUserIds,
     };
   }
 
@@ -64,6 +68,7 @@ class ReplyModel {
     String? parentId,
     int? karma,
     List<String>? voterIds,
+    List<String>? mentionedUserIds,
   }) {
     return ReplyModel(
       replyId: replyId ?? this.replyId,
@@ -76,6 +81,7 @@ class ReplyModel {
       parentId: parentId ?? this.parentId,
       karma: karma ?? this.karma,
       voterIds: voterIds ?? this.voterIds,
+      mentionedUserIds: mentionedUserIds ?? this.mentionedUserIds,
     );
   }
 }

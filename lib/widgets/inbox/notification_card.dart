@@ -28,6 +28,9 @@ class NotificationCard extends ConsumerWidget {
       case NotificationType.replyKarma:
         actionText = 'liked your reply';
         break;
+      case NotificationType.mention:
+        actionText = 'mentioned you';
+        break;
     }
 
     final t = TribeThemeScope.of(context);

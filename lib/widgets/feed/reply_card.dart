@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../models/reply_model.dart';
 import '../../utils/time_utils.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/rant_service.dart';
 import '../../services/report_service.dart';
+import '../../services/search_service.dart';
 import '../../design/tribe_design.dart';
 import '../../widgets/common/tap_scale.dart';
+import '../../widgets/common/mention_text.dart';
 import 'full_image_viewer.dart';
 
 class ReplyCard extends ConsumerWidget {
@@ -137,7 +140,18 @@ class ReplyCard extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 8),
-            Text(reply.content, style: t.body(size: 14, weight: FontWeight.w500, color: t.ink)),
+            MentionText(
+              content: reply.content,
+              style: t.body(size: 14, weight: FontWeight.w500, color: t.ink),
+              mentionStyle: t.body(size: 14, weight: FontWeight.w600, color: t.gold),
+              onMentionTap: (handle) async {
+                final users = await SearchService().searchUsers(handle);
+                final exactMatch = users.where((u) => u.handle == handle).toList();
+                if (exactMatch.isNotEmpty) {
+                  if (context.mounted) GoRouter.of(context).push('/user/${exactMatch.first.userId}');
+                }
+              },
+            ),
             const SizedBox(height: 8),
             Row(
               children: [
