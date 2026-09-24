@@ -15,6 +15,21 @@ class RantService {
     final docRef = _firestore.collection('rants').doc();
     final rantWithId = rant.copyWith(rantId: docRef.id);
     await docRef.set(rantWithId.toJson());
+
+    // Send mention notifications if there are mentioned users
+    if (rantWithId.mentionedUserIds.isNotEmpty) {
+      debugPrint('=== MENTION SERVICE CALLED FROM RANT: count=${rantWithId.mentionedUserIds.length} ===');
+      await NotificationService().sendMentionNotifications(
+        fromUserId: rantWithId.userId,
+        fromHandle: rantWithId.handle,
+        fromAvatarUrl: rantWithId.avatarUrl,
+        mentionedUserIds: rantWithId.mentionedUserIds,
+        targetRantId: docRef.id,
+        targetReplyId: null,
+        targetSnippet: rantWithId.content,
+        postOwnerId: rantWithId.userId,
+      );
+    }
   }
 
   Stream<List<RantModel>> streamFeed() {
@@ -49,7 +64,7 @@ class RantService {
             .toList());
   }
 
-  Future<String> createReply(ReplyModel reply) async {
+  Future<String> createReply(ReplyModel reply, {String? postOwnerId}) async {
     final docRef = _firestore
         .collection('rants')
         .doc(reply.rantId)
@@ -60,6 +75,29 @@ class RantService {
     await _firestore.collection('rants').doc(reply.rantId).update({
       'replyCount': FieldValue.increment(1),
     });
+
+    // Fetch postOwnerId if not provided
+    String? actualPostOwnerId = postOwnerId;
+    if (actualPostOwnerId == null) {
+      final rantDoc = await _firestore.collection('rants').doc(reply.rantId).get();
+      actualPostOwnerId = rantDoc.data()?['userId'] as String?;
+    }
+
+    // Send mention notifications if there are mentioned users
+    if (replyWithId.mentionedUserIds.isNotEmpty && actualPostOwnerId != null) {
+      debugPrint('=== MENTION SERVICE CALLED FROM REPLY: count=${replyWithId.mentionedUserIds.length} ===');
+      await NotificationService().sendMentionNotifications(
+        fromUserId: replyWithId.userId,
+        fromHandle: replyWithId.handle,
+        fromAvatarUrl: replyWithId.avatarUrl,
+        mentionedUserIds: replyWithId.mentionedUserIds,
+        targetRantId: reply.rantId,
+        targetReplyId: docRef.id,
+        targetSnippet: replyWithId.content,
+        postOwnerId: actualPostOwnerId,
+      );
+    }
+
     return docRef.id;
   }
 

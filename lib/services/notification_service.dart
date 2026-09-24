@@ -25,7 +25,8 @@ class NotificationService {
           for (final doc in snapshot.docs) {
             final id = doc.id;
             if (!id.startsWith('like_') && !id.startsWith('reply_')
-                && !id.startsWith('karma_') && !id.startsWith('replyKarma_')) {
+                && !id.startsWith('karma_') && !id.startsWith('replyKarma_')
+                && !id.startsWith('mention_')) {
               try {
                 doc.reference.delete();
               } catch (_) {}
@@ -305,6 +306,63 @@ class NotificationService {
         .doc(docId)
         .delete();
     debugPrint('DELETED REPLY NOTIFICATION $docId');
+  }
+
+  // Mention notification
+  Future<void> sendMentionNotifications({
+    required String fromUserId,
+    required String fromHandle,
+    required String? fromAvatarUrl,
+    required List<String> mentionedUserIds,
+    required String targetRantId,
+    String? targetReplyId,
+    required String targetSnippet,
+    required String postOwnerId,
+  }) async {
+    for (final toUserId in mentionedUserIds) {
+      // Deduplication rules
+      if (toUserId == fromUserId) continue; // Never notify yourself
+
+      // Fetch target user's OneSignal playerId
+      final targetUserDoc = await _firestore.collection('users').doc(toUserId).get();
+      final playerId = (targetUserDoc.data()?['oneSignalPlayerId'] as String?) ?? '';
+      
+      if (playerId.isEmpty) continue; // Can't send notification without playerId
+
+      // Deterministic doc ID for upsert
+      final docId = 'mention_${targetRantId}_${targetReplyId ?? 'main'}_$fromUserId';
+      final docRef = _firestore
+          .collection('users')
+          .doc(toUserId)
+          .collection('notifications')
+          .doc(docId);
+
+      // Truncate snippet to max 60 chars
+      final snippet = targetSnippet.length > 60 ? '${targetSnippet.substring(0, 60)}...' : targetSnippet;
+
+      // Create Firestore notification record
+      await docRef.set(NotificationModel(
+        notificationId: docId,
+        type: NotificationType.mention,
+        fromUserId: fromUserId,
+        fromHandle: fromHandle,
+        fromAvatarUrl: fromAvatarUrl,
+        targetRantId: targetRantId,
+        targetReplyId: targetReplyId,
+        targetSnippet: snippet,
+        timestamp: DateTime.now(),
+        isRead: false,
+      ).toJson());
+
+      // Send push notification via OneSignal REST API
+      debugPrint('=== MENTION PUSH TRIGGERED: to=$toUserId, from=$fromHandle, target=$targetRantId ===');
+      await _sendPush(
+        playerId: playerId,
+        heading: 'New Mention',
+        content: '@$fromHandle mentioned you in a ${targetReplyId != null ? 'reply' : 'rant'}',
+        data: {'rantId': targetRantId, 'type': 'mention', 'fromUserId': fromUserId},
+      );
+    }
   }
 }
 

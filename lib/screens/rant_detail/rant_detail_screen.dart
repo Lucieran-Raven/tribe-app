@@ -72,7 +72,9 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
         mentionedUserIds: _mentionedUserIds.value,
       );
 
-      final replyId = await RantService().createReply(reply);
+      // Fetch rant to get owner ID for notification and mention deduplication
+      final rant = await RantService().getRant(widget.rantId);
+      final replyId = await RantService().createReply(reply, postOwnerId: rant.userId);
 
       if (mounted) {
         _replyController.clear();
@@ -80,8 +82,6 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
         Toast.success(context, 'Reply sent');
       }
 
-      // Fetch rant to get owner ID for notification
-      final rant = await RantService().getRant(widget.rantId);
       if (user.userId != rant.userId) {
         debugPrint('=== TRIGGERING NEW REPLY PUSH to ${rant.userId} ===');
         await NotificationService().sendReplyNotification(

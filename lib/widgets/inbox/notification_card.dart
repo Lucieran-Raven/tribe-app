@@ -29,12 +29,13 @@ class NotificationCard extends ConsumerWidget {
         actionText = 'liked your reply';
         break;
       case NotificationType.mention:
-        actionText = 'mentioned you';
+        actionText = notification.targetReplyId != null ? 'mentioned you in a reply' : 'mentioned you in a rant';
         break;
     }
 
     final t = TribeThemeScope.of(context);
     final isLike = notification.type == NotificationType.karma || notification.type == NotificationType.replyKarma;
+    final isMention = notification.type == NotificationType.mention;
 
     return GestureDetector(
       onTap: onTap,
@@ -62,15 +63,15 @@ class NotificationCard extends ConsumerWidget {
                     width: 20,
                     height: 20,
                     decoration: BoxDecoration(
-                      color: isLike ? t.likeTint : t.bg3,
+                      color: isLike ? t.likeTint : (isMention ? t.goldTint : t.bg3),
                       shape: BoxShape.circle,
                       border: Border.all(color: t.lineStrong),
                     ),
                     alignment: Alignment.center,
                     child: Icon(
-                      isLike ? Icons.thumb_up : Icons.chat_bubble,
+                      isLike ? Icons.thumb_up : (isMention ? Icons.alternate_email : Icons.chat_bubble),
                       size: 11,
-                      color: isLike ? t.like : t.inkDim,
+                      color: isLike ? t.like : (isMention ? t.gold : t.inkDim),
                     ),
                   ),
                 ),
