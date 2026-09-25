@@ -6,14 +6,32 @@ import '../models/notification_model.dart';
 import '../models/user_model.dart';
 import '../services/notification_service.dart';
 import '../services/push_service.dart';
+import '../services/search_service.dart';
 
 class RantService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final Set<String> _pendingVotes = {};
 
+  Future<List<String>> _resolveMentions(String content) async {
+    final regex = RegExp(r'@([a-zA-Z0-9_]+)');
+    final matches = regex.allMatches(content);
+    final handles = matches.map((m) => m.group(1)!.toLowerCase()).toSet();
+    
+    final Set<String> resolvedUids = {};
+    for (final handle in handles) {
+      final users = await SearchService().searchUsers(handle);
+      final exactMatches = users.where((u) => u.handle?.toLowerCase() == handle).toList();
+      if (exactMatches.isNotEmpty) {
+        resolvedUids.add(exactMatches.first.userId);
+      }
+    }
+    return resolvedUids.toList();
+  }
+
   Future<void> createRant(RantModel rant) async {
     final docRef = _firestore.collection('rants').doc();
-    final rantWithId = rant.copyWith(rantId: docRef.id);
+    final resolvedMentions = await _resolveMentions(rant.content);
+    final rantWithId = rant.copyWith(rantId: docRef.id, mentionedUserIds: resolvedMentions);
     await docRef.set(rantWithId.toJson());
 
     // Send mention notifications if there are mentioned users
@@ -70,7 +88,8 @@ class RantService {
         .doc(reply.rantId)
         .collection('replies')
         .doc();
-    final replyWithId = reply.copyWith(replyId: docRef.id);
+    final resolvedMentions = await _resolveMentions(reply.content);
+    final replyWithId = reply.copyWith(replyId: docRef.id, mentionedUserIds: resolvedMentions);
     await docRef.set(replyWithId.toJson());
     await _firestore.collection('rants').doc(reply.rantId).update({
       'replyCount': FieldValue.increment(1),

@@ -322,6 +322,7 @@ class NotificationService {
     for (final toUserId in mentionedUserIds) {
       // Deduplication rules
       if (toUserId == fromUserId) continue; // Never notify yourself
+      if (toUserId == postOwnerId && targetReplyId != null) continue; // Standard app rule: post owner already receives the reply notification.
 
       // Fetch target user's OneSignal playerId
       final targetUserDoc = await _firestore.collection('users').doc(toUserId).get();

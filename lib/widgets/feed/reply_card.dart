@@ -146,9 +146,11 @@ class ReplyCard extends ConsumerWidget {
               mentionStyle: t.body(size: 14, weight: FontWeight.w600, color: t.gold),
               onMentionTap: (handle) async {
                 final users = await SearchService().searchUsers(handle);
-                final exactMatch = users.where((u) => u.handle == handle).toList();
+                final exactMatch = users.where((u) => u.handle?.toLowerCase() == handle.toLowerCase()).toList();
                 if (exactMatch.isNotEmpty) {
                   if (context.mounted) GoRouter.of(context).push('/user/${exactMatch.first.userId}');
+                } else {
+                  if (context.mounted) Toast.error(context, 'This user is not available or has been deleted.');
                 }
               },
             ),
