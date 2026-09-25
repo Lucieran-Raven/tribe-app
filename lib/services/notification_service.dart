@@ -285,11 +285,14 @@ class NotificationService {
     debugPrint('About to call _sendPush...');
     debugPrint('=== TRIGGERING NEW REPLY PUSH to $toUserId ===');
 
+    // Truncate snippet for push (50 chars)
+    final pushSnippet = replyContent.length > 50 ? '${replyContent.substring(0, 50)}...' : replyContent;
+
     // Send push notification via OneSignal REST API
     await _sendPush(
       playerId: playerId,
       heading: 'New Reply',
-      content: '@$fromUsername replied to your rant',
+      content: '@$fromUsername replied: "$pushSnippet"',
       data: {'rantId': rantId, 'type': 'reply', 'fromUserId': fromUserId},
     );
   }
@@ -357,10 +360,14 @@ class NotificationService {
 
       // Send push notification via OneSignal REST API
       debugPrint('=== MENTION PUSH TRIGGERED: to=$toUserId, from=$fromHandle, target=$targetRantId ===');
+      
+      // Truncate snippet for push (50 chars)
+      final pushSnippet = snippet.length > 50 ? '${snippet.substring(0, 50)}...' : snippet;
+      
       await _sendPush(
         playerId: playerId,
         heading: 'New Mention',
-        content: '@$fromHandle mentioned you in a ${targetReplyId != null ? 'reply' : 'rant'}',
+        content: '@$fromHandle mentioned you: "$pushSnippet"',
         data: {'rantId': targetRantId, 'type': 'mention', 'fromUserId': fromUserId},
       );
     }
