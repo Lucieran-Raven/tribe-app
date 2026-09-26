@@ -19,8 +19,13 @@ import '../../design/tribe_design.dart';
 
 class RantDetailScreen extends ConsumerStatefulWidget {
   final String rantId;
+  final String? targetReplyId;
 
-  const RantDetailScreen({super.key, required this.rantId});
+  const RantDetailScreen({
+    super.key,
+    required this.rantId,
+    this.targetReplyId,
+  });
 
   @override
   ConsumerState<RantDetailScreen> createState() => _RantDetailScreenState();

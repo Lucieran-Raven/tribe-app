@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
-import 'package:go_router/go_router.dart';
 import 'app.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-String? pendingNotificationRoute;
+final ValueNotifier<String?> pendingNotificationRoute = ValueNotifier(null);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,18 +27,9 @@ Future<void> main() async {
   // Handle notification clicks
   OneSignal.Notifications.addClickListener((event) {
     final additionalData = event.notification.additionalData;
-    if (additionalData != null && additionalData['targetRantId'] != null) {
-      final rantId = additionalData['targetRantId'] as String;
-      pendingNotificationRoute = '/rant/$rantId';
-      
-      // Try immediate navigation if context is ready
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final context = navigatorKey.currentContext;
-        if (context != null && pendingNotificationRoute != null) {
-          GoRouter.of(context).push(pendingNotificationRoute!);
-          pendingNotificationRoute = null;
-        }
-      });
+    if (additionalData != null) {
+      // Signal the MainScaffold to switch to Inbox tab
+      pendingNotificationRoute.value = '/inbox';
     }
   });
 

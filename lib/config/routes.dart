@@ -16,6 +16,7 @@ import '../screens/edit_profile_screen.dart';
 import '../screens/legal/terms_screen.dart';
 import '../screens/legal/privacy_screen.dart';
 import '../screens/blocked_accounts_screen.dart';
+import '../screens/inbox_screen.dart';
 import '../main.dart';
 
 Widget _buildPageTransition(Widget child, Animation<double> animation) {
@@ -30,17 +31,35 @@ final routerProvider = Provider<GoRouter>((ref) {
     navigatorKey: navigatorKey,
     initialLocation: '/splash',
     redirect: (context, state) async {
+      print('=== TRIBE_DL [ROUTER]: Redirect fired. matchedLocation=${state.matchedLocation} ===');
       final isSplash = state.matchedLocation == '/splash';
       if (isSplash) return null; // Never intercept splash
 
       final isLoggedIn = FirebaseAuth.instance.currentUser != null;
       final isAuth = state.matchedLocation == '/auth';
 
-      // Bounce unauthenticated users out of protected routes
       if (!isLoggedIn && !isAuth) return '/auth';
-      
-      return null; 
+
+      return null;
     },
+    errorBuilder: (context, state) => Scaffold(
+      backgroundColor: Colors.black,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64, color: Colors.grey),
+            const SizedBox(height: 16),
+            const Text('Page Not Found', style: TextStyle(color: Colors.white, fontSize: 20)),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () => context.go('/home'),
+              child: const Text('Go Home'),
+            ),
+          ],
+        ),
+      ),
+    ),
     routes: [
       GoRoute(
         path: '/splash',
@@ -131,10 +150,24 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
+        path: '/inbox',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const InboxScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return _buildPageTransition(child, animation);
+          },
+          transitionDuration: const Duration(milliseconds: 200),
+        ),
+      ),
+      GoRoute(
         path: '/rant/:id',
         pageBuilder: (context, state) => CustomTransitionPage(
           key: state.pageKey,
-          child: RantDetailScreen(rantId: state.pathParameters['id']!),
+          child: RantDetailScreen(
+            rantId: state.pathParameters['id']!,
+            targetReplyId: state.uri.queryParameters['targetReplyId'],
+          ),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return _buildPageTransition(child, animation);
           },

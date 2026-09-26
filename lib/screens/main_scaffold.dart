@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'home_screen.dart';
@@ -31,7 +30,7 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
       final authState = ref.read(authProvider);
       if (authState is AuthAuthenticated) {
         NotificationService().syncPlayerId(authState.user.userId);
-        
+
         // Request push permission once per user
         final prefs = await SharedPreferences.getInstance();
         if (!(prefs.getBool('push_prompt_shown') ?? false)) {
@@ -42,14 +41,33 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
           await prefs.setBool('push_prompt_shown', true);
         }
       }
-      
-      // Consume pending notification route from cold start
-      if (pendingNotificationRoute != null && mounted) {
-        final route = pendingNotificationRoute!;
-        pendingNotificationRoute = null;
-        GoRouter.of(context).push(route);
+
+      // Listen for notification taps (Warm/Cold)
+      pendingNotificationRoute.addListener(_handlePendingNotification);
+      // Handle Cold Start (if value is already set before listener attached)
+      if (pendingNotificationRoute.value != null) {
+        _handlePendingNotification();
       }
     });
+  }
+
+  void _handlePendingNotification() {
+    final route = pendingNotificationRoute.value;
+    if (route != null && mounted) {
+      pendingNotificationRoute.value = null; // Reset signal
+      // Switch to Inbox Tab (Index 2)
+      if (_currentIndex != 2) {
+        setState(() {
+          _currentIndex = 2;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    pendingNotificationRoute.removeListener(_handlePendingNotification);
+    super.dispose();
   }
 
   @override

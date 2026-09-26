@@ -293,7 +293,7 @@ class NotificationService {
       playerId: playerId,
       heading: 'New Reply',
       content: '@$fromUsername replied: "$pushSnippet"',
-      data: {'rantId': rantId, 'type': 'reply', 'fromUserId': fromUserId},
+      data: {'rantId': rantId, 'type': 'reply', 'fromUserId': fromUserId, 'targetReplyId': replyId},
     );
   }
 
@@ -368,7 +368,12 @@ class NotificationService {
         playerId: playerId,
         heading: 'New Mention',
         content: '@$fromHandle mentioned you: "$pushSnippet"',
-        data: {'rantId': targetRantId, 'type': 'mention', 'fromUserId': fromUserId},
+        data: {
+          'rantId': targetRantId,
+          'type': 'mention',
+          'fromUserId': fromUserId,
+          if (targetReplyId != null) 'targetReplyId': targetReplyId,
+        },
       );
     }
   }
