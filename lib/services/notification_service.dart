@@ -277,6 +277,7 @@ class NotificationService {
       fromHandle: fromUsername,
       fromAvatarUrl: fromAvatarUrl,
       targetRantId: rantId,
+      targetReplyId: replyId,
       targetSnippet: replyContent.length > 50 ? '${replyContent.substring(0, 50)}...' : replyContent,
       timestamp: DateTime.now(),
       isRead: false,

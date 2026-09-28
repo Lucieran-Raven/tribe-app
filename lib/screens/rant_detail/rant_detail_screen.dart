@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:scroll_to_index/scroll_to_index.dart';
 import '../../models/rant_model.dart';
 import '../../models/reply_model.dart';
 import '../../providers/auth_provider.dart';
@@ -34,9 +35,11 @@ class RantDetailScreen extends ConsumerStatefulWidget {
 class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
   final TextEditingController _replyController = TextEditingController();
   final ValueNotifier<List<String>> _mentionedUserIds = ValueNotifier([]);
+  final AutoScrollController _scrollController = AutoScrollController();
   bool _isSending = false;
   bool _isPostAvailable = true;
   bool _hasText = false;
+  bool _hasScrolled = false;
 
   @override
   void initState() {
@@ -52,6 +55,7 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
   void dispose() {
     _replyController.dispose();
     _mentionedUserIds.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -110,6 +114,84 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
     }
   }
 
+  List<Widget> _buildReplyChildren(AsyncValue<List<ReplyModel>> async, TribeTheme t, List<String> blocked) {
+    return async.when(
+      loading: () => [
+        const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator())),
+      ],
+      error: (error, stack) => [
+        Padding(
+          padding: const EdgeInsets.all(24),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('Failed to load replies'),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: () => ref.invalidate(repliesProvider(widget.rantId)),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+      data: (replies) {
+        final visibleReplies = replies.where((r) => !blocked.contains(r.userId)).toList();
+        final widgets = <Widget>[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 6),
+            child: Text('${visibleReplies.length} ${visibleReplies.length == 1 ? "reply" : "replies"}', style: t.caption(size: 12)),
+          ),
+        ];
+        if (visibleReplies.isEmpty) {
+          widgets.add(Padding(
+            padding: const EdgeInsets.all(34),
+            child: Center(child: Text('Be the first to reply.', style: t.body(size: 13, weight: FontWeight.w600, color: t.inkFaint))),
+          ));
+        } else {
+          for (int i = 0; i < visibleReplies.length; i++) {
+            final r = visibleReplies[i];
+            widgets.add(AutoScrollTag(
+              key: ValueKey(r.replyId),
+              controller: _scrollController,
+              index: i,
+              child: ReplyCard(reply: r),
+            ));
+          }
+        }
+        widgets.add(const SizedBox(height: 8));
+        WidgetsBinding.instance.addPostFrameCallback((_) => _tryScrollToTarget(visibleReplies));
+        return widgets;
+      },
+    );
+  }
+
+  void _tryScrollToTarget(List<ReplyModel> visibleReplies) {
+    debugPrint('=== DL-2 SCROLL: _tryScrollToTarget called, _hasScrolled=$_hasScrolled ===');
+    if (_hasScrolled) return;
+    final targetId = widget.targetReplyId;
+    debugPrint('=== DL-2 SCROLL: targetReplyId=$targetId ===');
+    if (targetId == null || targetId.isEmpty) {
+      debugPrint('=== DL-2 SCROLL: targetReplyId is null or empty, skipping ===');
+      return;
+    }
+    final idx = visibleReplies.indexWhere((r) => r.replyId == targetId);
+    debugPrint('=== DL-2 SCROLL: found index=$idx for targetId=$targetId (total replies=${visibleReplies.length}) ===');
+    if (idx == -1) {
+      debugPrint('=== DL-2 SCROLL: targetId not found in visible replies ===');
+      return;
+    }
+    _hasScrolled = true;
+    debugPrint('=== DL-2 SCROLL: executing scrollToIndex to idx=$idx ===');
+    _scrollController.scrollToIndex(
+      idx,
+      preferPosition: AutoScrollPosition.middle,
+      duration: const Duration(milliseconds: 600),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
@@ -156,7 +238,8 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
               ),
               Expanded(
                 child: ListView(
-                  padding: EdgeInsets.zero,
+                  controller: _scrollController,
+                  padding: const EdgeInsets.only(bottom: 100),
                   children: [
                     FutureBuilder<RantModel>(
                       future: RantService().getRant(widget.rantId),
@@ -275,44 +358,7 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
                         );
                       },
                     ),
-                    ref.watch(repliesProvider(widget.rantId)).when(
-                      loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (error, stack) => Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Text('Failed to load replies'),
-                              const SizedBox(height: 16),
-                              TextButton(
-                                onPressed: () => ref.invalidate(repliesProvider(widget.rantId)),
-                                child: const Text('Retry'),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      data: (replies) {
-                        final visibleReplies = replies.where((r) => !blocked.contains(r.userId)).toList();
-                        return Column(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(20, 12, 20, 6),
-                              child: Text('${visibleReplies.length} ${visibleReplies.length == 1 ? "reply" : "replies"}', style: t.caption(size: 12)),
-                            ),
-                            if (visibleReplies.isEmpty)
-                              Padding(
-                                padding: const EdgeInsets.all(34),
-                                child: Center(child: Text('Be the first to reply.', style: t.body(size: 13, weight: FontWeight.w600, color: t.inkFaint))),
-                              )
-                            else
-                              ...visibleReplies.map((r) => ReplyCard(reply: r)),
-                            const SizedBox(height: 8),
-                          ],
-                        );
-                      },
-                    ),
+                    ..._buildReplyChildren(ref.watch(repliesProvider(widget.rantId)), t, blocked),
                   ],
                 ),
               ),
