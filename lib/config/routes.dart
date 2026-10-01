@@ -167,6 +167,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           child: RantDetailScreen(
             rantId: state.pathParameters['id']!,
             targetReplyId: state.uri.queryParameters['targetReplyId'],
+            fromNotification: state.uri.queryParameters['fromNotification'] == 'true',
           ),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return _buildPageTransition(child, animation);

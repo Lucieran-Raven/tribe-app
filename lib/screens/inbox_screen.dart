@@ -120,13 +120,13 @@ class InboxScreen extends ConsumerWidget {
                   child: NotificationCard(
                     notification: notification,
                     onTap: () {
-                      String route = '/rant/${notification.targetRantId}';
+                      String route = '/rant/${notification.targetRantId}?fromNotification=true';
                       debugPrint('=== DL-2 INBOX: tapped notification, targetRantId=${notification.targetRantId}, targetReplyId=${notification.targetReplyId} ===');
                       if (notification.targetReplyId != null && notification.targetReplyId!.isNotEmpty) {
-                        route += '?targetReplyId=${notification.targetReplyId}';
+                        route += '&targetReplyId=${notification.targetReplyId}';
                         debugPrint('=== DL-2 INBOX: appended targetReplyId to route: $route ===');
                       } else {
-                        debugPrint('=== DL-2 INBOX: targetReplyId is null or empty, no query param ===');
+                        debugPrint('=== DL-2 INBOX: targetReplyId is null, passing only fromNotification ===');
                       }
                       GoRouter.of(context).push(route);
                       if (!notification.isRead) {

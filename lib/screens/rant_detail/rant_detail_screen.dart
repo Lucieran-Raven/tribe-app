@@ -21,11 +21,13 @@ import '../../design/tribe_design.dart';
 class RantDetailScreen extends ConsumerStatefulWidget {
   final String rantId;
   final String? targetReplyId;
+  final bool fromNotification;
 
   const RantDetailScreen({
     super.key,
     required this.rantId,
     this.targetReplyId,
+    this.fromNotification = false,
   });
 
   @override
@@ -40,15 +42,48 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
   bool _isPostAvailable = true;
   bool _hasText = false;
   bool _hasScrolled = false;
+  late final Future<RantModel> _rantFuture;
+
+  // --- DL-2b FLASH STATE FIELDS ---
+  bool _highlightRant = false;
+  String? _highlightedReplyId;
 
   @override
   void initState() {
     super.initState();
+    _rantFuture = RantService().getRant(widget.rantId);
     _replyController.addListener(() {
       setState(() {
         _hasText = _replyController.text.trim().isNotEmpty;
       });
     });
+
+    // --- FRAME 1 FADE-IN INIT ---
+    _highlightRant = false;
+    _highlightedReplyId = null;
+
+    if (widget.fromNotification) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() {
+          if (widget.targetReplyId != null && widget.targetReplyId!.isNotEmpty) {
+            _highlightedReplyId = widget.targetReplyId;
+          } else {
+            _highlightRant = true;
+          }
+        });
+
+        // Clear the flash after 1.5 seconds
+        Future.delayed(const Duration(milliseconds: 1500), () {
+          if (mounted) {
+            setState(() {
+              _highlightRant = false;
+              _highlightedReplyId = null;
+            });
+          }
+        });
+      });
+    }
   }
 
   @override
@@ -116,50 +151,39 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
 
   List<Widget> _buildReplyChildren(AsyncValue<List<ReplyModel>> async, TribeTheme t, List<String> blocked) {
     return async.when(
-      loading: () => [
-        const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator())),
-      ],
-      error: (error, stack) => [
-        Padding(
-          padding: const EdgeInsets.all(24),
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text('Failed to load replies'),
-                const SizedBox(height: 16),
-                TextButton(
-                  onPressed: () => ref.invalidate(repliesProvider(widget.rantId)),
-                  child: const Text('Retry'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
+      loading: () => const [],
+      error: (error, stack) => const [],
       data: (replies) {
         final visibleReplies = replies.where((r) => !blocked.contains(r.userId)).toList();
+        if (visibleReplies.isEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) => _tryScrollToTarget(visibleReplies));
+          return const [];
+        }
         final widgets = <Widget>[
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 6),
             child: Text('${visibleReplies.length} ${visibleReplies.length == 1 ? "reply" : "replies"}', style: t.caption(size: 12)),
           ),
         ];
-        if (visibleReplies.isEmpty) {
-          widgets.add(Padding(
-            padding: const EdgeInsets.all(34),
-            child: Center(child: Text('Be the first to reply.', style: t.body(size: 13, weight: FontWeight.w600, color: t.inkFaint))),
-          ));
-        } else {
-          for (int i = 0; i < visibleReplies.length; i++) {
-            final r = visibleReplies[i];
-            widgets.add(AutoScrollTag(
-              key: ValueKey(r.replyId),
-              controller: _scrollController,
-              index: i,
+        for (int i = 0; i < visibleReplies.length; i++) {
+          final r = visibleReplies[i];
+          widgets.add(AutoScrollTag(
+            key: ValueKey(r.replyId),
+            controller: _scrollController,
+            index: i,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 800),
+              curve: Curves.easeOut,
+              decoration: BoxDecoration(
+                color: _highlightedReplyId == r.replyId ? t.goldTint : Colors.transparent,
+                borderRadius: BorderRadius.circular(16),
+                border: _highlightedReplyId == r.replyId
+                    ? Border.all(color: t.gold.withValues(alpha: 0.5), width: 2)
+                    : null,
+              ),
               child: ReplyCard(reply: r),
-            ));
-          }
+            ),
+          ));
         }
         widgets.add(const SizedBox(height: 8));
         WidgetsBinding.instance.addPostFrameCallback((_) => _tryScrollToTarget(visibleReplies));
@@ -239,51 +263,59 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
               Expanded(
                 child: ListView(
                   controller: _scrollController,
-                  padding: const EdgeInsets.only(bottom: 100),
+                  padding: const EdgeInsets.only(bottom: 8),
                   children: [
-                    FutureBuilder<RantModel>(
-                      future: RantService().getRant(widget.rantId),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()));
-                        }
-                        if (snapshot.hasError || (snapshot.connectionState == ConnectionState.done && !snapshot.hasData)) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (mounted && _isPostAvailable) {
-                              setState(() => _isPostAvailable = false);
-                            }
-                          });
-                          return Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.error_outline, size: 64, color: t.inkFaint),
-                                const SizedBox(height: 16),
-                                Text('Post Unavailable', style: t.display(size: 18, color: t.ink)),
-                                const SizedBox(height: 8),
-                                Text('This post may have been deleted.', style: t.body(size: 14, color: t.inkDim)),
-                                const SizedBox(height: 24),
-                                ClayButtonSecondary(
-                                  label: 'Go Back',
-                                  onTap: () => Navigator.of(context).pop(),
-                                ),
-                              ],
-                            ),
-                          );
-                        }
-                        final rant = snapshot.data!;
-                        final currentUserId = authState is AuthAuthenticated ? authState.user.userId : null;
-                        final isLiked = currentUserId != null && rant.voterIds.contains(currentUserId);
-                        final karma = rant.voterIds.length;
-                        return Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                          padding: const EdgeInsets.all(13),
-                          decoration: BoxDecoration(
-                            color: t.bg2,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: t.line),
-                          ),
-                          child: Column(
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 800),
+                      curve: Curves.easeOut,
+                      margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.all(13),
+                      decoration: BoxDecoration(
+                        color: _highlightRant ? t.goldTint : t.bg2,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: _highlightRant ? t.gold.withValues(alpha: 0.5) : t.line,
+                          width: _highlightRant ? 2 : 1,
+                        ),
+                      ),
+                      child: FutureBuilder<RantModel>(
+                        future: _rantFuture,
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return const SizedBox(
+                              height: 224,
+                              child: Center(child: CircularProgressIndicator()),
+                            );
+                          }
+                          if (snapshot.hasError || (snapshot.connectionState == ConnectionState.done && !snapshot.hasData)) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (mounted && _isPostAvailable) {
+                                setState(() => _isPostAvailable = false);
+                              }
+                            });
+                            return Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.error_outline, size: 64, color: t.inkFaint),
+                                  const SizedBox(height: 16),
+                                  Text('Post Unavailable', style: t.display(size: 18, color: t.ink)),
+                                  const SizedBox(height: 8),
+                                  Text('This post may have been deleted.', style: t.body(size: 14, color: t.inkDim)),
+                                  const SizedBox(height: 24),
+                                  ClayButtonSecondary(
+                                    label: 'Go Back',
+                                    onTap: () => Navigator.of(context).pop(),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                          final rant = snapshot.data!;
+                          final currentUserId = authState is AuthAuthenticated ? authState.user.userId : null;
+                          final isLiked = currentUserId != null && rant.voterIds.contains(currentUserId);
+                          final karma = rant.voterIds.length;
+                          return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
@@ -354,9 +386,9 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
                                 ],
                               ),
                             ],
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
                     ..._buildReplyChildren(ref.watch(repliesProvider(widget.rantId)), t, blocked),
                   ],
