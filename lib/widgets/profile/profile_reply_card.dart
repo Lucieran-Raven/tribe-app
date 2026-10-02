@@ -64,7 +64,9 @@ class _ProfileReplyCardState extends State<ProfileReplyCard> {
     return TapScale(
       scale: 0.98,
       child: GestureDetector(
-        onTap: _parentDeleted ? null : () => GoRouter.of(context).push('/rant/${widget.reply.rantId}'),
+        onTap: _parentDeleted ? null : () => GoRouter.of(context).push(
+        '/rant/${widget.reply.rantId}?targetReplyId=${widget.reply.replyId}&fromNotification=true'
+      ),
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           padding: const EdgeInsets.all(13),

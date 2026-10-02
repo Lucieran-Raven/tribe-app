@@ -204,7 +204,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         itemBuilder: (context, index) {
                           final rant = userRants[index];
                           return GestureDetector(
-                            onTap: () => GoRouter.of(context).push('/rant/${rant.rantId}'),
+                            onTap: () => GoRouter.of(context).push('/rant/${rant.rantId}?fromNotification=true'),
                             child: Container(
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(colors: [t.bg3, t.bg1]),
@@ -318,7 +318,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       itemBuilder: (context, index) {
                         final rant = likedRants[index];
                         return GestureDetector(
-                          onTap: () => GoRouter.of(context).push('/rant/${rant.rantId}'),
+                          onTap: () => GoRouter.of(context).push('/rant/${rant.rantId}?fromNotification=true'),
                           child: Container(
                             decoration: BoxDecoration(
                               gradient: LinearGradient(colors: [t.bg3, t.bg1]),
