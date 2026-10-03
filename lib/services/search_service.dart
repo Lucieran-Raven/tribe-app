@@ -24,30 +24,29 @@ class SearchService {
   }
 
   Future<List<RantModel>> searchRants(String query) async {
-    if (query.isEmpty) {
-      return [];
-    }
+    final q = query.trim().toLowerCase();
+    if (q.isEmpty) return [];
 
+    // Minimal search intentionally uses a small recent window. Firestore does
+    // not provide arbitrary full-text search, so we avoid downloading the feed.
     final snapshot = await _firestore
         .collection('rants')
         .orderBy('timestamp', descending: true)
-        .limit(100)
+        .limit(40)
         .get();
 
-    final lowerQuery = query.toLowerCase();
-    final ranked = snapshot.docs
-      .map((doc) => RantModel.fromJson(doc.data(), rantId: doc.id))
-      .where((rant) => rant.content.toLowerCase().contains(lowerQuery))
-      .toList();
+    final results = snapshot.docs
+        .map((doc) => RantModel.fromJson(doc.data(), rantId: doc.id))
+        .where((rant) => rant.isVisible && rant.content.toLowerCase().contains(q))
+        .toList();
 
-    // Rank: exact phrase match first, then word-boundary match, then substring
-    ranked.sort((a, b) {
-      final aContent = a.content.toLowerCase();
-      final bContent = b.content.toLowerCase();
-      final aExact = aContent == lowerQuery ? 0 : (aContent.contains(' $lowerQuery ') || aContent.startsWith('$lowerQuery ')) ? 1 : 2;
-      final bExact = bContent == lowerQuery ? 0 : (bContent.contains(' $lowerQuery ') || bContent.startsWith('$lowerQuery ')) ? 1 : 2;
-      return aExact.compareTo(bExact);
+    results.sort((a, b) {
+      final ac = a.content.toLowerCase();
+      final bc = b.content.toLowerCase();
+      int rank(String s) => s == q ? 0 : (s.startsWith(q) ? 1 : (s.contains(' $q') ? 2 : 3));
+      final c = rank(ac).compareTo(rank(bc));
+      return c != 0 ? c : b.timestamp.compareTo(a.timestamp);
     });
-    return ranked;
+    return results.take(20).toList();
   }
 }
