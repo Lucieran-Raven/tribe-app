@@ -26,7 +26,18 @@ service cloud.firestore {
       match /notifications/{notificationId} {
         allow read: if isOwner(userId)
           || (isAuthenticated() && resource.data.fromUserId == request.auth.uid);
-        allow create: if isAuthenticated() && request.resource.data.fromUserId == request.auth.uid;
+        allow create: if isAuthenticated()
+          && request.resource.data.fromUserId == request.auth.uid
+          && (
+            (request.resource.data.type == 'karma'
+              && get(/databases/$(database)/documents/rants/$(request.resource.data.targetRantId)).data.userId == userId)
+            || (request.resource.data.type == 'replyKarma'
+              && get(/databases/$(database)/documents/rants/$(request.resource.data.targetRantId)/replies/$(request.resource.data.targetReplyId)).data.userId == userId)
+            || (request.resource.data.type == 'reply'
+              && get(/databases/$(database)/documents/rants/$(request.resource.data.targetRantId)).data.userId == userId)
+            || (request.resource.data.type == 'mention'
+              && get(/databases/$(database)/documents/rants/$(request.resource.data.targetRantId)).data.mentionedUserIds.hasAny([userId]))
+          );
         allow update: if isOwner(userId)
           || (isAuthenticated() && resource.data.fromUserId == request.auth.uid);
         allow delete: if isOwner(userId)
