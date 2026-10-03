@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'home_screen.dart';
@@ -30,24 +31,15 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
       final authState = ref.read(authProvider);
       if (authState is AuthAuthenticated) {
         NotificationService().syncPlayerId(authState.user.userId);
-
-        // Request push permission once per user
         final prefs = await SharedPreferences.getInstance();
         if (!(prefs.getBool('push_prompt_shown') ?? false)) {
           final granted = await OneSignal.Notifications.requestPermission(true);
-          if (granted) {
-            await OneSignal.User.pushSubscription.optIn();
-          }
+          if (granted) await OneSignal.User.pushSubscription.optIn();
           await prefs.setBool('push_prompt_shown', true);
         }
       }
-
-      // Listen for notification taps (Warm/Cold)
       pendingNotificationRoute.addListener(_handlePendingNotification);
-      // Handle Cold Start (if value is already set before listener attached)
-      if (pendingNotificationRoute.value != null) {
-        _handlePendingNotification();
-      }
+      if (pendingNotificationRoute.value != null) _handlePendingNotification();
     });
   }
 
@@ -71,29 +63,14 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final t = TribeTheme(isDark);
     final unreadCount = ref.watch(unreadCountProvider);
+    final currentTab = switch (_currentIndex) {
+      0 => TribeTab.home,
+      1 => TribeTab.search,
+      2 => TribeTab.inbox,
+      3 => TribeTab.profile,
+      _ => TribeTab.home,
+    };
 
-    // Map _selectedIndex to TribeTab
-    // Stack: 0=Home, 1=Search, 2=Inbox, 3=Profile
-    // TribeTab: home, search, create, inbox, profile
-    TribeTab currentTab;
-    switch (_currentIndex) {
-      case 0:
-        currentTab = TribeTab.home;
-        break;
-      case 1:
-        currentTab = TribeTab.search;
-        break;
-      case 2:
-        currentTab = TribeTab.inbox;
-        break;
-      case 3:
-        currentTab = TribeTab.profile;
-        break;
-      default:
-        currentTab = TribeTab.home;
-    }
-
-    // Mark inbox as read when navigating to it
     void markInboxAsRead() {
       final authState = ref.read(authProvider);
       if (authState is AuthAuthenticated) {
@@ -101,7 +78,6 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
       }
     }
 
-    // Show compose sheet
     void showComposeSheet() {
       showModalBottomSheet(
         context: context,
@@ -109,9 +85,7 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
         useSafeArea: true,
         backgroundColor: Colors.transparent,
         builder: (context) => Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-          ),
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
           child: const ComposeScreen(),
         ),
       );
@@ -123,54 +97,27 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
         backgroundColor: t.bg1,
         body: SafeArea(
           child: IndexedStack(
-          index: _currentIndex,
-          children: const [
-            HomeScreen(),
-            SearchScreen(),
-            InboxScreen(),
-            ProfileScreen(),
-          ],
-        ),
+            index: _currentIndex,
+            children: const [HomeScreen(), SearchScreen(), InboxScreen(), ProfileScreen()],
+          ),
         ),
         bottomNavigationBar: BottomNavBar(
           tab: currentTab,
           unreadCount: unreadCount,
           onTab: (tab) {
-            // Handle create tab - show compose sheet
             if (tab == TribeTab.create) {
               showComposeSheet();
               return;
             }
-
-            // Mark inbox as read when navigating to it
-            if (tab == TribeTab.inbox) {
-              markInboxAsRead();
-            }
-
-            // Map TribeTab back to _selectedIndex
-            int newIndex;
-            switch (tab) {
-              case TribeTab.home:
-                newIndex = 0;
-                break;
-              case TribeTab.search:
-                newIndex = 1;
-                break;
-              case TribeTab.inbox:
-                newIndex = 2;
-                break;
-              case TribeTab.profile:
-                newIndex = 3;
-                break;
-              default:
-                newIndex = 0;
-            }
-
-            // Reset search when leaving search tab
-            if (_currentIndex == 1 && newIndex != 1) {
-              SearchScreenReset.notify?.call();
-            }
-
+            if (tab == TribeTab.inbox) markInboxAsRead();
+            final newIndex = switch (tab) {
+              TribeTab.home => 0,
+              TribeTab.search => 1,
+              TribeTab.inbox => 2,
+              TribeTab.profile => 3,
+              _ => 0,
+            };
+            if (_currentIndex == 1 && newIndex != 1) SearchScreenReset.notify?.call();
             setState(() => _currentIndex = newIndex);
           },
           onCreate: showComposeSheet,
