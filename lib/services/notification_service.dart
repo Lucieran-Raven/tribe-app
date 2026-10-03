@@ -297,23 +297,9 @@ class NotificationService {
         isRead: false,
       ).toJson());
 
-      // Send push notification via OneSignal REST API
-      debugPrint('=== MENTION PUSH TRIGGERED: to=$toUserId, from=$fromHandle, target=$targetRantId ===');
-      
-      // Truncate snippet for push (50 chars)
-      final pushSnippet = snippet.length > 50 ? '${snippet.substring(0, 50)}...' : snippet;
-      
-      await _sendPush(
-        playerId: playerId,
-        heading: 'New Mention',
-        content: '@$fromHandle mentioned you: "$pushSnippet"',
-        data: {
-          'rantId': targetRantId,
-          'type': 'mention',
-          'fromUserId': fromUserId,
-          if (targetReplyId != null) 'targetReplyId': targetReplyId,
-        },
-      );
+      final pushSnippet = snippet.length > 50 ? snippet.substring(0, 50) + '...' : snippet;
+      await PushService().sendPush(targetUserId: toUserId, title: 'New Mention', body: '@' + fromHandle + ' mentioned you: "' + pushSnippet + '"', targetRantId: targetRantId, targetReplyId: targetReplyId, type: 'mention');
+
     }
   }
 }
