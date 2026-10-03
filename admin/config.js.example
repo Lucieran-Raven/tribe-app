@@ -1,0 +1,10 @@
+// Copy to config.js and fill with the Firebase Web App configuration for tribe-app-v1.
+// Firebase Web API keys are client identifiers, not service-account secrets.
+window.TRIBE_FIREBASE_CONFIG = {
+  apiKey: "REPLACE",
+  authDomain: "tribe-app-v1.firebaseapp.com",
+  projectId: "tribe-app-v1",
+  storageBucket: "REPLACE",
+  messagingSenderId: "REPLACE",
+  appId: "REPLACE"
+};
