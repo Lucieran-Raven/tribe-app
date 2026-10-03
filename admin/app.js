@@ -25,3 +25,11 @@ document.querySelector("#deletePost").onclick=()=>call("deletePost",{rantId:docu
 document.querySelector("#deleteReply").onclick=()=>call("deleteReply",{rantId:document.querySelector("#rantId").value,replyId:document.querySelector("#replyId").value});
 document.querySelector("#banUser").onclick=()=>call("banUser",{userId:document.querySelector("#userId").value,banned:document.querySelector("#ban").checked});
 document.querySelector("#announce").onclick=()=>call("createAnnouncement",{title:document.querySelector("#announcementTitle").value,body:document.querySelector("#announcementBody").value});
+
+
+document.querySelector("#refresh").onclick = async () => {
+  try {
+    const result = await httpsCallable(functions, "getAdminData")();
+    document.querySelector("#data").textContent = JSON.stringify(result.data, null, 2);
+  } catch (e) { status.textContent = e.message; }
+};
