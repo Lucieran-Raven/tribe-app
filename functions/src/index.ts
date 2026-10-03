@@ -41,7 +41,25 @@ async function sendOneSignal(title: string, body: string, data: Record<string, u
   if (!response.ok) throw new Error(`OneSignal error ${response.status}`);
 }
 
-export const sendPush = onCall({ secrets: [oneSignalRestKey] }, async (request) => {\n  requireAuth(request);\n  const targetUserId = String(request.data?.targetUserId ?? "");\n  const title = String(request.data?.title ?? "");\n  const body = String(request.data?.body ?? "");\n  if (!targetUserId || !title || !body) throw new HttpsError("invalid-argument", "Push fields are required.");\n  const target = await db.collection("users").doc(targetUserId).get();\n  const playerId = String(target.data()?.oneSignalPlayerId ?? "");\n  if (playerId) await sendOneSignal(title, body, { type: request.data?.type ?? "notification", ...(request.data?.targetRantId ? { targetRantId: request.data.targetRantId } : {}), ...(request.data?.targetReplyId ? { targetReplyId: request.data.targetReplyId } : {}) }, [playerId]);\n  return { sent: Boolean(playerId) };\n});\n\nexport const moderatePost = onCall(async (request) => {
+export const sendPush = onCall({ secrets: [oneSignalRestKey] }, async (request) => {
+  requireAuth(request);
+  const targetUserId = String(request.data?.targetUserId ?? "");
+  const title = String(request.data?.title ?? "");
+  const body = String(request.data?.body ?? "");
+  if (!targetUserId || !title || !body) throw new HttpsError("invalid-argument", "Push fields are required.");
+  const target = await db.collection("users").doc(targetUserId).get();
+  const playerId = String(target.data()?.oneSignalPlayerId ?? "");
+  if (playerId) {
+    await sendOneSignal(title, body, {
+      type: request.data?.type ?? "notification",
+      ...(request.data?.targetRantId ? { targetRantId: request.data.targetRantId } : {}),
+      ...(request.data?.targetReplyId ? { targetReplyId: request.data.targetReplyId } : {}),
+    }, [playerId]);
+  }
+  return { sent: Boolean(playerId) };
+});
+
+export const moderatePost = onCall(async (request) => {
   requireSuperAdmin(request);
   const rantId = String(request.data?.rantId ?? "");
   if (!rantId) throw new HttpsError("invalid-argument", "rantId is required.");
