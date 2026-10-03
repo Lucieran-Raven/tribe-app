@@ -41,7 +41,7 @@ async function sendOneSignal(title: string, body: string, data: Record<string, u
   if (!response.ok) throw new Error(`OneSignal error ${response.status}`);
 }
 
-export const moderatePost = onCall(async (request) => {
+export const sendPush = onCall({ secrets: [oneSignalRestKey] }, async (request) => {\n  requireAuth(request);\n  const targetUserId = String(request.data?.targetUserId ?? "");\n  const title = String(request.data?.title ?? "");\n  const body = String(request.data?.body ?? "");\n  if (!targetUserId || !title || !body) throw new HttpsError("invalid-argument", "Push fields are required.");\n  const target = await db.collection("users").doc(targetUserId).get();\n  const playerId = String(target.data()?.oneSignalPlayerId ?? "");\n  if (playerId) await sendOneSignal(title, body, { type: request.data?.type ?? "notification", ...(request.data?.targetRantId ? { targetRantId: request.data.targetRantId } : {}), ...(request.data?.targetReplyId ? { targetReplyId: request.data.targetReplyId } : {}) }, [playerId]);\n  return { sent: Boolean(playerId) };\n});\n\nexport const moderatePost = onCall(async (request) => {
   requireSuperAdmin(request);
   const rantId = String(request.data?.rantId ?? "");
   if (!rantId) throw new HttpsError("invalid-argument", "rantId is required.");
