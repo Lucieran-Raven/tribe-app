@@ -29,7 +29,7 @@ Widget _buildPageTransition(Widget child, Animation<double> animation) {
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     navigatorKey: navigatorKey,
-    initialLocation: '/splash',
+    initialLocation: (() { final route = WidgetsBinding.instance.platformDispatcher.defaultRouteName; return route.isNotEmpty && route != '/' ? route : '/splash'; })(),
     redirect: (context, state) async {
       print('=== TRIBE_DL [ROUTER]: Redirect fired. matchedLocation=${state.matchedLocation} ===');
       final isSplash = state.matchedLocation == '/splash';
