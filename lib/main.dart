@@ -7,30 +7,31 @@ import 'app.dart';
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 final ValueNotifier<String?> pendingNotificationRoute = ValueNotifier(null);
 
+String? _notificationRoute(Map<String, dynamic>? data) {
+  if (data == null) return null;
+  final rantId = (data['targetRantId'] ?? data['rantId'] ?? data['postId'])?.toString();
+  if (rantId == null || rantId.isEmpty) return null;
+  final replyId = (data['targetReplyId'] ?? data['replyId'])?.toString();
+  final params = <String, String>{'fromNotification': 'true'};
+  if (replyId != null && replyId.isNotEmpty) params['targetReplyId'] = replyId;
+  final query = params.entries.map((e) => '${Uri.encodeQueryComponent(e.key)}=${Uri.encodeQueryComponent(e.value)}').join('&');
+  return '/rant/${Uri.encodeComponent(rantId)}?$query';
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
 
-  // Initialize OneSignal
   OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
   OneSignal.initialize('e98051a2-ef46-43f2-bf9d-90e2f9180263');
-  
-  // Diagnostic Observer
+
   OneSignal.User.pushSubscription.addObserver((state) {
-    print('=== ONESIGNAL DEVICE STATE ===');
-    print('Subscription ID: ${state.current.id}');
-    print('Push Token: ${state.current.token}');
-    print('Opted In: ${state.current.optedIn}');
-    print('==============================');
+    debugPrint('OneSignal subscription=${state.current.id} optedIn=${state.current.optedIn}');
   });
-  
-  // Handle notification clicks
+
   OneSignal.Notifications.addClickListener((event) {
-    final additionalData = event.notification.additionalData;
-    if (additionalData != null) {
-      // Signal the MainScaffold to switch to Inbox tab
-      pendingNotificationRoute.value = '/inbox';
-    }
+    final route = _notificationRoute(event.notification.additionalData);
+    if (route != null) pendingNotificationRoute.value = route;
   });
 
   runApp(const ProviderScope(child: App()));
