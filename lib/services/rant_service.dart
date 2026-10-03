@@ -319,6 +319,7 @@ class RantService {
     return _firestore
         .collectionGroup('replies')
         .where('userId', isEqualTo: userId)
+        .orderBy('timestamp', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => ReplyModel.fromJson(doc.data(), replyId: doc.id))
