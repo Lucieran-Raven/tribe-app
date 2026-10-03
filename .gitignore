@@ -59,3 +59,6 @@ android/app/upload-keystore.jks
 .env.local
 .firebase/
 lib/config/onesignal_keys.dart
+
+# Local Super Admin web configuration
+admin/config.js
