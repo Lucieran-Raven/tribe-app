@@ -95,6 +95,7 @@ export const banUser = onCall(async (request) => {
   const userId = String(request.data?.userId ?? "");
   const banned = request.data?.banned === true;
   if (!userId || userId === adminUid) throw new HttpsError("invalid-argument", "Invalid user.");
+  await admin.auth().updateUser(userId, { disabled: banned });
   await db.collection("users").doc(userId).set({
     isBanned: banned,
     moderatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -139,4 +140,18 @@ export const setSuperAdmin = onCall(async (request) => {
   }
   await admin.auth().setCustomUserClaims(uid, { superAdmin: true });
   return { superAdmin: true };
+});
+
+export const getAdminData = onCall(async (request) => {
+  requireSuperAdmin(request);
+  const [users, reports, history] = await Promise.all([
+    db.collection("users").select("handle", "displayName", "email", "isBanned", "createdAt").limit(100).get(),
+    db.collection("reports").orderBy("timestamp", "desc").limit(100).get().catch(() => ({ docs: [] as any[] })),
+    db.collection("moderationHistory").orderBy("timestamp", "desc").limit(100).get().catch(() => ({ docs: [] as any[] })),
+  ]);
+  return {
+    users: users.docs.map(d => ({ id: d.id, ...d.data() })),
+    reports: reports.docs.map(d => ({ id: d.id, ...d.data() })),
+    history: history.docs.map(d => ({ id: d.id, ...d.data() })),
+  };
 });
