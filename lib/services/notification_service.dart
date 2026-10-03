@@ -6,9 +6,6 @@ import 'push_service.dart';
 
 class NotificationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  static const String _appId = 'e98051a2-ef46-43f2-bf9d-90e2f9180263';
-  static const String _apiKey = OneSignalKeys.restApiKey;
-  static const String _apiUrl = 'https://api.onesignal.com/notifications';
 
   Stream<List<NotificationModel>> streamNotifications(String userId) {
     return _firestore
