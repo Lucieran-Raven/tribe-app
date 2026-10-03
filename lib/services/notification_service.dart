@@ -237,13 +237,9 @@ class NotificationService {
     // Truncate snippet for push (50 chars)
     final pushSnippet = replyContent.length > 50 ? '${replyContent.substring(0, 50)}...' : replyContent;
 
-    // Send push notification via OneSignal REST API
-    await _sendPush(
-      playerId: playerId,
-      heading: 'New Reply',
-      content: '@$fromUsername replied: "$pushSnippet"',
-      data: {'rantId': rantId, 'type': 'reply', 'fromUserId': fromUserId, 'targetReplyId': replyId},
-    );
+    final pushSnippet = replyContent.length > 50 ? replyContent.substring(0, 50) + '...' : replyContent;
+    await PushService().sendPush(targetUserId: toUserId, title: 'New Reply', body: '@' + fromUsername + ' replied: "' + pushSnippet + '"', targetRantId: rantId, targetReplyId: replyId, type: 'reply');
+
   }
 
   Future<void> deleteReplyNotification({
