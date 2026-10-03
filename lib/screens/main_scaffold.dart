@@ -53,15 +53,11 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
 
   void _handlePendingNotification() {
     final route = pendingNotificationRoute.value;
-    if (route != null && mounted) {
-      pendingNotificationRoute.value = null; // Reset signal
-      // Switch to Inbox Tab (Index 2)
-      if (_currentIndex != 2) {
-        setState(() {
-          _currentIndex = 2;
-        });
-      }
-    }
+    if (route == null || !mounted) return;
+    pendingNotificationRoute.value = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.push(route);
+    });
   }
 
   @override
