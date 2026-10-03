@@ -209,12 +209,6 @@ class NotificationService {
     if (fromUserId == toUserId) return; // Don't notify yourself
 
     // Fetch target user's OneSignal playerId
-    final targetUserDoc = await _firestore.collection('users').doc(toUserId).get();
-    final playerId = (targetUserDoc.data()?['oneSignalPlayerId'] as String?) ?? '';
-    debugPrint('Target playerId: $playerId (empty: ${playerId.isEmpty})');
-
-    if (playerId.isEmpty) return; // Can't send notification without playerId
-
     // Use per-reply doc ID (unique per reply)
     final docId = 'reply_$replyId';
     final docRef = _firestore
@@ -237,7 +231,7 @@ class NotificationService {
       isRead: false,
     ).toJson());
 
-    debugPrint('About to call _sendPush...');
+
     debugPrint('=== TRIGGERING NEW REPLY PUSH to $toUserId ===');
 
     // Truncate snippet for push (50 chars)
