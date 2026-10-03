@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TRIBE Super Admin</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<header><strong>TRIBE</strong><span>Super Admin</span></header>
+<main>
+<section id="login"><h1>Super Admin</h1><p>Sign in with the Firebase account that has the <code>superAdmin</code> claim.</p><button id="signIn">Sign in</button></section>
+<section id="app" hidden>
+<h1>Moderation</h1>
+<div class="grid">
+<article><h2>Delete post</h2><input id="postId" placeholder="Post ID"><button id="deletePost">Delete post</button></article>
+<article><h2>Delete reply</h2><input id="rantId" placeholder="Post ID"><input id="replyId" placeholder="Reply ID"><button id="deleteReply">Delete reply</button></article>
+<article><h2>Ban / unban user</h2><input id="userId" placeholder="User ID"><label><input id="ban" type="checkbox" checked> Banned</label><button id="banUser">Save user status</button></article>
+<article><h2>Announcement</h2><input id="announcementTitle" placeholder="Title"><textarea id="announcementBody" placeholder="Message"></textarea><button id="announce">Notify all users</button></article>
+</div><pre id="status"></pre>
+</section>
+</main>
+<script type="module" src="app.js"></script>
+</body></html>
