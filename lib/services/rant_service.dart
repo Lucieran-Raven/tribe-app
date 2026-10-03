@@ -320,9 +320,16 @@ class RantService {
         .collectionGroup('replies')
         .where('userId', isEqualTo: userId)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => ReplyModel.fromJson(doc.data(), replyId: doc.id))
-            .toList());
+        .map((snapshot) {
+          final replies = snapshot.docs
+              .map((doc) => ReplyModel.fromJson(doc.data(), replyId: doc.id))
+              .toList();
+          
+          // ENFORCE NEWEST-FIRST (Reverse Chronological)
+          replies.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+          
+          return replies;
+        });
   }
 
   Stream<List<RantModel>> streamUserLikes(String userId) {
