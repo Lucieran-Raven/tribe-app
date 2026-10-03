@@ -1,10 +1,11 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { defineSecret } from "firebase-functions/params";
+import { defineSecret, defineString } from "firebase-functions/params";
 import * as admin from "firebase-admin";
 
 admin.initializeApp();
 const db = admin.firestore();
 const oneSignalRestKey = defineSecret("ONESIGNAL_REST_API_KEY");
+const superAdminUid = defineString("SUPER_ADMIN_UID");
 const ONE_SIGNAL_APP_ID = "e98051a2-ef46-43f2-bf9d-90e2f9180263";
 
 function requireAuth(request: any): string {
@@ -152,7 +153,7 @@ export const createAnnouncement = onCall({ secrets: [oneSignalRestKey] }, async 
 
 export const setSuperAdmin = onCall(async (request) => {
   const uid = requireAuth(request);
-  const bootstrapUid = process.env.SUPER_ADMIN_UID;
+  const bootstrapUid = superAdminUid.value();
   if (!bootstrapUid || uid !== bootstrapUid) {
     throw new HttpsError("permission-denied", "Bootstrap authorization failed.");
   }
