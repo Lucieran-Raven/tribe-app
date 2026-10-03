@@ -1,10 +1,8 @@
-import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import '../models/notification_model.dart';
-import '../config/onesignal_keys.dart';
+import 'push_service.dart';
 
 class NotificationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -147,35 +145,6 @@ class NotificationService {
     debugPrint('PLAYERID SYNC GAVE UP for $uid after $maxAttempts attempts');
   }
 
-  Future<void> _sendPush({
-    required String playerId,
-    required String heading,
-    required String content,
-    required Map<String, dynamic> data,
-  }) async {
-    if (playerId.isEmpty) return;
-    try {
-      final response = await http.post(
-        Uri.parse(_apiUrl),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Basic $_apiKey',
-        },
-        body: jsonEncode({
-          'app_id': _appId,
-          'include_player_ids': [playerId],
-          'headings': {'en': heading},
-          'contents': {'en': content},
-          'small_icon': 'ic_notification',
-          'data': data,
-        }),
-      ).timeout(const Duration(seconds: 10));
-      debugPrint('PUSH STATUS: ${response.statusCode}');
-      debugPrint('PUSH BODY: ${response.body}');
-    } catch (e) {
-      debugPrint('PUSH FAILED: $e');
-    }
-  }
 
   // Like notification
   Future<void> sendLikeNotification({
@@ -186,12 +155,6 @@ class NotificationService {
     required String rantId,
   }) async {
     if (fromUserId == toUserId) return; // Don't notify yourself
-
-    // Fetch target user's OneSignal playerId
-    final targetUserDoc = await _firestore.collection('users').doc(toUserId).get();
-    final playerId = (targetUserDoc.data()?['oneSignalPlayerId'] as String?) ?? '';
-    
-    if (playerId.isEmpty) return; // Can't send notification without playerId
 
     // Use deterministic doc ID for upsert
     final docId = 'like_${fromUserId}_${toUserId}_${rantId}';
@@ -214,13 +177,7 @@ class NotificationService {
       isRead: false,
     ).toJson());
 
-    // Send push notification via OneSignal REST API
-    await _sendPush(
-      playerId: playerId,
-      heading: 'New Like',
-      content: '@$fromUsername liked your rant',
-      data: {'rantId': rantId, 'type': 'like', 'fromUserId': fromUserId},
-    );
+    await PushService().sendPush(targetUserId: toUserId, title: 'New Like', body: '@$fromUsername liked your rant', targetRantId: rantId, type: 'like');
   }
 
   Future<void> deleteLikeNotification({
@@ -327,12 +284,6 @@ class NotificationService {
       // Deduplication rules
       if (toUserId == fromUserId) continue; // Never notify yourself
       if (toUserId == postOwnerId && targetReplyId != null) continue; // Standard app rule: post owner already receives the reply notification.
-
-      // Fetch target user's OneSignal playerId
-      final targetUserDoc = await _firestore.collection('users').doc(toUserId).get();
-      final playerId = (targetUserDoc.data()?['oneSignalPlayerId'] as String?) ?? '';
-      
-      if (playerId.isEmpty) continue; // Can't send notification without playerId
 
       // Deterministic doc ID for upsert
       final docId = 'mention_${targetRantId}_${targetReplyId ?? 'main'}_$fromUserId';
