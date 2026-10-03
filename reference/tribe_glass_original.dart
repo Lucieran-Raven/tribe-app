@@ -156,7 +156,7 @@ class TribeThemeScope extends InheritedWidget {
   const TribeThemeScope({super.key, required this.theme, required super.child});
 
   static TribeTheme of(BuildContext context) =>
-      context.dependOnInheritedWidgetOfType<TribeThemeScope>()!.theme;
+      context.dependOnInheritedWidgetOfExactType<TribeThemeScope>()!.theme;
 
   @override
   bool updateShouldNotify(TribeThemeScope oldWidget) => oldWidget.theme.isDark != theme.isDark;
