@@ -25,6 +25,7 @@ class SearchScreenReset {
 
 class _SearchScreenState extends ConsumerState<SearchScreen> {
   final TextEditingController _controller = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
   Timer? _debounce;
   List<UserModel> _users = [];
   List<RantModel> _rants = [];
@@ -38,11 +39,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     super.initState();
     _loadHistory();
     SearchScreenReset.notify = resetSearch;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _searchFocusNode.requestFocus();
+    });
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _searchFocusNode.dispose();
     _debounce?.cancel();
     SearchScreenReset.notify = null;
     super.dispose();
@@ -157,134 +162,166 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       child: Scaffold(
         backgroundColor: t.bg1,
         appBar: GlassAppBar(title: Text('Search', style: t.display(size: 18, color: t.milk))),
-        body: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: ClayInput(
-                controller: _controller,
-                hint: 'Search posts or users…',
-                prefix: Icon(Icons.search, size: 16, color: t.inkFaint),
-                onChanged: _onSearchChanged,
-                onSubmitted: (q) {
-                  _debounce?.cancel();
-                  _performSearch(q);
-                  _addHistory(q);
-                },
-              ),
-            ),
-            Expanded(
-              child: _isLoading
-                  ? const Center(child: CupertinoActivityIndicator())
-                  : _searchError != null
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text('Search failed: $_searchError', style: t.body(size: 13, weight: FontWeight.w600, color: t.inkFaint)),
-                              const SizedBox(height: 16),
-                              TextButton(
-                                onPressed: () {
-                                  setState(() => _searchError = null);
-                                  _performSearch(_controller.text);
-                                },
-                                child: const Text('Retry'),
-                              ),
-                            ],
+        body: GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          behavior: HitTestBehavior.translucent,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: ClayInput(
+                  controller: _controller,
+                  hint: 'Search posts or users…',
+                  prefix: Icon(Icons.search, size: 16, color: t.inkFaint),
+                  suffix: _controller.text.isNotEmpty
+                      ? GestureDetector(
+                          onTap: () {
+                            _controller.clear();
+                            _debounce?.cancel();
+                            setState(() {
+                              _users = [];
+                              _rants = [];
+                            });
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 12),
+                            child: Icon(Icons.close, size: 18, color: t.inkFaint),
                           ),
                         )
-                      : visibleUsers.isEmpty && visibleRants.isEmpty && _controller.text.isNotEmpty
-                          ? Center(child: Text('No results for "${_controller.text}"', style: t.body(size: 13, weight: FontWeight.w600, color: t.inkFaint)))
-                          : ListView(
-                          children: [
-                            if (_controller.text.isEmpty && _searchHistory.isNotEmpty) ...[
-                              Padding(
-                                padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      : null,
+                  onChanged: _onSearchChanged,
+                  onSubmitted: (q) {
+                    _debounce?.cancel();
+                    _performSearch(q);
+                    _addHistory(q);
+                  },
+                ),
+              ),
+              Expanded(
+                child: _isLoading
+                    ? const Center(child: CupertinoActivityIndicator())
+                    : _searchError != null
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text('Search failed: $_searchError', style: t.body(size: 13, weight: FontWeight.w600, color: t.inkFaint)),
+                                const SizedBox(height: 16),
+                                TextButton(
+                                  onPressed: () {
+                                    setState(() => _searchError = null);
+                                    _performSearch(_controller.text);
+                                  },
+                                  child: const Text('Retry'),
+                                ),
+                              ],
+                            ),
+                          )
+                        : _controller.text.isNotEmpty && !_isLoading && visibleUsers.isEmpty && visibleRants.isEmpty
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Text('Recent', style: t.caption(size: 12)),
-                                    TextButton(
-                                      onPressed: () {
-                                        setState(() => _searchHistory = []);
-                                        _persistHistory();
-                                      },
-                                      child: Text('Clear all', style: t.body(size: 12, weight: FontWeight.w700, color: t.gold)),
-                                    ),
+                                    Icon(Icons.search_off, size: 48, color: t.inkFaint),
+                                    const SizedBox(height: 12),
+                                    Text('No results found', style: t.body(size: 15, color: t.inkDim)),
                                   ],
                                 ),
-                              ),
-                              ..._searchHistory.map((term) => Container(
-                                decoration: BoxDecoration(border: Border(bottom: BorderSide(color: t.line))),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      _controller.text = term;
-                                      _performSearch(term);
-                                      _addHistory(term);
-                                    },
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.search, size: 14, color: t.inkFaint),
-                                        const SizedBox(width: 12),
-                                        Expanded(child: Text(term, style: t.body(size: 13.5, weight: FontWeight.w600, color: t.ink))),
-                                        IconBtn(icon: Icons.close, size: 16, onTap: () {
-                                          setState(() => _searchHistory.remove(term));
-                                          _persistHistory();
-                                        }),
-                                      ],
+                              )
+                            : ListView(
+                                children: [
+                                  if (_controller.text.isEmpty && _searchHistory.isNotEmpty) ...[
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text('Recent Searches', style: t.body(size: 14, weight: FontWeight.w700, color: t.ink)),
+                                          GestureDetector(
+                                            onTap: () {
+                                              setState(() => _searchHistory.clear());
+                                              _persistHistory();
+                                            },
+                                            child: Text('Clear All', style: t.body(size: 13, weight: FontWeight.w600, color: t.gold)),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                ),
-                              )),
-                            ],
-                            if (_controller.text.isEmpty && _searchHistory.isEmpty)
-                              Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Text('No recent searches.', style: t.body(size: 12.5, weight: FontWeight.w600, color: t.inkFaint)),
-                              ),
-                            if (visibleUsers.isNotEmpty || visibleRants.isNotEmpty) ...[
-                              Padding(
-                                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                                child: Row(
-                                  children: [
-                                    if (visibleUsers.isNotEmpty) ...[
-                                      TribeChip(
-                                        label: 'Users',
-                                        active: _resultTab == 'users',
-                                        onTap: () => setState(() => _resultTab = 'users'),
-                                      ),
-                                      const SizedBox(width: 8),
-                                    ],
-                                    if (visibleRants.isNotEmpty)
-                                      TribeChip(
-                                        label: 'Posts',
-                                        active: _resultTab == 'posts',
-                                        onTap: () => setState(() => _resultTab = 'posts'),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                              if (_resultTab == 'users' && visibleUsers.isNotEmpty)
-                                ...visibleUsers.map((user) => UserSearchCard(
-                                      user: user,
+                                    ..._searchHistory.map((term) => GestureDetector(
                                       onTap: () {
-                                        _addHistory(_controller.text);
-                                        GoRouter.of(context).push('/user/${user.userId}');
+                                        _controller.text = term;
+                                        _performSearch(term);
                                       },
+                                      behavior: HitTestBehavior.opaque,
+                                      child: Container(
+                                        margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                        decoration: BoxDecoration(
+                                          color: t.bg2,
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(color: t.line, width: 1),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.history, size: 16, color: t.inkFaint),
+                                            const SizedBox(width: 10),
+                                            Expanded(child: Text(term, style: t.body(size: 14, weight: FontWeight.w500, color: t.ink))),
+                                            GestureDetector(
+                                              onTap: () {
+                                                setState(() => _searchHistory.remove(term));
+                                                _persistHistory();
+                                              },
+                                              child: Icon(Icons.close, size: 16, color: t.inkFaint),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                     )),
-                              if (_resultTab == 'posts' && visibleRants.isNotEmpty)
-                                ...visibleRants.map((rant) => RantCard(rant: rant)),
-                            ],
-                          ],
-                        ),
-            ),
-          ],
+                                  ],
+                                  if (_controller.text.isEmpty && _searchHistory.isEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Text('No recent searches.', style: t.body(size: 12.5, weight: FontWeight.w600, color: t.inkFaint)),
+                                    ),
+                                  if (visibleUsers.isNotEmpty || visibleRants.isNotEmpty) ...[
+                                    Padding(
+                                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                                      child: Row(
+                                        children: [
+                                          if (visibleUsers.isNotEmpty) ...[
+                                            TribeChip(
+                                              label: 'Users',
+                                              active: _resultTab == 'users',
+                                              onTap: () => setState(() => _resultTab = 'users'),
+                                            ),
+                                            const SizedBox(width: 8),
+                                          ],
+                                          if (visibleRants.isNotEmpty)
+                                            TribeChip(
+                                              label: 'Posts',
+                                              active: _resultTab == 'posts',
+                                              onTap: () => setState(() => _resultTab = 'posts'),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (_resultTab == 'users' && visibleUsers.isNotEmpty)
+                                      ...visibleUsers.map((user) => UserSearchCard(
+                                            user: user,
+                                            onTap: () {
+                                              GoRouter.of(context).push('/user/${user.userId}');
+                                            },
+                                          )),
+                                    if (_resultTab == 'posts' && visibleRants.isNotEmpty)
+                                      ...visibleRants.map((rant) => RantCard(rant: rant)),
+                                  ],
+                                ],
+                              ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
-
-
