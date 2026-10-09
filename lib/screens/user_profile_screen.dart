@@ -291,43 +291,46 @@ class UserProfileScreen extends ConsumerWidget {
                             itemCount: rants.length,
                             itemBuilder: (context, index) {
                               final rant = rants[index];
-                              return Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(colors: [t.bg3, t.bg1]),
-                                  border: Border.all(color: t.line),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                padding: const EdgeInsets.all(11),
-                                child: Stack(
-                                  children: [
-                                    if (rant.imageUrl != null)
-                                      Positioned(
-                                        top: 0,
-                                        right: 0,
-                                        child: Icon(Icons.image_outlined, size: 13, color: t.grey500),
-                                      ),
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            rant.content,
-                                            maxLines: 4,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: t.body(size: 11.5, weight: FontWeight.w600, color: t.inkDim),
+                              return GestureDetector(
+                                onTap: () => GoRouter.of(context).push('/rant/${rant.rantId}?fromNotification=true'),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(colors: [t.bg3, t.bg1]),
+                                    border: Border.all(color: t.line),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  padding: const EdgeInsets.all(11),
+                                  child: Stack(
+                                    children: [
+                                      if (rant.imageUrl != null)
+                                        Positioned(
+                                          top: 0,
+                                          right: 0,
+                                          child: Icon(Icons.image_outlined, size: 13, color: t.grey500),
+                                        ),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              rant.content,
+                                              maxLines: 4,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: t.body(size: 11.5, weight: FontWeight.w600, color: t.inkDim),
+                                            ),
                                           ),
-                                        ),
-                                        Row(
-                                          children: [
-                                            Icon(Icons.thumb_up, size: 11, color: t.inkFaint),
-                                            const SizedBox(width: 5),
-                                            Text('${rant.voterIds.length}', style: t.body(size: 10.5, weight: FontWeight.w700, color: t.inkFaint)),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ],
+                                          Row(
+                                            children: [
+                                              Icon(Icons.thumb_up, size: 11, color: t.inkFaint),
+                                              const SizedBox(width: 5),
+                                              Text('${rant.voterIds.length}', style: t.body(size: 10.5, weight: FontWeight.w700, color: t.inkFaint)),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               );
                             },
@@ -390,43 +393,46 @@ class UserProfileScreen extends ConsumerWidget {
                           itemCount: likedRants.length,
                           itemBuilder: (context, index) {
                             final rant = likedRants[index];
-                            return Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(colors: [t.bg3, t.bg1]),
-                                border: Border.all(color: t.line),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              padding: const EdgeInsets.all(11),
-                              child: Stack(
-                                children: [
-                                  if (rant.imageUrl != null)
-                                    Positioned(
-                                      top: 0,
-                                      right: 0,
-                                      child: Icon(Icons.image_outlined, size: 13, color: t.grey500),
-                                    ),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          rant.content,
-                                          maxLines: 4,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: t.body(size: 11.5, weight: FontWeight.w600, color: t.inkDim),
+                            return GestureDetector(
+                              onTap: () => GoRouter.of(context).push('/rant/${rant.rantId}?fromNotification=true'),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(colors: [t.bg3, t.bg1]),
+                                  border: Border.all(color: t.line),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                padding: const EdgeInsets.all(11),
+                                child: Stack(
+                                  children: [
+                                    if (rant.imageUrl != null)
+                                      Positioned(
+                                        top: 0,
+                                        right: 0,
+                                        child: Icon(Icons.image_outlined, size: 13, color: t.grey500),
+                                      ),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            rant.content,
+                                            maxLines: 4,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: t.body(size: 11.5, weight: FontWeight.w600, color: t.inkDim),
+                                          ),
                                         ),
-                                      ),
-                                      Row(
-                                        children: [
-                                          Icon(Icons.thumb_up, size: 11, color: t.like),
-                                          const SizedBox(width: 5),
-                                          Text('${rant.voterIds.length}', style: t.body(size: 10.5, weight: FontWeight.w700, color: t.like)),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ],
+                                        Row(
+                                          children: [
+                                            Icon(Icons.thumb_up, size: 11, color: t.like),
+                                            const SizedBox(width: 5),
+                                            Text('${rant.voterIds.length}', style: t.body(size: 10.5, weight: FontWeight.w700, color: t.like)),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
                             );
                           },
