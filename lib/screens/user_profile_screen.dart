@@ -86,7 +86,7 @@ class UserProfileScreen extends ConsumerWidget {
             child: Column(
               children: [
                 GlassAppBar(
-                  leading: IconBtn(icon: Icons.arrow_back, onTap: () => context.go('/home')),
+                  leading: IconBtn(icon: Icons.arrow_back, onTap: () => Navigator.of(context).pop()),
                   title: userAsync.whenOrNull(data: (u) =>
                       Text('@${u.handle ?? 'anonymous'}', style: t.display(size: 18, color: t.milk)))
                       ?? Text('Profile', style: t.display(size: 18, color: t.milk)),
@@ -128,7 +128,7 @@ class UserProfileScreen extends ConsumerWidget {
           child: Column(
             children: [
               GlassAppBar(
-                leading: IconBtn(icon: Icons.arrow_back, onTap: () => context.go('/home')),
+                leading: IconBtn(icon: Icons.arrow_back, onTap: () => Navigator.of(context).pop()),
                 title: userAsync.whenOrNull(data: (u) =>
                     Text('@${u.handle ?? 'anonymous'}', style: t.display(size: 18, color: t.milk)))
                     ?? Text('Profile', style: t.display(size: 18, color: t.milk)),

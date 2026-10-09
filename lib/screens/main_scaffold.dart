@@ -123,61 +123,72 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
 
     return TribeThemeScope(
       theme: t,
-      child: Scaffold(
-        backgroundColor: t.bg1,
-        body: SafeArea(
-          child: IndexedStack(
-          index: _currentIndex,
-          children: const [
-            HomeScreen(),
-            SearchScreen(),
-            InboxScreen(),
-            ProfileScreen(),
-          ],
-        ),
-        ),
-        bottomNavigationBar: BottomNavBar(
-          tab: currentTab,
-          unreadCount: unreadCount,
-          onTab: (tab) {
-            // Handle create tab - show compose sheet
-            if (tab == TribeTab.create) {
-              showComposeSheet();
-              return;
-            }
+      child: PopScope(
+        canPop: _currentIndex == 0,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) return;
+          if (_currentIndex != 0) {
+            setState(() {
+              _currentIndex = 0;
+            });
+          }
+        },
+        child: Scaffold(
+          backgroundColor: t.bg1,
+          body: SafeArea(
+            child: IndexedStack(
+            index: _currentIndex,
+            children: const [
+              HomeScreen(),
+              SearchScreen(),
+              InboxScreen(),
+              ProfileScreen(),
+            ],
+          ),
+          ),
+          bottomNavigationBar: BottomNavBar(
+            tab: currentTab,
+            unreadCount: unreadCount,
+            onTab: (tab) {
+              // Handle create tab - show compose sheet
+              if (tab == TribeTab.create) {
+                showComposeSheet();
+                return;
+              }
 
-            // Mark inbox as read when navigating to it
-            if (tab == TribeTab.inbox) {
-              markInboxAsRead();
-            }
+              // Mark inbox as read when navigating to it
+              if (tab == TribeTab.inbox) {
+                markInboxAsRead();
+              }
 
-            // Map TribeTab back to _selectedIndex
-            int newIndex;
-            switch (tab) {
-              case TribeTab.home:
-                newIndex = 0;
-                break;
-              case TribeTab.search:
-                newIndex = 1;
-                break;
-              case TribeTab.inbox:
-                newIndex = 2;
-                break;
-              case TribeTab.profile:
-                newIndex = 3;
-                break;
-              default:
-                newIndex = 0;
-            }
+              // Map TribeTab back to _selectedIndex
+              int newIndex;
+              switch (tab) {
+                case TribeTab.home:
+                  newIndex = 0;
+                  break;
+                case TribeTab.search:
+                  newIndex = 1;
+                  break;
+                case TribeTab.inbox:
+                  newIndex = 2;
+                  break;
+                case TribeTab.profile:
+                  newIndex = 3;
+                  break;
+                default:
+                  newIndex = 0;
+              }
 
-            // Reset search when leaving search tab
-            if (_currentIndex == 1 && newIndex != 1) {
-              SearchScreenReset.notify?.call();
-            }
+              // Reset search when leaving search tab
+              if (_currentIndex == 1 && newIndex != 1) {
+                SearchScreenReset.notify?.call();
+              }
 
-            setState(() => _currentIndex = newIndex);
-          },
-          onCreate: showComposeSheet,
+              setState(() => _currentIndex = newIndex);
+            },
+            onCreate: showComposeSheet,
+          ),
         ),
       ),
     );
