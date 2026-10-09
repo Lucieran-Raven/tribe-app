@@ -42,6 +42,7 @@ class ReplyCard extends ConsumerWidget {
             Row(
               children: [
                 GestureDetector(
+                  onTap: () => GoRouter.of(context).push('/user/${reply.userId}'),
                   onLongPress: reply.avatarUrl != null && reply.avatarUrl!.isNotEmpty
                       ? () => Navigator.of(context).push(
                             MaterialPageRoute(
@@ -58,7 +59,10 @@ class ReplyCard extends ConsumerWidget {
                     children: [
                       Row(
                         children: [
-                          Text('@${reply.handle}', style: t.body(size: 12.5, weight: FontWeight.w800, color: t.ink)),
+                          GestureDetector(
+                            onTap: () => GoRouter.of(context).push('/user/${reply.userId}'),
+                            child: Text('@${reply.handle}', style: t.body(size: 12.5, weight: FontWeight.w800, color: t.ink)),
+                          ),
                           const SizedBox(width: 8),
                           Text(TimeUtils.formatRelativeTime(reply.timestamp), style: t.caption(size: 11)),
                         ],

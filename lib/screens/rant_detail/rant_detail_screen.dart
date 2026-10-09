@@ -318,20 +318,24 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                children: [
-                                  Avatar(handle: rant.handle, imageUrl: rant.avatarUrl, size: 38),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text('@${rant.handle}', style: t.body(size: 13.5, weight: FontWeight.w800, color: t.ink)),
-                                        Text(TimeUtils.formatRelativeTime(rant.timestamp), style: t.caption(size: 11)),
-                                      ],
+                              GestureDetector(
+                                onTap: () => GoRouter.of(context).push('/user/${rant.userId}'),
+                                behavior: HitTestBehavior.opaque,
+                                child: Row(
+                                  children: [
+                                    Avatar(handle: rant.handle, imageUrl: rant.avatarUrl, size: 38),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text('@${rant.handle}', style: t.body(size: 13.5, weight: FontWeight.w800, color: t.ink)),
+                                          Text(TimeUtils.formatRelativeTime(rant.timestamp), style: t.caption(size: 11)),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                               const SizedBox(height: 12),
                               MentionText(
