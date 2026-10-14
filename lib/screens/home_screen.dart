@@ -60,6 +60,7 @@ class HomeScreen extends ConsumerWidget {
                       ref.invalidate(feedProvider);
                     },
                     child: ListView.builder(
+                      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       itemCount: visibleRants.length,
                       addAutomaticKeepAlives: true,

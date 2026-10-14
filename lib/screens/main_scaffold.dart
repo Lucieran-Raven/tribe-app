@@ -133,19 +133,22 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
             });
           }
         },
-        child: Scaffold(
-          backgroundColor: t.bg1,
-          body: SafeArea(
-            child: IndexedStack(
-            index: _currentIndex,
-            children: const [
-              HomeScreen(),
-              SearchScreen(),
-              InboxScreen(),
-              ProfileScreen(),
-            ],
-          ),
-          ),
+        child: GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          behavior: HitTestBehavior.translucent,
+          child: Scaffold(
+            backgroundColor: t.bg1,
+            body: SafeArea(
+              child: IndexedStack(
+              index: _currentIndex,
+              children: const [
+                HomeScreen(),
+                SearchScreen(),
+                InboxScreen(),
+                ProfileScreen(),
+              ],
+            ),
+            ),
           bottomNavigationBar: BottomNavBar(
             tab: currentTab,
             unreadCount: unreadCount,
@@ -189,6 +192,7 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
             },
             onCreate: showComposeSheet,
           ),
+        ),
         ),
       ),
     );

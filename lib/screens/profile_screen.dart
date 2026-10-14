@@ -194,6 +194,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 userRants.isEmpty
                     ? const Center(child: Text('No posts yet.'))
                     : GridView.builder(
+                        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                         padding: const EdgeInsets.all(3),
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 3,
@@ -264,6 +265,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         builder: (context, snapshot) {
                           if (!snapshot.hasData) {
                             return ListView.builder(
+                              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                               itemCount: userReplies.length,
                               itemBuilder: (context, index) {
                                 final reply = userReplies[index];
@@ -277,6 +279,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           }
                           final snippets = snapshot.data!;
                           return ListView.builder(
+                            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                             itemCount: userReplies.length,
                             itemBuilder: (context, index) {
                               final reply = userReplies[index];
@@ -308,6 +311,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   data: (likedRants) {
                     if (likedRants.isEmpty) return const Center(child: Text('No likes yet.'));
                     return GridView.builder(
+                      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                       padding: const EdgeInsets.all(3),
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3,

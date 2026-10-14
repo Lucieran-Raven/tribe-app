@@ -77,6 +77,7 @@ class InboxScreen extends ConsumerWidget {
             }
 
             return ListView.builder(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               itemCount: notifications.length,
               itemBuilder: (context, index) {
                 final notification = notifications[index];

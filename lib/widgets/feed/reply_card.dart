@@ -12,18 +12,33 @@ import '../../widgets/common/tap_scale.dart';
 import '../../widgets/common/mention_text.dart';
 import 'full_image_viewer.dart';
 
-class ReplyCard extends ConsumerWidget {
+class ReplyCard extends ConsumerStatefulWidget {
   final ReplyModel reply;
 
   const ReplyCard({super.key, required this.reply});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ReplyCard> createState() => _ReplyCardState();
+}
+
+class _ReplyCardState extends ConsumerState<ReplyCard> {
+  late bool _optimisticLiked;
+  late int _optimisticKarma;
+
+  @override
+  void initState() {
+    super.initState();
+    final authState = ref.read(authProvider);
+    final currentUserId = authState is AuthAuthenticated ? authState.user.userId : null;
+    _optimisticLiked = currentUserId != null && widget.reply.voterIds.contains(currentUserId);
+    _optimisticKarma = widget.reply.karma;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final currentUserId = authState is AuthAuthenticated ? authState.user.userId : null;
-    final isLiked = currentUserId != null && reply.voterIds.contains(currentUserId);
-    final karma = reply.voterIds.length;
-    final isOwnReply = authState is AuthAuthenticated && authState.user.userId == reply.userId;
+    final isOwnReply = authState is AuthAuthenticated && authState.user.userId == widget.reply.userId;
     final t = TribeThemeScope.of(context);
 
     return TapScale(
@@ -34,7 +49,7 @@ class ReplyCard extends ConsumerWidget {
         decoration: BoxDecoration(
           color: t.bg2,
           borderRadius: BorderRadius.circular(16),
-          border: Border(left: BorderSide(color: _colorForHandle(reply.handle), width: 2)),
+          border: Border(left: BorderSide(color: _colorForHandle(widget.reply.handle), width: 2)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -42,15 +57,15 @@ class ReplyCard extends ConsumerWidget {
             Row(
               children: [
                 GestureDetector(
-                  onTap: () => GoRouter.of(context).push('/user/${reply.userId}'),
-                  onLongPress: reply.avatarUrl != null && reply.avatarUrl!.isNotEmpty
+                  onTap: () => GoRouter.of(context).push('/user/${widget.reply.userId}'),
+                  onLongPress: widget.reply.avatarUrl != null && widget.reply.avatarUrl!.isNotEmpty
                       ? () => Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => FullImageViewer(imageUrl: reply.avatarUrl!),
+                              builder: (_) => FullImageViewer(imageUrl: widget.reply.avatarUrl!),
                             ),
                           )
                       : null,
-                  child: Avatar(handle: reply.handle, imageUrl: reply.avatarUrl, size: 30),
+                  child: Avatar(handle: widget.reply.handle, imageUrl: widget.reply.avatarUrl, size: 30),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -60,11 +75,11 @@ class ReplyCard extends ConsumerWidget {
                       Row(
                         children: [
                           GestureDetector(
-                            onTap: () => GoRouter.of(context).push('/user/${reply.userId}'),
-                            child: Text('@${reply.handle}', style: t.body(size: 12.5, weight: FontWeight.w800, color: t.ink)),
+                            onTap: () => GoRouter.of(context).push('/user/${widget.reply.userId}'),
+                            child: Text('@${widget.reply.handle}', style: t.body(size: 12.5, weight: FontWeight.w800, color: t.ink)),
                           ),
                           const SizedBox(width: 8),
-                          Text(TimeUtils.formatRelativeTime(reply.timestamp), style: t.caption(size: 11)),
+                          Text(TimeUtils.formatRelativeTime(widget.reply.timestamp), style: t.caption(size: 11)),
                         ],
                       ),
                     ],
@@ -92,7 +107,7 @@ class ReplyCard extends ConsumerWidget {
                               onConfirm: () async {
                                 Navigator.of(ctx).pop();
                                 try {
-                                  await RantService().deleteReply(reply.rantId, reply.replyId);
+                                  await RantService().deleteReply(widget.reply.rantId, widget.reply.replyId);
                                   if (context.mounted) Toast.success(context, 'Reply deleted');
                                 } catch (e) {
                                   if (context.mounted) {
@@ -123,10 +138,10 @@ class ReplyCard extends ConsumerWidget {
                                 if (authState is AuthAuthenticated) {
                                   await ReportService().reportContent(
                                     targetType: 'reply',
-                                    targetId: reply.replyId,
+                                    targetId: widget.reply.replyId,
                                     reporterId: authState.user.userId,
                                     reason: reason,
-                                    snippet: reply.content,
+                                    snippet: widget.reply.content,
                                   );
                                   if (context.mounted) {
                                     Toast.success(context, 'Report submitted. Thank you.');
@@ -145,7 +160,7 @@ class ReplyCard extends ConsumerWidget {
             ),
             const SizedBox(height: 8),
             MentionText(
-              content: reply.content,
+              content: widget.reply.content,
               style: t.body(size: 14, weight: FontWeight.w500, color: t.ink),
               mentionStyle: t.body(size: 14, weight: FontWeight.w600, color: t.gold),
               onMentionTap: (handle) async {
@@ -163,21 +178,32 @@ class ReplyCard extends ConsumerWidget {
               children: [
                 ActionPill(
                   icon: Icons.thumb_up_outlined,
-                  label: '$karma',
-                  liked: isLiked,
+                  label: '$_optimisticKarma',
+                  liked: _optimisticLiked,
                   onTap: () async {
                     if (currentUserId == null) {
                       Toast.info(context, 'Sign in to like');
                       return;
                     }
-                    if (reply.userId == currentUserId) {
+                    if (widget.reply.userId == currentUserId) {
                       Toast.warning(context, "You can't like your own reply");
                       return;
                     }
+
+                    final wasLiked = _optimisticLiked;
+                    setState(() {
+                      _optimisticLiked = !_optimisticLiked;
+                      _optimisticKarma += _optimisticLiked ? 1 : -1;
+                    });
+
                     try {
-                      await RantService().toggleReplyVote(reply.rantId, reply.replyId, currentUserId);
+                      await RantService().toggleReplyVote(widget.reply.rantId, widget.reply.replyId, currentUserId);
                     } catch (e) {
-                      if (context.mounted) {
+                      if (mounted) {
+                        setState(() {
+                          _optimisticLiked = wasLiked;
+                          _optimisticKarma += wasLiked ? 1 : -1;
+                        });
                         Toast.error(context, 'Failed to like: $e');
                       }
                     }

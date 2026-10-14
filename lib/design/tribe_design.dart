@@ -482,6 +482,7 @@ class ClayInput extends StatelessWidget {
   final Widget? prefix;
   final Widget? suffix;
   final Color? borderColorOverride;
+  final FocusNode? focusNode;
   const ClayInput({
     super.key,
     this.controller,
@@ -493,6 +494,7 @@ class ClayInput extends StatelessWidget {
     this.prefix,
     this.suffix,
     this.borderColorOverride,
+    this.focusNode,
   });
 
   @override
@@ -510,6 +512,7 @@ class ClayInput extends StatelessWidget {
         Expanded(
           child: CupertinoTextField(
             controller: controller,
+            focusNode: focusNode,
             maxLines: maxLines,
             maxLength: maxLength,
             onChanged: onChanged,

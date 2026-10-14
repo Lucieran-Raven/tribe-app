@@ -37,6 +37,7 @@ class RantDetailScreen extends ConsumerStatefulWidget {
 class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
   final TextEditingController _replyController = TextEditingController();
   final ValueNotifier<List<String>> _mentionedUserIds = ValueNotifier([]);
+  final FocusNode _replyFocusNode = FocusNode();
   final AutoScrollController _scrollController = AutoScrollController();
   bool _isSending = false;
   bool _isPostAvailable = true;
@@ -90,6 +91,7 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
   void dispose() {
     _replyController.dispose();
     _mentionedUserIds.dispose();
+    _replyFocusNode.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -100,6 +102,11 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
 
     final authState = ref.read(authProvider);
     if (authState is! AuthAuthenticated) return;
+
+    // Instant UI feedback: clear text and dismiss keyboard
+    _replyController.clear();
+    _mentionedUserIds.value = [];
+    FocusScope.of(context).unfocus();
 
     setState(() => _isSending = true);
 
@@ -121,8 +128,6 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
       final replyId = await RantService().createReply(reply, postOwnerId: rant.userId);
 
       if (mounted) {
-        _replyController.clear();
-        _mentionedUserIds.value = [];
         Toast.success(context, 'Reply sent');
       }
 
@@ -262,6 +267,7 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
               ),
               Expanded(
                 child: ListView(
+                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                   controller: _scrollController,
                   padding: const EdgeInsets.only(bottom: 8),
                   children: [
@@ -412,6 +418,7 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
                         mentionedUserIds: _mentionedUserIds,
                         child: ClayInput(
                           controller: _replyController,
+                          focusNode: _replyFocusNode,
                           hint: 'Write a reply…',
                           maxLength: 300,
                         ),

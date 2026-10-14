@@ -282,6 +282,7 @@ class UserProfileScreen extends ConsumerWidget {
                     rants.isEmpty
                         ? const Center(child: Text('No posts yet.'))
                         : GridView.builder(
+                            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                             padding: const EdgeInsets.all(3),
                             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: 3,
@@ -352,6 +353,7 @@ class UserProfileScreen extends ConsumerWidget {
                             builder: (context, snapshot) {
                               if (!snapshot.hasData) {
                                 return ListView.builder(
+                                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                                   itemCount: replies.length,
                                   itemBuilder: (context, index) {
                                     final reply = replies[index];
@@ -365,6 +367,7 @@ class UserProfileScreen extends ConsumerWidget {
                               }
                               final snippets = snapshot.data!;
                               return ListView.builder(
+                                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                                 itemCount: replies.length,
                                 itemBuilder: (context, index) {
                                   final reply = replies[index];
@@ -384,6 +387,7 @@ class UserProfileScreen extends ConsumerWidget {
                       data: (likedRants) {
                         if (likedRants.isEmpty) return const Center(child: Text('No likes yet.'));
                         return GridView.builder(
+                          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                           padding: const EdgeInsets.all(3),
                           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 3,

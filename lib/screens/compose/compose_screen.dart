@@ -20,6 +20,7 @@ class ComposeScreen extends ConsumerStatefulWidget {
 class _ComposeScreenState extends ConsumerState<ComposeScreen> {
   final TextEditingController _controller = TextEditingController();
   final ValueNotifier<List<String>> _mentionedUserIds = ValueNotifier([]);
+  final FocusNode _composeFocusNode = FocusNode();
   String _rantText = '';
   bool _isPosting = false;
   File? _pickedImage;
@@ -30,12 +31,16 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
     _controller.addListener(() {
       setState(() => _rantText = _controller.text);
     });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _composeFocusNode.requestFocus();
+    });
   }
 
   @override
   void dispose() {
     _controller.dispose();
     _mentionedUserIds.dispose();
+    _composeFocusNode.dispose();
     super.dispose();
   }
 
@@ -126,6 +131,7 @@ class _ComposeScreenState extends ConsumerState<ComposeScreen> {
                 mentionedUserIds: _mentionedUserIds,
                 child: ClayInput(
                   controller: _controller,
+                  focusNode: _composeFocusNode,
                   hint: "What's on your mind?",
                   maxLines: 4,
                   maxLength: 500,
