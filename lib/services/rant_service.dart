@@ -304,6 +304,7 @@ class RantService {
     return _firestore
         .collection('rants')
         .where('userId', isEqualTo: userId)
+        .limit(50)
         .snapshots()
         .map((snapshot) {
           final rants = snapshot.docs
@@ -319,6 +320,7 @@ class RantService {
     return _firestore
         .collectionGroup('replies')
         .where('userId', isEqualTo: userId)
+        .limit(50)
         .snapshots()
         .map((snapshot) {
           final replies = snapshot.docs
