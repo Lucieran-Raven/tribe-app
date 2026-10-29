@@ -403,6 +403,19 @@ class RantService {
       final batch = _firestore.batch();
       final end = (i + 500 < repliesQuery.docs.length) ? i + 500 : repliesQuery.docs.length;
       for (var j = i; j < end; j++) {
+        // For each reply, delete its votes subcollection first
+        final replyVotesQuery = await _firestore
+            .collection('rants').doc(rantId)
+            .collection('replies').doc(repliesQuery.docs[j].id)
+            .collection('votes').get();
+        for (var k = 0; k < replyVotesQuery.docs.length; k += 500) {
+          final voteBatch = _firestore.batch();
+          final voteEnd = (k + 500 < replyVotesQuery.docs.length) ? k + 500 : replyVotesQuery.docs.length;
+          for (var l = k; l < voteEnd; l++) {
+            voteBatch.delete(replyVotesQuery.docs[l].reference);
+          }
+          await voteBatch.commit();
+        }
         batch.delete(repliesQuery.docs[j].reference);
       }
       await batch.commit();
@@ -437,6 +450,41 @@ class RantService {
   }
 
   Future<void> deleteReply(String rantId, String replyId) async {
+    // 1a. Delete all votes under this reply
+    final replyVotesQuery = await _firestore
+        .collection('rants').doc(rantId)
+        .collection('replies').doc(replyId)
+        .collection('votes').get();
+    for (var i = 0; i < replyVotesQuery.docs.length; i += 500) {
+      final batch = _firestore.batch();
+      final end = (i + 500 < replyVotesQuery.docs.length) ? i + 500 : replyVotesQuery.docs.length;
+      for (var j = i; j < end; j++) {
+        batch.delete(replyVotesQuery.docs[j].reference);
+      }
+      await batch.commit();
+    }
+
+    // 1b. Delete all replyKarma notifications targeting this reply in the reply owner's inbox
+    final replyDoc = await _firestore.collection('rants').doc(rantId).collection('replies').doc(replyId).get();
+    final replyOwnerId = replyDoc.data()?['userId'];
+    if (replyOwnerId != null) {
+      final notifsQuery = await _firestore
+          .collection('users').doc(replyOwnerId)
+          .collection('notifications')
+          .where('targetReplyId', isEqualTo: replyId)
+          .where('type', isEqualTo: 'replyKarma')
+          .get();
+      for (var i = 0; i < notifsQuery.docs.length; i += 500) {
+        final batch = _firestore.batch();
+        final end = (i + 500 < notifsQuery.docs.length) ? i + 500 : notifsQuery.docs.length;
+        for (var j = i; j < end; j++) {
+          batch.delete(notifsQuery.docs[j].reference);
+        }
+        await batch.commit();
+      }
+    }
+
+    // Then proceed with the existing replyCount decrement + reply doc deletion
     final replyRef = _firestore.collection('rants').doc(rantId).collection('replies').doc(replyId);
     final rantRef = _firestore.collection('rants').doc(rantId);
     final batch = _firestore.batch();

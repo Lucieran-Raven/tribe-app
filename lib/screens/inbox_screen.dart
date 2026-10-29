@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../providers/notification_provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/notification_service.dart';
@@ -110,12 +111,12 @@ class InboxScreen extends ConsumerWidget {
                     return confirmed ?? false;
                   },
                   onDismissed: (direction) async {
-                    await NotificationService().deleteNotificationBySource(
-                      authState.user.userId,
-                      notification.type,
-                      notification.fromUserId,
-                      notification.targetRantId,
-                    );
+                    await FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(authState.user.userId)
+                        .collection('notifications')
+                        .doc(notification.notificationId)
+                        .delete();
                     if (context.mounted) Toast.success(context, 'Notification deleted');
                   },
                   child: NotificationCard(

@@ -59,6 +59,11 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
       });
     });
 
+    // Auto-focus reply input on screen open
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _replyFocusNode.requestFocus();
+    });
+
     // --- FRAME 1 FADE-IN INIT ---
     _highlightRant = false;
     _highlightedReplyId = null;
