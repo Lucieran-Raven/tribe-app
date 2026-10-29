@@ -53,7 +53,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 Column(children: [
                   Image.asset('assets/logo/tribe_logo.png', width: 180, height: 180, fit: BoxFit.cover),
                   const SizedBox(height: 24),
-                  Text('Where honesty is the algorithm', style: GoogleFonts.montserrat(fontSize: 16, fontWeight: FontWeight.w300, color: Colors.white)),
+                  Text('Where honesty is the algorithm', style: GoogleFonts.montserrat(fontSize: 16, fontWeight: FontWeight.w300, color: t.milk)),
                 ]),
                 Column(children: [
                   ClayButtonPrimary(

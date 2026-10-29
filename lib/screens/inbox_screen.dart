@@ -86,10 +86,10 @@ class InboxScreen extends ConsumerWidget {
                   key: ValueKey(notification.notificationId),
                   direction: DismissDirection.endToStart,
                   background: Container(
-                    color: Colors.red,
+                    color: t.danger,
                     alignment: Alignment.centerRight,
                     padding: const EdgeInsets.only(right: 20),
-                    child: const Icon(Icons.delete, color: Colors.white),
+                    child: Icon(Icons.delete, color: t.milk),
                   ),
                   confirmDismiss: (direction) async {
                     final confirmed = await showDialog<bool>(

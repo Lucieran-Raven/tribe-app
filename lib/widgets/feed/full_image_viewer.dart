@@ -28,10 +28,10 @@ class FullImageViewer extends StatelessWidget {
                   placeholder: (context, url) => const Center(
                     child: CupertinoActivityIndicator(color: Colors.white),
                   ),
-                  errorWidget: (context, url, error) => const Icon(
+                  errorWidget: (context, url, error) => Icon(
                     Icons.broken_image_outlined,
                     size: 40,
-                    color: Colors.white38,
+                    color: theme.inkFaint,
                   ),
                 ),
               ),
