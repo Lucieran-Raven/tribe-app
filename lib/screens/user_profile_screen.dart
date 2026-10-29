@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -6,15 +7,23 @@ import '../providers/user_profile_provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/profile/profile_reply_card.dart';
 import '../widgets/feed/full_image_viewer.dart';
+import '../widgets/common/skeletons.dart';
 import '../services/report_service.dart';
 import '../services/rant_service.dart';
 import '../design/tribe_design.dart';
 import '../utils/affiliation_sort.dart';
 
-class UserProfileScreen extends ConsumerWidget {
+class UserProfileScreen extends ConsumerStatefulWidget {
   final String userId;
 
   const UserProfileScreen({super.key, required this.userId});
+
+  @override
+  ConsumerState<UserProfileScreen> createState() => _UserProfileScreenState();
+}
+
+class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
+  final Set<String> _processingBlocks = {};
 
   void _showReportDialog(BuildContext context, WidgetRef ref) {
     showDialog<void>(
@@ -33,7 +42,7 @@ class UserProfileScreen extends ConsumerWidget {
                 if (authState is AuthAuthenticated) {
                   await ReportService().reportContent(
                     targetType: 'user',
-                    targetId: userId,
+                    targetId: widget.userId,
                     reporterId: authState.user.userId,
                     reason: reason,
                   );
@@ -50,9 +59,11 @@ class UserProfileScreen extends ConsumerWidget {
   }
 
   Future<void> _toggleBlock(BuildContext context, WidgetRef ref, String userId, bool block) async {
-    final auth = ref.read(authProvider);
-    if (auth is! AuthAuthenticated) return;
+    if (_processingBlocks.contains(userId)) return;
+    setState(() => _processingBlocks.add(userId));
     try {
+      final auth = ref.read(authProvider);
+      if (auth is! AuthAuthenticated) return;
       final freshUser = block
           ? await RantService().blockUser(auth.user.userId, userId)
           : await RantService().unblockUser(auth.user.userId, userId);
@@ -64,16 +75,18 @@ class UserProfileScreen extends ConsumerWidget {
       if (context.mounted) {
         Toast.error(context, 'Failed: $e');
       }
+    } finally {
+      if (mounted) setState(() => _processingBlocks.remove(userId));
     }
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final userAsync = ref.watch(userProfileProvider(userId));
-    final rantsAsync = ref.watch(userRantsProvider(userId));
-    final repliesAsync = ref.watch(userRepliesProvider(userId));
+  Widget build(BuildContext context) {
+    final userAsync = ref.watch(userProfileProvider(widget.userId));
+    final rantsAsync = ref.watch(userRantsProvider(widget.userId));
+    final repliesAsync = ref.watch(userRepliesProvider(widget.userId));
     final authState = ref.watch(authProvider);
-    final isBlocked = authState is AuthAuthenticated && authState.user.blockedUsers.contains(userId);
+    final isBlocked = authState is AuthAuthenticated && authState.user.blockedUsers.contains(widget.userId);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final t = TribeTheme(isDark);
 
@@ -104,10 +117,16 @@ class UserProfileScreen extends ConsumerWidget {
                             sub: "You won't see their posts or replies.",
                           ),
                           const SizedBox(height: 8),
-                          ClayButtonSecondary(
-                            label: 'Unblock',
-                            onTap: () => _toggleBlock(context, ref, userId, false),
-                          ),
+                          _processingBlocks.contains(widget.userId)
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CupertinoActivityIndicator(),
+                                )
+                              : ClayButtonSecondary(
+                                  label: 'Unblock',
+                                  onTap: () => _toggleBlock(context, ref, widget.userId, false),
+                                ),
                         ],
                       ),
                     ),
@@ -133,7 +152,7 @@ class UserProfileScreen extends ConsumerWidget {
                     Text('@${u.handle ?? 'anonymous'}', style: t.display(size: 18, color: t.milk)))
                     ?? Text('Profile', style: t.display(size: 18, color: t.milk)),
                 actions: [
-                  if (authState is AuthAuthenticated && authState.user.userId != userId)
+                  if (authState is AuthAuthenticated && authState.user.userId != widget.userId)
                     IconBtn(icon: Icons.more_horiz, onTap: () => _showMenu(context, ref, isBlocked)),
                 ],
               ),
@@ -147,7 +166,7 @@ class UserProfileScreen extends ConsumerWidget {
                         const Text('Failed to load profile'),
                         const SizedBox(height: 16),
                         TextButton(
-                          onPressed: () => ref.invalidate(userProfileProvider(userId)),
+                          onPressed: () => ref.invalidate(userProfileProvider(widget.userId)),
                           child: const Text('Retry'),
                         ),
                       ],
@@ -279,113 +298,156 @@ class UserProfileScreen extends ConsumerWidget {
                 },
                 body: TabBarView(
                   children: [
-                    rants.isEmpty
-                        ? const Center(child: Text('No posts yet.'))
-                        : GridView.builder(
-                            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                            padding: const EdgeInsets.all(3),
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 3,
-                              crossAxisSpacing: 3,
-                              mainAxisSpacing: 3,
-                            ),
-                            itemCount: rants.length,
-                            itemBuilder: (context, index) {
-                              final rant = rants[index];
-                              return GestureDetector(
-                                onTap: () => GoRouter.of(context).push('/rant/${rant.rantId}?fromNotification=true'),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(colors: [t.bg3, t.bg1]),
-                                    border: Border.all(color: t.line),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  padding: const EdgeInsets.all(11),
-                                  child: Stack(
-                                    children: [
-                                      if (rant.imageUrl != null)
-                                        Positioned(
-                                          top: 0,
-                                          right: 0,
-                                          child: Icon(Icons.image_outlined, size: 13, color: t.grey500),
-                                        ),
-                                      Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              rant.content,
-                                              maxLines: 4,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: t.body(size: 11.5, weight: FontWeight.w600, color: t.inkDim),
-                                            ),
-                                          ),
-                                          Row(
-                                            children: [
-                                              Icon(Icons.thumb_up, size: 11, color: t.inkFaint),
-                                              const SizedBox(width: 5),
-                                              Text('${rant.voterIds.length}', style: t.body(size: 10.5, weight: FontWeight.w700, color: t.inkFaint)),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
+                    rantsAsync.when(
+                      loading: () => GridView.builder(
+                        padding: const EdgeInsets.all(3),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 3,
+                          mainAxisSpacing: 3,
+                        ),
+                        itemCount: 12,
+                        itemBuilder: (_, i) => const ShimmerBox(
+                          width: double.infinity,
+                          height: double.infinity,
+                          radius: 6,
+                        ),
+                      ),
+                      error: (e, _) => const Center(child: Text('Failed to load posts')),
+                      data: (rants) {
+                        if (rants.isEmpty) {
+                          return const EmptyState(
+                            icon: Icons.photo_library_outlined,
+                            headline: 'No posts yet',
+                            sub: 'Share your first thought.',
+                          );
+                        }
+                        return GridView.builder(
+                          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                          padding: const EdgeInsets.all(3),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            crossAxisSpacing: 3,
+                            mainAxisSpacing: 3,
+                          ),
+                          itemCount: rants.length,
+                          itemBuilder: (context, index) {
+                            final rant = rants[index];
+                            return GestureDetector(
+                              onTap: () => GoRouter.of(context).push('/rant/${rant.rantId}?fromNotification=true'),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(colors: [t.bg3, t.bg1]),
+                                  border: Border.all(color: t.line),
+                                  borderRadius: BorderRadius.circular(6),
                                 ),
-                              );
-                            },
-                          ),
-                    replies.isEmpty
-                        ? const Center(child: Text('No replies yet.'))
-                        : FutureBuilder<Map<String, String?>>(
-                            future: () async {
-                              final rantIds = replies.map((r) => r.rantId).toSet().toList();
-                              final futures = rantIds.map((id) => FirebaseFirestore.instance.collection('rants').doc(id).get());
-                              final snapshots = await Future.wait(futures);
-                              final Map<String, String?> snippets = {};
-                              for (int i = 0; i < rantIds.length; i++) {
-                                final doc = snapshots[i];
-                                snippets[rantIds[i]] = doc.exists ? (doc.data() as Map<String, dynamic>)['content'] as String? : null;
-                              }
-                              return snippets;
-                            }(),
-                            builder: (context, snapshot) {
-                              if (!snapshot.hasData) {
-                                return ListView.builder(
-                                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                                  itemCount: replies.length,
-                                  itemBuilder: (context, index) {
-                                    final reply = replies[index];
-                                    return ProfileReplyCard(
-                                      reply: reply,
-                                      parentSnippet: null,
-                                      parentDeleted: false,
-                                    );
-                                  },
+                                padding: const EdgeInsets.all(11),
+                                child: Stack(
+                                  children: [
+                                    if (rant.imageUrl != null)
+                                      Positioned(
+                                        top: 0,
+                                        right: 0,
+                                        child: Icon(Icons.image_outlined, size: 13, color: t.grey500),
+                                      ),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            rant.content,
+                                            maxLines: 4,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: t.body(size: 11.5, weight: FontWeight.w600, color: t.inkDim),
+                                          ),
+                                        ),
+                                        Row(
+                                          children: [
+                                            Icon(Icons.thumb_up, size: 11, color: t.inkFaint),
+                                            const SizedBox(width: 5),
+                                            Text('${rant.voterIds.length}', style: t.body(size: 10.5, weight: FontWeight.w700, color: t.inkFaint)),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                    repliesAsync.when(
+                      loading: () => const FeedSkeleton(),
+                      error: (e, _) => const Center(child: Text('Failed to load replies')),
+                      data: (replies) {
+                        if (replies.isEmpty) {
+                          return const EmptyState(
+                            icon: Icons.chat_bubble_outline,
+                            headline: 'No replies yet',
+                            sub: 'Join the conversation.',
+                          );
+                        }
+                        return FutureBuilder<Map<String, String?>>(
+                          future: () async {
+                            final rantIds = replies.map((r) => r.rantId).toSet().toList();
+                            final futures = rantIds.map((id) => FirebaseFirestore.instance.collection('rants').doc(id).get());
+                            final snapshots = await Future.wait(futures);
+                            final Map<String, String?> snippets = {};
+                            for (int i = 0; i < rantIds.length; i++) {
+                              final doc = snapshots[i];
+                              snippets[rantIds[i]] = doc.exists ? (doc.data() as Map<String, dynamic>)['content'] as String? : null;
+                            }
+                            return snippets;
+                          }(),
+                          builder: (context, snapshot) {
+                            if (!snapshot.hasData) {
+                              return const FeedSkeleton();
+                            }
+                            final snippets = snapshot.data!;
+                            return ListView.builder(
+                              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                              itemCount: replies.length,
+                              itemBuilder: (context, index) {
+                                final reply = replies[index];
+                                final parentDeleted = snippets[reply.rantId] == null;
+                                return ProfileReplyCard(
+                                  reply: reply,
+                                  parentSnippet: snippets[reply.rantId],
+                                  parentDeleted: parentDeleted,
                                 );
-                              }
-                              final snippets = snapshot.data!;
-                              return ListView.builder(
-                                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                                itemCount: replies.length,
-                                itemBuilder: (context, index) {
-                                  final reply = replies[index];
-                                  final parentDeleted = snippets[reply.rantId] == null;
-                                  return ProfileReplyCard(
-                                    reply: reply,
-                                    parentSnippet: snippets[reply.rantId],
-                                    parentDeleted: parentDeleted,
-                                  );
-                                },
-                              );
-                            },
-                          ),
-                    ref.watch(userLikesProvider(userId)).when(
-                      loading: () => const Center(child: CircularProgressIndicator()),
+                              },
+                            );
+                          },
+                        );
+                      },
+                    ),
+                    ref.watch(userLikesProvider(widget.userId)).when(
+                      loading: () => GridView.builder(
+                        padding: const EdgeInsets.all(3),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 3,
+                          mainAxisSpacing: 3,
+                        ),
+                        itemCount: 12,
+                        itemBuilder: (_, i) => const ShimmerBox(
+                          width: double.infinity,
+                          height: double.infinity,
+                          radius: 6,
+                        ),
+                      ),
                       error: (e, _) => const Center(child: Text('Failed to load likes')),
                       data: (likedRants) {
-                        if (likedRants.isEmpty) return const Center(child: Text('No likes yet.'));
+                        if (likedRants.isEmpty) {
+                          return const EmptyState(
+                            icon: Icons.thumb_up_outlined,
+                            headline: 'No likes yet',
+                            sub: 'Posts you like will appear here.',
+                          );
+                        }
                         return GridView.builder(
                           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                           padding: const EdgeInsets.all(3),
@@ -488,7 +550,7 @@ class UserProfileScreen extends ConsumerWidget {
                   ]))),
               Container(height: 1, color: t.line),
               GestureDetector(
-                onTap: () { Navigator.of(ctx).pop(); _toggleBlock(context, ref, userId, !isBlocked); },
+                onTap: () { Navigator.of(ctx).pop(); _toggleBlock(context, ref, widget.userId, !isBlocked); },
                 child: Padding(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
                   child: Row(children: [
                     Icon(Icons.block, size: 17, color: t.danger),

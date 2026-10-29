@@ -191,110 +191,147 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             },
             body: TabBarView(
               children: [
-                userRants.isEmpty
-                    ? const Center(child: Text('No posts yet.'))
-                    : GridView.builder(
-                        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                        padding: const EdgeInsets.all(3),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          crossAxisSpacing: 3,
-                          mainAxisSpacing: 3,
-                        ),
-                        itemCount: userRants.length,
-                        itemBuilder: (context, index) {
-                          final rant = userRants[index];
-                          return GestureDetector(
-                            onTap: () => GoRouter.of(context).push('/rant/${rant.rantId}?fromNotification=true'),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(colors: [t.bg3, t.bg1]),
-                                border: Border.all(color: t.line),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              padding: const EdgeInsets.all(11),
-                              child: Stack(
-                                children: [
-                                  if (rant.imageUrl != null)
-                                    Positioned(
-                                      top: 0,
-                                      right: 0,
-                                      child: Icon(Icons.image_outlined, size: 13, color: t.grey500),
-                                    ),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          rant.content,
-                                          maxLines: 4,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: t.body(size: 11.5, weight: FontWeight.w600, color: t.inkDim),
-                                        ),
-                                      ),
-                                      Row(
-                                        children: [
-                                          Icon(Icons.thumb_up, size: 11, color: t.inkFaint),
-                                          const SizedBox(width: 5),
-                                          Text('${rant.voterIds.length}', style: t.body(size: 10.5, weight: FontWeight.w700, color: t.inkFaint)),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
+                userRantsAsync.when(
+                  loading: () => GridView.builder(
+                    padding: const EdgeInsets.all(3),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 3,
+                      mainAxisSpacing: 3,
+                    ),
+                    itemCount: 12,
+                    itemBuilder: (_, i) => const ShimmerBox(
+                      width: double.infinity,
+                      height: double.infinity,
+                      radius: 6,
+                    ),
+                  ),
+                  error: (e, _) => const Center(child: Text('Failed to load posts')),
+                  data: (rants) {
+                    if (rants.isEmpty) {
+                      return const EmptyState(
+                        icon: Icons.photo_library_outlined,
+                        headline: 'No posts yet',
+                        sub: 'Share your first thought.',
+                      );
+                    }
+                    return GridView.builder(
+                      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                      padding: const EdgeInsets.all(3),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        crossAxisSpacing: 3,
+                        mainAxisSpacing: 3,
+                      ),
+                      itemCount: rants.length,
+                      itemBuilder: (context, index) {
+                        final rant = rants[index];
+                        return GestureDetector(
+                          onTap: () => GoRouter.of(context).push('/rant/${rant.rantId}?fromNotification=true'),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(colors: [t.bg3, t.bg1]),
+                              border: Border.all(color: t.line),
+                              borderRadius: BorderRadius.circular(6),
                             ),
-                          );
-                        },
-                      ),
-                userReplies.isEmpty
-                    ? const Center(child: Text('No replies yet.'))
-                    : FutureBuilder<Map<String, String?>>(
-                        future: () async {
-                          final rantIds = userReplies.map((r) => r.rantId).toSet().toList();
-                          final futures = rantIds.map((id) => FirebaseFirestore.instance.collection('rants').doc(id).get());
-                          final snapshots = await Future.wait(futures);
-                          final Map<String, String?> snippets = {};
-                          for (int i = 0; i < rantIds.length; i++) {
-                            final doc = snapshots[i];
-                            snippets[rantIds[i]] = doc.exists ? (doc.data() as Map<String, dynamic>)['content'] as String? : null;
-                          }
-                          return snippets;
-                        }(),
-                        builder: (context, snapshot) {
-                          if (!snapshot.hasData) {
-                            return ListView.builder(
-                              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                              itemCount: userReplies.length,
-                              itemBuilder: (context, index) {
-                                final reply = userReplies[index];
-                                return ProfileReplyCard(
-                                  reply: reply,
-                                  parentSnippet: null,
-                                  parentDeleted: false,
-                                );
-                              },
+                            padding: const EdgeInsets.all(11),
+                            child: Stack(
+                              children: [
+                                if (rant.imageUrl != null)
+                                  Positioned(
+                                    top: 0,
+                                    right: 0,
+                                    child: Icon(Icons.image_outlined, size: 13, color: t.grey500),
+                                  ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        rant.content,
+                                        maxLines: 4,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: t.body(size: 11.5, weight: FontWeight.w600, color: t.inkDim),
+                                      ),
+                                    ),
+                                    Row(
+                                      children: [
+                                        Icon(Icons.thumb_up, size: 11, color: t.inkFaint),
+                                        const SizedBox(width: 5),
+                                        Text('${rant.voterIds.length}', style: t.body(size: 10.5, weight: FontWeight.w700, color: t.inkFaint)),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+                userRepliesAsync.when(
+                  loading: () => const FeedSkeleton(),
+                  error: (e, _) => const Center(child: Text('Failed to load replies')),
+                  data: (replies) {
+                    if (replies.isEmpty) {
+                      return const EmptyState(
+                        icon: Icons.chat_bubble_outline,
+                        headline: 'No replies yet',
+                        sub: 'Join the conversation.',
+                      );
+                    }
+                    return FutureBuilder<Map<String, String?>>(
+                      future: () async {
+                        final rantIds = replies.map((r) => r.rantId).toSet().toList();
+                        final futures = rantIds.map((id) => FirebaseFirestore.instance.collection('rants').doc(id).get());
+                        final snapshots = await Future.wait(futures);
+                        final Map<String, String?> snippets = {};
+                        for (int i = 0; i < rantIds.length; i++) {
+                          final doc = snapshots[i];
+                          snippets[rantIds[i]] = doc.exists ? (doc.data() as Map<String, dynamic>)['content'] as String? : null;
+                        }
+                        return snippets;
+                      }(),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) {
+                          return const FeedSkeleton();
+                        }
+                        final snippets = snapshot.data!;
+                        return ListView.builder(
+                          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                          itemCount: replies.length,
+                          itemBuilder: (context, index) {
+                            final reply = replies[index];
+                            final parentDeleted = snippets[reply.rantId] == null;
+                            return ProfileReplyCard(
+                              reply: reply,
+                              parentSnippet: snippets[reply.rantId],
+                              parentDeleted: parentDeleted,
                             );
-                          }
-                          final snippets = snapshot.data!;
-                          return ListView.builder(
-                            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                            itemCount: userReplies.length,
-                            itemBuilder: (context, index) {
-                              final reply = userReplies[index];
-                              final parentDeleted = snippets[reply.rantId] == null;
-                              return ProfileReplyCard(
-                                reply: reply,
-                                parentSnippet: snippets[reply.rantId],
-                                parentDeleted: parentDeleted,
-                              );
-                            },
-                          );
-                        },
-                      ),
+                          },
+                        );
+                      },
+                    );
+                  },
+                ),
                 ref.watch(userLikesProvider(userId)).when(
-                  loading: () => const Center(child: CircularProgressIndicator()),
+                  loading: () => GridView.builder(
+                    padding: const EdgeInsets.all(3),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 3,
+                      mainAxisSpacing: 3,
+                    ),
+                    itemCount: 12,
+                    itemBuilder: (_, i) => const ShimmerBox(
+                      width: double.infinity,
+                      height: double.infinity,
+                      radius: 6,
+                    ),
+                  ),
                   error: (e, _) => Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -309,7 +346,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                   ),
                   data: (likedRants) {
-                    if (likedRants.isEmpty) return const Center(child: Text('No likes yet.'));
+                    if (likedRants.isEmpty) {
+                      return const EmptyState(
+                        icon: Icons.thumb_up_outlined,
+                        headline: 'No likes yet',
+                        sub: 'Posts you like will appear here.',
+                      );
+                    }
                     return GridView.builder(
                       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                       padding: const EdgeInsets.all(3),
