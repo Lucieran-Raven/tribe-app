@@ -713,6 +713,30 @@ class EmptyState extends StatelessWidget {
   }
 }
 
+class TribeErrorState extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+  final IconData icon;
+  const TribeErrorState({super.key, required this.message, required this.onRetry, this.icon = Icons.error_outline});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = TribeThemeScope.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 34, vertical: 70),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 48, color: t.inkFaint),
+          const SizedBox(height: 12),
+          Text(message, style: t.body(size: 14, color: t.inkDim)),
+          const SizedBox(height: 16),
+          ClayButtonSecondary(label: 'Retry', onTap: onRetry),
+        ]),
+      ),
+    );
+  }
+}
+
 class MiniCheckbox extends StatelessWidget {
   final bool checked;
   const MiniCheckbox({super.key, required this.checked});

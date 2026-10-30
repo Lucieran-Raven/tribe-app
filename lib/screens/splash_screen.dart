@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
@@ -17,6 +16,8 @@ class SplashScreen extends ConsumerStatefulWidget {
 }
 
 class _SplashScreenState extends ConsumerState<SplashScreen> {
+  String? _errorMessage;
+
   @override
   void initState() {
     super.initState();
@@ -40,7 +41,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     while (!authReady && attempts < maxAttempts) {
       await Future.delayed(const Duration(milliseconds: 100));
       if (!mounted) return;
-      
+
       final authState = ref.read(authProvider);
       if (authState is AuthAuthenticated || authState is AuthUnauthenticated || authState is AuthError) {
         authReady = true;
@@ -51,7 +52,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     if (!mounted) return;
 
     final authState = ref.read(authProvider);
-    
+
     if (authState is AuthAuthenticated) {
       try {
         final user = authState.user;
@@ -71,14 +72,23 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         }
       } catch (e) {
         if (!mounted) return;
-        context.go('/auth'); // Fallback to auth on error
+        setState(() => _errorMessage = 'Connection failed. Please check your network.');
       }
     } else if (authState is AuthUnauthenticated) {
       context.go('/auth');
     } else {
-      // Auth timed out or error - fallback to auth
-      context.go('/auth');
+      // Auth timed out or error - show error state
+      if (!mounted) return;
+      setState(() => _errorMessage = 'Connection failed. Please check your network.');
     }
+  }
+
+  void _retryInitialization() {
+    setState(() => _errorMessage = null);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(authProvider.notifier).initialize();
+      _navigateAfterAuthReady();
+    });
   }
 
   @override
@@ -90,18 +100,23 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       child: Scaffold(
         backgroundColor: t.bg0,
         body: SafeArea(
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Image.asset('assets/logo/tribe_logo.png', width: 200, height: 200, fit: BoxFit.cover),
-                const SizedBox(height: 20),
-                const Wordmark(size: 30),
-                const SizedBox(height: 6),
-                Text('v1.0.0', style: t.caption(size: 11)),
-              ],
-            ),
-          ),
+          child: _errorMessage != null
+              ? TribeErrorState(
+                  message: _errorMessage!,
+                  onRetry: _retryInitialization,
+                )
+              : Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image.asset('assets/logo/tribe_logo.png', width: 200, height: 200, fit: BoxFit.cover),
+                      const SizedBox(height: 20),
+                      const Wordmark(size: 30),
+                      const SizedBox(height: 6),
+                      Text('v1.0.0', style: t.caption(size: 11)),
+                    ],
+                  ),
+                ),
         ),
       ),
     );

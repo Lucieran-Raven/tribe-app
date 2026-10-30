@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,6 +9,7 @@ import '../models/user_model.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/search/user_search_card.dart';
 import '../widgets/feed/rant_card.dart';
+import '../widgets/common/skeletons.dart';
 import '../design/tribe_design.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
@@ -199,23 +199,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               ),
               Expanded(
                 child: _isLoading
-                    ? const Center(child: CupertinoActivityIndicator())
+                    ? const FeedSkeleton()
                     : _searchError != null
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text('Search failed: $_searchError', style: t.body(size: 13, weight: FontWeight.w600, color: t.inkFaint)),
-                                const SizedBox(height: 16),
-                                TextButton(
-                                  onPressed: () {
-                                    setState(() => _searchError = null);
-                                    _performSearch(_controller.text);
-                                  },
-                                  child: const Text('Retry'),
-                                ),
-                              ],
-                            ),
+                        ? TribeErrorState(
+                            message: 'Search failed',
+                            onRetry: () {
+                              setState(() => _searchError = null);
+                              _performSearch(_controller.text);
+                            },
                           )
                         : _controller.text.isNotEmpty && !_isLoading && visibleUsers.isEmpty && visibleRants.isEmpty
                             ? Center(

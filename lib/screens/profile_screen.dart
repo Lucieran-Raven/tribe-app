@@ -206,18 +206,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       radius: 6,
                     ),
                   ),
-                  error: (e, _) => Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text('Failed to load posts'),
-                        const SizedBox(height: 16),
-                        TextButton(
-                          onPressed: () => ref.invalidate(userRantsProvider(user.userId)),
-                          child: const Text('Retry'),
-                        ),
-                      ],
-                    ),
+                  error: (e, _) => TribeErrorState(
+                    message: 'Failed to load posts',
+                    onRetry: () => ref.invalidate(userRantsProvider(user.userId)),
                   ),
                   data: (rants) {
                     if (rants.isEmpty) {
@@ -286,18 +277,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
                 userRepliesAsync.when(
                   loading: () => const FeedSkeleton(),
-                  error: (e, _) => Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text('Failed to load replies'),
-                        const SizedBox(height: 16),
-                        TextButton(
-                          onPressed: () => ref.invalidate(userRepliesProvider(user.userId)),
-                          child: const Text('Retry'),
-                        ),
-                      ],
-                    ),
+                  error: (e, _) => TribeErrorState(
+                    message: 'Failed to load replies',
+                    onRetry: () => ref.invalidate(userRepliesProvider(user.userId)),
                   ),
                   data: (replies) {
                     if (replies.isEmpty) {
@@ -356,18 +338,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       radius: 6,
                     ),
                   ),
-                  error: (e, _) => Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text('Failed to load likes'),
-                        const SizedBox(height: 16),
-                        TextButton(
-                          onPressed: () => ref.invalidate(userLikesProvider(userId)),
-                          child: const Text('Retry'),
-                        ),
-                      ],
-                    ),
+                  error: (e, _) => TribeErrorState(
+                    message: 'Failed to load likes',
+                    onRetry: () => ref.invalidate(userLikesProvider(userId)),
                   ),
                   data: (likedRants) {
                     if (likedRants.isEmpty) {

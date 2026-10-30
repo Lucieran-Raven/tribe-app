@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import '../providers/user_profile_provider.dart';
 import '../services/rant_service.dart';
+import '../widgets/common/skeletons.dart';
 import '../design/tribe_design.dart';
 
 class BlockedAccountsScreen extends ConsumerStatefulWidget {
@@ -27,7 +28,7 @@ class _BlockedAccountsScreenState extends ConsumerState<BlockedAccountsScreen> {
         theme: t,
         child: Scaffold(
           backgroundColor: t.bg1,
-          body: const Center(child: CircularProgressIndicator()),
+          body: const FeedSkeleton(),
         ),
       );
     }
@@ -96,8 +97,28 @@ class _BlockedUserRow extends ConsumerWidget {
     final isProcessing = processingBlocks.contains(blockedUserId);
 
     return userAsync.when(
-      loading: () => const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator())),
-      error: (e, _) => ListTile(title: Text('User unavailable')),
+      loading: () => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+        child: Row(
+          children: [
+            const ShimmerBox(width: 34, height: 34, radius: 17),
+            const SizedBox(width: 12),
+            const ShimmerBox(width: 120, height: 14),
+          ],
+        ),
+      ),
+      error: (e, _) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: t.bg2,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: t.line),
+          ),
+          child: Text('This account is unavailable', style: t.body(size: 13, color: t.inkDim)),
+        ),
+      ),
       data: (user) {
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),

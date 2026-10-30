@@ -16,6 +16,7 @@ import '../../widgets/feed/full_image_viewer.dart';
 import '../../widgets/common/tap_scale.dart';
 import '../../widgets/common/mention_autocomplete.dart';
 import '../../widgets/common/mention_text.dart';
+import '../../widgets/common/skeletons.dart';
 import '../../design/tribe_design.dart';
 
 class RantDetailScreen extends ConsumerStatefulWidget {
@@ -161,13 +162,45 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
 
   List<Widget> _buildReplyChildren(AsyncValue<List<ReplyModel>> async, TribeTheme t, List<String> blocked) {
     return async.when(
-      loading: () => const [],
-      error: (error, stack) => const [],
+      loading: () => [
+        const SizedBox(height: 12),
+        ...List.generate(3, (_) => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                const ShimmerBox(width: 32, height: 32, radius: 16),
+                const SizedBox(width: 10),
+                const ShimmerBox(width: 80, height: 12),
+              ]),
+              const SizedBox(height: 10),
+              const ShimmerBox(width: double.infinity, height: 14),
+              const SizedBox(height: 6),
+              const ShimmerBox(width: 200, height: 14),
+            ],
+          ),
+        )),
+      ],
+      error: (error, stack) => [
+        const SizedBox(height: 12),
+        TribeErrorState(
+          message: 'Failed to load replies',
+          onRetry: () => ref.invalidate(repliesProvider(widget.rantId)),
+        ),
+      ],
       data: (replies) {
         final visibleReplies = replies.where((r) => !blocked.contains(r.userId)).toList();
         if (visibleReplies.isEmpty) {
           WidgetsBinding.instance.addPostFrameCallback((_) => _tryScrollToTarget(visibleReplies));
-          return const [];
+          return [
+            const SizedBox(height: 24),
+            const EmptyState(
+              icon: Icons.chat_bubble_outline,
+              headline: 'No replies yet',
+              sub: 'Be the first to respond.',
+            ),
+          ];
         }
         final widgets = <Widget>[
           Padding(
@@ -295,7 +328,29 @@ class _RantDetailScreenState extends ConsumerState<RantDetailScreen> {
                           if (snapshot.connectionState == ConnectionState.waiting) {
                             return const SizedBox(
                               height: 224,
-                              child: Center(child: CircularProgressIndicator()),
+                              child: Padding(
+                                padding: EdgeInsets.all(13),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(children: [
+                                      ShimmerBox(width: 38, height: 38, radius: 19),
+                                      SizedBox(width: 12),
+                                      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                        ShimmerBox(width: 100, height: 12),
+                                        SizedBox(height: 6),
+                                        ShimmerBox(width: 60, height: 10),
+                                      ]),
+                                    ]),
+                                    SizedBox(height: 12),
+                                    ShimmerBox(width: double.infinity, height: 14),
+                                    SizedBox(height: 8),
+                                    ShimmerBox(width: 250, height: 14),
+                                    SizedBox(height: 12),
+                                    ShimmerBox(width: double.infinity, height: 120, radius: 16),
+                                  ],
+                                ),
+                              ),
                             );
                           }
                           if (snapshot.hasError || (snapshot.connectionState == ConnectionState.done && !snapshot.hasData)) {

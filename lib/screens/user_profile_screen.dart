@@ -158,19 +158,10 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
               ),
               Expanded(
                 child: userAsync.when(
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text('Failed to load profile'),
-                        const SizedBox(height: 16),
-                        TextButton(
-                          onPressed: () => ref.invalidate(userProfileProvider(widget.userId)),
-                          child: const Text('Retry'),
-                        ),
-                      ],
-                    ),
+                  loading: () => const ProfileSkeleton(),
+                  error: (e, _) => TribeErrorState(
+                    message: 'Failed to load profile',
+                    onRetry: () => ref.invalidate(userProfileProvider(widget.userId)),
                   ),
                   data: (user) {
             final rants = rantsAsync.value ?? [];
@@ -313,18 +304,9 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                           radius: 6,
                         ),
                       ),
-                      error: (e, _) => Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Text('Failed to load posts'),
-                            const SizedBox(height: 16),
-                            TextButton(
-                              onPressed: () => ref.invalidate(userRantsProvider(widget.userId)),
-                              child: const Text('Retry'),
-                            ),
-                          ],
-                        ),
+                      error: (e, _) => TribeErrorState(
+                        message: 'Failed to load posts',
+                        onRetry: () => ref.invalidate(userRantsProvider(widget.userId)),
                       ),
                       data: (rants) {
                         if (rants.isEmpty) {
@@ -393,18 +375,9 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                     ),
                     repliesAsync.when(
                       loading: () => const FeedSkeleton(),
-                      error: (e, _) => Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Text('Failed to load replies'),
-                            const SizedBox(height: 16),
-                            TextButton(
-                              onPressed: () => ref.invalidate(userRepliesProvider(widget.userId)),
-                              child: const Text('Retry'),
-                            ),
-                          ],
-                        ),
+                      error: (e, _) => TribeErrorState(
+                        message: 'Failed to load replies',
+                        onRetry: () => ref.invalidate(userRepliesProvider(widget.userId)),
                       ),
                       data: (replies) {
                         if (replies.isEmpty) {
@@ -463,18 +436,9 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                           radius: 6,
                         ),
                       ),
-                      error: (e, _) => Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Text('Failed to load likes'),
-                            const SizedBox(height: 16),
-                            TextButton(
-                              onPressed: () => ref.invalidate(userLikesProvider(widget.userId)),
-                              child: const Text('Retry'),
-                            ),
-                          ],
-                        ),
+                      error: (e, _) => TribeErrorState(
+                        message: 'Failed to load likes',
+                        onRetry: () => ref.invalidate(userLikesProvider(widget.userId)),
                       ),
                       data: (likedRants) {
                         if (likedRants.isEmpty) {

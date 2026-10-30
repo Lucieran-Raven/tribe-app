@@ -24,7 +24,7 @@ class InboxScreen extends ConsumerWidget {
         theme: t,
         child: Scaffold(
           backgroundColor: t.bg1,
-          body: const Center(child: CircularProgressIndicator()),
+          body: const FeedSkeleton(),
         ),
       );
     }
@@ -55,18 +55,9 @@ class InboxScreen extends ConsumerWidget {
               ),
             ),
           ),
-          error: (error, stack) => Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text('Failed to load notifications: $error'),
-                const SizedBox(height: 16),
-                TextButton(
-                  onPressed: () => ref.invalidate(inboxProvider),
-                  child: const Text('Retry'),
-                ),
-              ],
-            ),
+          error: (error, stack) => TribeErrorState(
+            message: 'Failed to load notifications',
+            onRetry: () => ref.invalidate(inboxProvider),
           ),
           data: (notifications) {
             if (notifications.isEmpty) {
