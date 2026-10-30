@@ -313,7 +313,19 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                           radius: 6,
                         ),
                       ),
-                      error: (e, _) => const Center(child: Text('Failed to load posts')),
+                      error: (e, _) => Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text('Failed to load posts'),
+                            const SizedBox(height: 16),
+                            TextButton(
+                              onPressed: () => ref.invalidate(userRantsProvider(widget.userId)),
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        ),
+                      ),
                       data: (rants) {
                         if (rants.isEmpty) {
                           return const EmptyState(
@@ -381,7 +393,19 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                     ),
                     repliesAsync.when(
                       loading: () => const FeedSkeleton(),
-                      error: (e, _) => const Center(child: Text('Failed to load replies')),
+                      error: (e, _) => Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text('Failed to load replies'),
+                            const SizedBox(height: 16),
+                            TextButton(
+                              onPressed: () => ref.invalidate(userRepliesProvider(widget.userId)),
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        ),
+                      ),
                       data: (replies) {
                         if (replies.isEmpty) {
                           return const EmptyState(
@@ -439,7 +463,19 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                           radius: 6,
                         ),
                       ),
-                      error: (e, _) => const Center(child: Text('Failed to load likes')),
+                      error: (e, _) => Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text('Failed to load likes'),
+                            const SizedBox(height: 16),
+                            TextButton(
+                              onPressed: () => ref.invalidate(userLikesProvider(widget.userId)),
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        ),
+                      ),
                       data: (likedRants) {
                         if (likedRants.isEmpty) {
                           return const EmptyState(

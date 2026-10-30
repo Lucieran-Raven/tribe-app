@@ -3,19 +3,32 @@ import '../models/user_model.dart';
 import '../models/rant_model.dart';
 import '../models/reply_model.dart';
 import '../services/rant_service.dart';
+import 'auth_provider.dart';
 
 final userProfileProvider = FutureProvider.family<UserModel, String>((ref, userId) {
   return RantService().getUser(userId);
 });
 
 final userRantsProvider = StreamProvider.family<List<RantModel>, String>((ref, userId) {
+  final authState = ref.watch(authProvider);
+  if (authState is! AuthAuthenticated) {
+    return const Stream.empty();
+  }
   return RantService().streamUserRants(userId);
 });
 
 final userRepliesProvider = StreamProvider.family<List<ReplyModel>, String>((ref, userId) {
+  final authState = ref.watch(authProvider);
+  if (authState is! AuthAuthenticated) {
+    return const Stream.empty();
+  }
   return RantService().streamUserReplies(userId);
 });
 
 final userLikesProvider = StreamProvider.family<List<RantModel>, String>((ref, userId) {
+  final authState = ref.watch(authProvider);
+  if (authState is! AuthAuthenticated) {
+    return const Stream.empty();
+  }
   return RantService().streamUserLikes(userId);
 });

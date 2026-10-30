@@ -16,7 +16,7 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if true;
+      allow read: if isAuthenticated();
       allow create: if isOwner(userId)
         && (!('affiliations' in request.resource.data) || isValidAffiliationsArray(request.resource.data.affiliations));
       allow update: if isOwner(userId)
@@ -39,14 +39,14 @@ service cloud.firestore {
     }
 
     match /rants/{rantId} {
-      allow read: if true;
+      allow read: if isAuthenticated();
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow update: if isOwner(resource.data.userId)
         || (isAuthenticated() && changedKeys().hasOnly(['voterIds', 'karma', 'replyCount']));
       allow delete: if isOwner(resource.data.userId);
 
       match /votes/{voteId} {
-        allow read: if true;
+        allow read: if isAuthenticated();
         allow create: if isAuthenticated() && request.auth.uid == voteId;
         allow delete: if isAuthenticated()
           && (request.auth.uid == voteId
@@ -57,7 +57,7 @@ service cloud.firestore {
       }
 
       match /replies/{replyId} {
-        allow read: if true;
+        allow read: if isAuthenticated();
         allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
         allow update: if isOwner(resource.data.userId)
           || (isAuthenticated() && changedKeys().hasOnly(['voterIds', 'karma']));
@@ -67,7 +67,7 @@ service cloud.firestore {
                  == request.auth.uid);
 
         match /votes/{voteId} {
-          allow read: if true;
+          allow read: if isAuthenticated();
           allow create: if isAuthenticated() && request.auth.uid == voteId;
           allow delete: if isAuthenticated()
             && (request.auth.uid == voteId
@@ -86,12 +86,12 @@ service cloud.firestore {
 
     // CollectionGroup queries for user's replies
     match /{path=**}/replies/{replyId} {
-      allow read: if true;
+      allow read: if isAuthenticated();
     }
 
     // CollectionGroup queries for user's votes
     match /{path=**}/votes/{voteId} {
-      allow read: if true;
+      allow read: if isAuthenticated();
     }
 
     // CollectionGroup query support: notifications (inbox + avatar sync)
