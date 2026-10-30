@@ -11,7 +11,7 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<RantModel>>> {
 
   final Ref _ref;
   StreamSubscription? _subscription;
-  StreamSubscription? _authSubscription;
+  dynamic _authSubscription;
   bool _hasStartedStream = false;
 
   void _init() {
@@ -52,7 +52,9 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<RantModel>>> {
   @override
   void dispose() {
     _subscription?.cancel();
-    _authSubscription?.cancel();
+    if (_authSubscription != null && _authSubscription.close != null) {
+      _authSubscription.close();
+    }
     super.dispose();
   }
 
