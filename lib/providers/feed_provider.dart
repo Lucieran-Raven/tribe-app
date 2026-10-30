@@ -11,20 +11,22 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<RantModel>>> {
 
   final Ref _ref;
   StreamSubscription? _subscription;
-  dynamic _authSubscription;
+  ProviderSubscription<AuthState>? _authSubscription;
   bool _hasStartedStream = false;
 
   void _init() {
     // Listen to authProvider for auth state changes
     _authSubscription = _ref.listen<AuthState>(authProvider, (previous, next) {
+      if (!mounted) return;
+      
       if (next is AuthAuthenticated && !_hasStartedStream) {
         // Auth is ready, start feed stream
         _startFeedStream();
       } else if (next is AuthUnauthenticated) {
         // User signed out, clear feed
-        state = const AsyncValue.data([]);
         _subscription?.cancel();
         _hasStartedStream = false;
+        state = const AsyncValue.data([]);
       }
     }, fireImmediately: true);
 
@@ -41,9 +43,11 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<RantModel>>> {
     
     _subscription = RantService().streamFeed().listen(
       (rants) {
+        if (!mounted) return;
         state = AsyncValue.data(rants);
       },
       onError: (error, stack) {
+        if (!mounted) return;
         state = AsyncValue.error(error, stack);
       },
     );
@@ -52,13 +56,12 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<RantModel>>> {
   @override
   void dispose() {
     _subscription?.cancel();
-    if (_authSubscription != null && _authSubscription.close != null) {
-      _authSubscription.close();
-    }
+    _authSubscription?.close();
     super.dispose();
   }
 
   void updateRant(RantModel updatedRant) {
+    if (!mounted) return;
     final currentList = state.valueOrNull ?? [];
     state = AsyncValue.data([
       for (final r in currentList)
