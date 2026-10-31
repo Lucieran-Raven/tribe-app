@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -55,21 +56,27 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
     if (authState is AuthAuthenticated) {
       try {
-        final user = authState.user;
-        final authService = AuthService();
-        await authService.ensureUserDoc();
-        final doc = await FirebaseFirestore.instance.collection('users').doc(user.userId).get();
+        // Wrap post-auth network calls in a 5-second timeout to prevent hanging in Airplane mode
+        await Future(() async {
+          final user = authState.user;
+          final authService = AuthService();
+          await authService.ensureUserDoc();
+          final doc = await FirebaseFirestore.instance.collection('users').doc(user.userId).get();
 
-        // Store OneSignal playerId in user document
-        await OneSignal.login(user.userId);
-        await NotificationService().syncPlayerId(user.userId);
+          // Store OneSignal playerId in user document
+          await OneSignal.login(user.userId);
+          await NotificationService().syncPlayerId(user.userId);
 
+          if (!mounted) return;
+          if (doc.exists && doc.data()?['handle'] != null && doc.data()?['handle'] != '') {
+            context.go('/home');
+          } else {
+            context.go('/onboarding/1');
+          }
+        }).timeout(const Duration(seconds: 5));
+      } on TimeoutException catch (_) {
         if (!mounted) return;
-        if (doc.exists && doc.data()?['handle'] != null && doc.data()?['handle'] != '') {
-          context.go('/home');
-        } else {
-          context.go('/onboarding/1');
-        }
+        setState(() => _errorMessage = 'Connection failed. Please check your network.');
       } catch (e) {
         if (!mounted) return;
         setState(() => _errorMessage = 'Connection failed. Please check your network.');
