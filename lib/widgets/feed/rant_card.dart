@@ -14,6 +14,8 @@ import '../../widgets/common/tap_scale.dart';
 import '../../widgets/common/mention_text.dart';
 import 'full_image_viewer.dart';
 
+final Set<String> _processingLikes = {};
+
 class RantCard extends ConsumerStatefulWidget {
   final RantModel rant;
 
@@ -210,6 +212,10 @@ class _RantCardState extends ConsumerState<RantCard> {
                     Toast.warning(context, "You can't like your own post");
                     return;
                   }
+                  if (_processingLikes.contains(widget.rant.rantId)) {
+                    return;
+                  }
+                  _processingLikes.add(widget.rant.rantId);
                   final optimisticRant = widget.rant.copyWith(
                     voterIds: isLiked
                       ? widget.rant.voterIds.where((id) => id != currentUserId).toList()
@@ -223,6 +229,8 @@ class _RantCardState extends ConsumerState<RantCard> {
                     if (context.mounted) {
                       Toast.error(context, 'Failed to like: $e');
                     }
+                  } finally {
+                    _processingLikes.remove(widget.rant.rantId);
                   }
                 },
               ),

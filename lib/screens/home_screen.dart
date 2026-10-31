@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/feed_provider.dart';
@@ -57,7 +58,10 @@ class HomeScreen extends ConsumerWidget {
 
                   return RefreshIndicator(
                     onRefresh: () async {
-                      ref.invalidate(feedProvider);
+                      await Future(() async {
+                        ref.invalidate(feedProvider);
+                        await Future.delayed(const Duration(milliseconds: 500));
+                      }).timeout(const Duration(seconds: 5));
                     },
                     child: ListView.builder(
                       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,

@@ -1,9 +1,11 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../config/affiliations_seed.dart';
 import '../../config/country_constants.dart';
 import '../../models/affiliation_model.dart';
@@ -16,7 +18,6 @@ import '../../design/tribe_design.dart';
 import '../../widgets/common/avatar_cropper.dart';
 import '../../utils/affiliation_sort.dart';
 import '../../utils/custom_interest_utils.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -266,50 +267,53 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
     try {
       if (_pickedAvatar != null && user != null) {
-        final newAvatarUrl = await StorageService().uploadAvatar(_pickedAvatar!, user.userId);
+        // Wrap batch operations in 15-second timeout to prevent indefinite hang
+        await Future(() async {
+          final newAvatarUrl = await StorageService().uploadAvatar(_pickedAvatar!, user.userId);
 
-        // 1. Update user document
-        await FirebaseFirestore.instance.collection('users').doc(user.userId).update({
-          'avatarUrl': newAvatarUrl,
-        });
+          // 1. Update user document
+          await FirebaseFirestore.instance.collection('users').doc(user.userId).update({
+            'avatarUrl': newAvatarUrl,
+          });
 
-        // 2. Batch update ALL user's rants
-        final rantsSnapshot = await FirebaseFirestore.instance
-            .collection('rants')
-            .where('userId', isEqualTo: user.userId)
-            .get();
-        final batch = FirebaseFirestore.instance.batch();
-        for (final doc in rantsSnapshot.docs) {
-          batch.update(doc.reference, {'avatarUrl': newAvatarUrl});
-        }
+          // 2. Batch update ALL user's rants
+          final rantsSnapshot = await FirebaseFirestore.instance
+              .collection('rants')
+              .where('userId', isEqualTo: user.userId)
+              .get();
+          final batch = FirebaseFirestore.instance.batch();
+          for (final doc in rantsSnapshot.docs) {
+            batch.update(doc.reference, {'avatarUrl': newAvatarUrl});
+          }
 
-        // 3. Batch update ALL user's replies (across all rants)
-        final repliesSnapshot = await FirebaseFirestore.instance
-            .collectionGroup('replies')
-            .where('userId', isEqualTo: user.userId)
-            .get();
-        for (final doc in repliesSnapshot.docs) {
-          batch.update(doc.reference, {'avatarUrl': newAvatarUrl});
-        }
+          // 3. Batch update ALL user's replies (across all rants)
+          final repliesSnapshot = await FirebaseFirestore.instance
+              .collectionGroup('replies')
+              .where('userId', isEqualTo: user.userId)
+              .get();
+          for (final doc in repliesSnapshot.docs) {
+            batch.update(doc.reference, {'avatarUrl': newAvatarUrl});
+          }
 
-        // 4. Batch update notifications where this user is the sender
-        final notificationsSnapshot = await FirebaseFirestore.instance
-            .collectionGroup('notifications')
-            .where('fromUserId', isEqualTo: user.userId)
-            .get();
-        for (final doc in notificationsSnapshot.docs) {
-          batch.update(doc.reference, {'fromAvatarUrl': newAvatarUrl});
-        }
+          // 4. Batch update notifications where this user is the sender
+          final notificationsSnapshot = await FirebaseFirestore.instance
+              .collectionGroup('notifications')
+              .where('fromUserId', isEqualTo: user.userId)
+              .get();
+          for (final doc in notificationsSnapshot.docs) {
+            batch.update(doc.reference, {'fromAvatarUrl': newAvatarUrl});
+          }
 
-        await batch.commit();
+          await batch.commit();
 
-        // 5. Clear image cache so new image loads immediately
-        PaintingBinding.instance.imageCache.clear();
+          // 5. Clear image cache so new image loads immediately
+          PaintingBinding.instance.imageCache.clear();
 
-        // 6. Refresh auth state
-        final freshUserDoc = await FirebaseFirestore.instance.collection('users').doc(user.userId).get();
-        final freshUser = UserModel.fromJson(freshUserDoc.data()!);
-        ref.read(authProvider.notifier).updateUser(freshUser);
+          // 6. Refresh auth state
+          final freshUserDoc = await FirebaseFirestore.instance.collection('users').doc(user.userId).get();
+          final freshUser = UserModel.fromJson(freshUserDoc.data()!);
+          ref.read(authProvider.notifier).updateUser(freshUser);
+        }).timeout(const Duration(seconds: 15));
       }
 
       await ref.read(onboardingProvider.notifier).updateProfile(
@@ -324,6 +328,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         Toast.success(context, 'Profile updated');
         ref.invalidate(userProfileProvider(user?.userId ?? ''));
         context.go('/user/${user?.userId}');
+      }
+    } on TimeoutException catch (_) {
+      if (mounted) {
+        Toast.error(context, 'Update timed out. Please try again.');
       }
     } catch (e) {
       if (mounted) {

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -27,9 +28,25 @@ class AuthProvider extends StateNotifier<AuthState> {
   final AuthService _authService;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  StreamSubscription<User?>? _authSubscription;
 
   AuthProvider(this._authService) : super(AuthInitial()) {
     // Don't auto-initialize - call initialize() explicitly
+    _listenToAuthChanges();
+  }
+
+  void _listenToAuthChanges() {
+    _authSubscription = _auth.authStateChanges().listen((user) {
+      if (user == null && state is AuthAuthenticated) {
+        // Firebase silently signed out the user (token expiry, console deletion, etc.)
+        _performCleanLogout();
+      }
+    });
+  }
+
+  void _performCleanLogout() {
+    OneSignal.logout();
+    state = AuthUnauthenticated();
   }
 
   Future<void> initialize() async {
@@ -93,6 +110,12 @@ class AuthProvider extends StateNotifier<AuthState> {
 
   void updateUser(UserModel user) {
     state = AuthAuthenticated(user);
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
   }
 }
 
