@@ -35,10 +35,17 @@ android {
     signingConfigs {
         create("release") {
             if (keystorePropertiesFile.exists()) {
-                keyAlias = keystoreProperties["keyAlias"] as String
-                keyPassword = keystoreProperties["keyPassword"] as String
-                storeFile = file(keystoreProperties["storeFile"] as String)
-                storePassword = keystoreProperties["storePassword"] as String
+                val keyAliasProp = keystoreProperties["keyAlias"]
+                val keyPasswordProp = keystoreProperties["keyPassword"]
+                val storeFileProp = keystoreProperties["storeFile"]
+                val storePasswordProp = keystoreProperties["storePassword"]
+                
+                if (keyAliasProp != null && keyPasswordProp != null && storeFileProp != null && storePasswordProp != null) {
+                    keyAlias = keyAliasProp.toString()
+                    keyPassword = keyPasswordProp.toString()
+                    storeFile = file(storeFileProp.toString())
+                    storePassword = storePasswordProp.toString()
+                }
             }
         }
     }
@@ -50,7 +57,7 @@ android {
             }
         }
         debug {
-            signingConfig = signingConfigs.getByName("debug")
+            // Debug uses default debug keystore, ignore key.properties
         }
     }
 }
