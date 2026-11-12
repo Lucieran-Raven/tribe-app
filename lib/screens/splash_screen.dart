@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
+import 'package:lottie/lottie.dart';
 import '../design/tribe_design.dart';
 import '../services/auth_service.dart';
 import '../services/notification_service.dart';
@@ -31,8 +32,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   Future<void> _navigateAfterAuthReady() async {
-    // Wait minimum 2 seconds for brand exposure
-    await Future.delayed(const Duration(seconds: 2));
+    // Wait minimum 3 seconds for brand exposure (animation is 2.8s, +0.2s breathe on final frame)
+    await Future.delayed(const Duration(seconds: 3));
 
     // Wait up to 5 more seconds for auth initialization (7 second total timeout)
     bool authReady = false;
@@ -108,15 +109,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         backgroundColor: const Color(0xFF000000), // Void #000000
         body: Stack(
           children: [
-            // Full splash mock image edge-to-edge
-            Center(
-              child: Image.asset(
-                'assets/branding/splash_mock.jpg',
-                fit: BoxFit.contain,
-                width: double.infinity,
-                height: double.infinity,
+            // Lottie animation - full screen, aspect-fill
+            if (_errorMessage == null)
+              Lottie.asset(
+                'assets/branding/TRIBE_Splash.json',
+                fit: BoxFit.cover,
+                repeat: false,
+                animate: true,
               ),
-            ),
             // Error state overlay (if any)
             if (_errorMessage != null)
               SafeArea(

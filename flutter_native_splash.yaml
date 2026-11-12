@@ -1,0 +1,7 @@
+flutter_native_splash:
+  color: "#000000"
+  # We leave 'image' blank so the native splash is pure black. 
+  # Flutter will draw the wordmark on pure black a split-second later, creating a seamless transition.
+  android_12:
+    color: "#000000"
+    # icon_background_color: "#000000" # Optional, ensures the icon background is also black if the OS forces an icon.
