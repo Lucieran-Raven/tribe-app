@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Modify this file to customize your launch splash screen -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Pure Black Background -->
     <item android:drawable="@color/splash_background" />
-
-    <!-- TRIBE logo centered -->
+    
+    <!-- Centered TRIBE Wordmark (matching Flutter splash) -->
     <item>
         <bitmap
             android:gravity="center"
-            android:src="@mipmap/ic_launcher" />
+            android:src="@drawable/tribe_wordmark" />
     </item>
 </layer-list>

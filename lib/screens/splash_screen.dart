@@ -105,25 +105,27 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     return TribeThemeScope(
       theme: t,
       child: Scaffold(
-        backgroundColor: t.bg0,
-        body: SafeArea(
-          child: _errorMessage != null
-              ? TribeErrorState(
+        backgroundColor: const Color(0xFF000000), // Void #000000
+        body: Stack(
+          children: [
+            // Full splash mock image edge-to-edge
+            Center(
+              child: Image.asset(
+                'assets/branding/splash_mock.jpg',
+                fit: BoxFit.contain,
+                width: double.infinity,
+                height: double.infinity,
+              ),
+            ),
+            // Error state overlay (if any)
+            if (_errorMessage != null)
+              SafeArea(
+                child: TribeErrorState(
                   message: _errorMessage!,
                   onRetry: _retryInitialization,
-                )
-              : Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Image.asset('assets/logo/tribe_logo.png', width: 200, height: 200, fit: BoxFit.cover),
-                      const SizedBox(height: 20),
-                      const Wordmark(size: 30),
-                      const SizedBox(height: 6),
-                      Text('v1.0.0', style: t.caption(size: 11)),
-                    ],
-                  ),
                 ),
+              ),
+          ],
         ),
       ),
     );
