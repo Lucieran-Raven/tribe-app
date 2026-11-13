@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../design/tribe_design.dart';
-import '../../widgets/onboarding/onboarding_page_indicator.dart';
 import '../../providers/onboarding_provider.dart';
 
 class OnboardingWelcomeScreen extends ConsumerStatefulWidget {
@@ -28,70 +28,82 @@ class _OnboardingWelcomeScreenState extends ConsumerState<OnboardingWelcomeScree
     return TribeThemeScope(
       theme: t,
       child: Scaffold(
-        backgroundColor: t.bg1,
+        backgroundColor: const Color(0xFF000000),
         body: SafeArea(
           child: Column(
             children: [
-              // Header row with indicator
               Padding(
-                padding: const EdgeInsets.fromLTRB(18, 16, 18, 6),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Opacity(
-                      opacity: 0,
-                      child: IconBtn(icon: Icons.arrow_back, onTap: () => context.go('/onboarding/1')),
-                    ),
-                    const OnboardingPageIndicator(activeIndex: 0),
-                    const SizedBox(width: 20),
-                  ],
+                padding: const EdgeInsets.only(top: 24),
+                child: Text(
+                  '01 / WELCOME',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 2.0,
+                    color: const Color(0xFF8F8A8B),
+                  ),
                 ),
               ),
-              // Vertically centered cluster
               Expanded(
                 child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 10, 24, 26),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Logo container
-                        Container(
-                          padding: const EdgeInsets.all(5),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(26),
-                            border: Border.all(color: t.lineStrong),
-                            boxShadow: [BoxShadow(color: t.gold.withValues(alpha: 0.16), blurRadius: 34, spreadRadius: 2)],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(22),
-                            child: Image.asset('assets/logo/tribe_logo.png', width: 104, height: 104, fit: BoxFit.cover),
-                          ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Image.asset(
+                        'assets/branding/tribe_wordmark_4k.png',
+                        width: MediaQuery.of(context).size.width * 0.72,
+                        fit: BoxFit.contain,
+                      ),
+                      const SizedBox(height: 32),
+                      Text(
+                        'SAY THE QUIET PART.',
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        style: GoogleFonts.anton(
+                          fontSize: 44,
+                          height: 1.05,
+                          color: const Color(0xFFFFFFFF),
                         ),
-                        const SizedBox(height: 18),
-                        // Headline
-                        Text(
-                          'Say the\nquiet part.',
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: 300,
+                        child: Text(
+                          'TRIBE is where your campus tells the truth. Post rants and confessions you\'d never say under your real name.',
                           textAlign: TextAlign.center,
-                          style: t.display(size: 22, color: t.milk).copyWith(height: 1.2),
-                        ),
-                        const SizedBox(height: 18),
-                        // Description
-                        SizedBox(
-                          width: 250,
-                          child: Text(
-                            'TRIBE is where your campus tells the truth. Post rants and confessions you\'d never say under your real name.',
-                            textAlign: TextAlign.center,
-                            style: t.body(size: 13.5, weight: FontWeight.w500, color: t.inkDim).copyWith(height: 1.6),
+                          style: GoogleFonts.inter(
+                            fontSize: 15,
+                            height: 1.46,
+                            color: const Color(0xFFF4F1F0),
                           ),
                         ),
-                        const SizedBox(height: 10),
-                        // Get Started button
-                        ClayButtonPrimary(
-                          label: 'Get started',
-                          onTap: () => context.go('/onboarding/2'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                child: GestureDetector(
+                  onTap: () => context.go('/onboarding/2'),
+                  child: Container(
+                    width: double.infinity,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFFFFF),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Center(
+                      child: Text(
+                        'Get started',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF0E0C0D),
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
