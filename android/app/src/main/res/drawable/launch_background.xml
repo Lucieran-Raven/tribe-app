@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Modify this file to customize your launch splash screen -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Pure Black Background -->
     <item android:drawable="@color/splash_background" />
     
-    <!-- Centered TRIBE Wordmark (1:1, no stretching) -->
+    <!-- Centered TRIBE Wordmark (4K High Resolution) -->
     <item>
         <bitmap
             android:gravity="center"
-            android:src="@drawable/tribe_splash_288" />
+            android:src="@drawable/tribe_wordmark_4k" />
     </item>
 </layer-list>
