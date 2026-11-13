@@ -3,11 +3,11 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../design/tribe_design.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/storage_service.dart';
 import '../../models/user_model.dart';
-import '../../widgets/onboarding/onboarding_page_indicator.dart';
 import '../../widgets/common/avatar_cropper.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -20,147 +20,143 @@ class OnboardingAvatarScreen extends ConsumerStatefulWidget {
 
 class _OnboardingAvatarScreenState extends ConsumerState<OnboardingAvatarScreen> {
   File? _pickedImage;
+  bool _isUploading = false;
 
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final user = authState is AuthAuthenticated ? authState.user : null;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final t = TribeTheme(isDark);
 
-    return TribeThemeScope(
-      theme: t,
-      child: Scaffold(
-        backgroundColor: t.bg1,
-        body: SafeArea(
-          child: Column(
-            children: [
-              // Header row with indicator
-              Padding(
-                padding: const EdgeInsets.fromLTRB(18, 16, 18, 6),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Scaffold(
+      backgroundColor: const Color(0xFF000000),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Header row
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Color(0xFF8F8A8B), size: 24),
+                    onPressed: () => context.go('/onboarding/1'),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    '02 / AVATAR',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 2.0,
+                      color: const Color(0xFF8F8A8B),
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Centered content
+            Expanded(
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    IconBtn(icon: Icons.arrow_back, onTap: () => context.go('/onboarding/1')),
-                    const OnboardingPageIndicator(activeIndex: 1),
-                    const SizedBox(width: 20),
+                    // Avatar circle
+                    Stack(
+                      alignment: Alignment.bottomRight,
+                      children: [
+                        Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: const Color(0xFF1B1819),
+                            border: Border.all(color: const Color(0xFF2B2627), width: 1),
+                          ),
+                          child: ClipOval(
+                            child: _pickedImage != null
+                                ? Image.file(_pickedImage!, fit: BoxFit.cover, width: 120, height: 120)
+                                : (user?.avatarUrl != null
+                                    ? Image.network(
+                                        user!.avatarUrl!,
+                                        fit: BoxFit.cover,
+                                        width: 120,
+                                        height: 120,
+                                        errorBuilder: (_, __, ___) => const Icon(Icons.camera_alt_outlined, size: 40, color: Color(0xFF8F8A8B)),
+                                      )
+                                    : const Icon(Icons.camera_alt_outlined, size: 40, color: Color(0xFF8F8A8B))),
+                          ),
+                        ),
+                        // Camera FAB
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: GestureDetector(
+                            onTap: () async {
+                              final picker = ImagePicker();
+                              final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+                              if (pickedFile != null) {
+                                try {
+                                  final cropped = await AvatarCropper.crop(File(pickedFile.path), context);
+                                  if (cropped != null && mounted) {
+                                    setState(() => _pickedImage = cropped);
+                                  }
+                                } catch (e) {
+                                  if (mounted) {
+                                    Toast.error(context, 'Failed to crop image: $e');
+                                  }
+                                }
+                              }
+                            },
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: const Color(0xFF6D001A),
+                                border: Border.all(color: const Color(0xFF000000), width: 2),
+                              ),
+                              child: const Icon(Icons.add, color: Color(0xFFFFFFFF), size: 24),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 32),
+                    // Headline
+                    Text(
+                      'PICK A FACE.',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.anton(fontSize: 40, height: 1.05, color: const Color(0xFFFFFFFF)),
+                    ),
+                    const SizedBox(height: 12),
+                    // Subtext
+                    SizedBox(
+                      width: 280,
+                      child: Text(
+                        "It doesn't have to be your face.\nJust yours.",
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(fontSize: 15, height: 1.46, color: const Color(0xFF8F8A8B)),
+                      ),
+                    ),
                   ],
                 ),
               ),
-              // Centered cluster
-              Expanded(
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 10, 24, 26),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Headline
-                        Text(
-                          'Pick a face',
-                          style: t.display(size: 19, color: t.milk),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 10),
-                        // Subtext
-                        Text(
-                          "It doesn't have to be your face. Just yours.",
-                          style: t.body(size: 13, weight: FontWeight.w500, color: t.inkDim),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 18),
-                        // Avatar preview
-                        GestureDetector(
-                          onTap: () async {
-                            final picker = ImagePicker();
-                            final pickedFile = await picker.pickImage(
-                              source: ImageSource.gallery,
-                            );
-                            if (pickedFile != null) {
-                              try {
-                                final cropped = await AvatarCropper.crop(File(pickedFile.path), context);
-                                if (cropped != null && mounted) {
-                                  setState(() => _pickedImage = cropped);
-                                }
-                              } catch (e) {
-                                if (mounted) {
-                                  Toast.error(context, 'Failed to crop image: $e');
-                                }
-                              }
-                            }
-                          },
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              Container(
-                                width: 100,
-                                height: 100,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: t.bg2,
-                                  border: Border.all(color: t.line),
-                                  boxShadow: t.clayOut,
-                                ),
-                                alignment: Alignment.center,
-                                child: _pickedImage != null
-                                    ? CircleAvatar(
-                                        radius: 50,
-                                        backgroundImage: FileImage(_pickedImage!),
-                                      )
-                                    : (user?.avatarUrl != null
-                                        ? CircleAvatar(
-                                            radius: 50,
-                                            backgroundImage: NetworkImage(user!.avatarUrl!),
-                                          )
-                                        : Icon(Icons.camera_alt_outlined, size: 26, color: t.inkFaint)),
-                              ),
-                              Positioned(
-                                bottom: -4,
-                                right: -4,
-                                child: SizedBox(
-                                  width: 48,
-                                  height: 48,
-                                  child: GestureDetector(
-                                    onTap: () async {
-                                      final picker = ImagePicker();
-                                      final pickedFile = await picker.pickImage(
-                                        source: ImageSource.gallery,
-                                      );
-                                      if (pickedFile != null) {
-                                        try {
-                                          final cropped = await AvatarCropper.crop(File(pickedFile.path), context);
-                                          if (cropped != null && mounted) {
-                                            setState(() => _pickedImage = cropped);
-                                          }
-                                        } catch (e) {
-                                          if (mounted) {
-                                            Toast.error(context, 'Failed to crop image: $e');
-                                          }
-                                        }
-                                      }
-                                    },
-                                    child: Container(
-                                      width: 30,
-                                      height: 30,
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(colors: [t.milk, t.milkDim], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                                        shape: BoxShape.circle,
-                                        boxShadow: t.clayMilkOut,
-                                      ),
-                                      alignment: Alignment.center,
-                                      child: Icon(Icons.camera_alt, size: 13, color: t.bg0),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        // Next button
-                        ClayButtonPrimary(
-                          label: 'Next',
-                          onTap: () async {
+            ),
+            // Bottom actions
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Next button
+                  GestureDetector(
+                    onTap: _isUploading
+                        ? null
+                        : () async {
+                            setState(() => _isUploading = true);
                             final authState = ref.read(authProvider);
                             if (authState is AuthAuthenticated && _pickedImage != null) {
                               try {
@@ -175,27 +171,45 @@ class _OnboardingAvatarScreenState extends ConsumerState<OnboardingAvatarScreen>
                                 if (context.mounted) {
                                   Toast.error(context, 'Upload failed: $e');
                                 }
-                                return; // Stop navigation if upload fails
+                                setState(() => _isUploading = false);
+                                return;
                               }
                             }
-                            if (context.mounted) context.go('/onboarding/3');
+                            if (context.mounted) {
+                              setState(() => _isUploading = false);
+                              context.go('/onboarding/3');
+                            }
                           },
-                        ),
-                        const SizedBox(height: 10),
-                        // Skip button
-                        ClayButtonSecondary(
-                          label: 'Skip for now',
-                          plain: true,
-                          textColor: t.inkFaint,
-                          onTap: () => context.go('/onboarding/3'),
-                        ),
-                      ],
+                    child: Container(
+                      width: double.infinity,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: _isUploading ? const Color(0xFF1B1819) : const Color(0xFFFFFFFF),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Center(
+                        child: _isUploading
+                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Color(0xFF8F8A8B), strokeWidth: 2))
+                            : Text('NEXT', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, letterSpacing: 1.4, color: const Color(0xFF0E0C0D))),
+                      ),
                     ),
                   ),
-                ),
+                  const SizedBox(height: 16),
+                  // Skip button
+                  GestureDetector(
+                    onTap: () => context.go('/onboarding/3'),
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      width: double.infinity,
+                      height: 44,
+                      alignment: Alignment.center,
+                      child: Text('SKIP FOR NOW', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, letterSpacing: 1.4, color: const Color(0xFF8F8A8B))),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
