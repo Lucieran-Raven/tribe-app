@@ -26,8 +26,25 @@ class HomeScreen extends ConsumerWidget {
           children: [
             SafeArea(
               bottom: false,
-              child: GlassAppBar(
-                title: const Wordmark(size: 17),
+              child: Container(
+                height: 56,
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF000000),
+                  border: Border(bottom: BorderSide(color: Color(0xFF2B2627), width: 1)),
+                ),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 160,
+                      height: 34,
+                      child: Image.asset(
+                        'assets/branding/tribe_wordmark_header.png',
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             Expanded(
@@ -57,6 +74,7 @@ class HomeScreen extends ConsumerWidget {
                   }
 
                   return RefreshIndicator(
+                    color: Colors.white,
                     onRefresh: () async {
                       await Future(() async {
                         ref.invalidate(feedProvider);
@@ -65,7 +83,7 @@ class HomeScreen extends ConsumerWidget {
                     },
                     child: ListView.builder(
                       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      padding: const EdgeInsets.fromLTRB(0, 4, 0, 24),
                       itemCount: visibleRants.length,
                       addAutomaticKeepAlives: true,
                       addRepaintBoundaries: true,

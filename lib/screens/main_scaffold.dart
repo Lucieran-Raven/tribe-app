@@ -149,38 +149,13 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
               ],
             ),
             ),
-          bottomNavigationBar: BottomNavBar(
-            tab: currentTab,
+          bottomNavigationBar: _V3BottomNavBar(
+            currentIndex: _currentIndex,
             unreadCount: unreadCount,
-            onTab: (tab) {
-              // Handle create tab - show compose sheet
-              if (tab == TribeTab.create) {
-                showComposeSheet();
-                return;
-              }
-
+            onTab: (newIndex) {
               // Mark inbox as read when navigating to it
-              if (tab == TribeTab.inbox) {
+              if (newIndex == 2) {
                 markInboxAsRead();
-              }
-
-              // Map TribeTab back to _selectedIndex
-              int newIndex;
-              switch (tab) {
-                case TribeTab.home:
-                  newIndex = 0;
-                  break;
-                case TribeTab.search:
-                  newIndex = 1;
-                  break;
-                case TribeTab.inbox:
-                  newIndex = 2;
-                  break;
-                case TribeTab.profile:
-                  newIndex = 3;
-                  break;
-                default:
-                  newIndex = 0;
               }
 
               // Reset search when leaving search tab
@@ -193,6 +168,92 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
             onCreate: showComposeSheet,
           ),
         ),
+        ),
+      ),
+    );
+  }
+}
+
+class _V3BottomNavBar extends StatelessWidget {
+  final int currentIndex;
+  final ValueChanged<int> onTab;
+  final VoidCallback onCreate;
+  final int unreadCount;
+  const _V3BottomNavBar({required this.currentIndex, required this.onTab, required this.onCreate, this.unreadCount = 0});
+
+  @override
+  Widget build(BuildContext context) {
+    Widget navItem(IconData icon, int index, {int badgeCount = 0}) {
+      final active = currentIndex == index;
+      return GestureDetector(
+        onTap: () => onTab(index),
+        behavior: HitTestBehavior.opaque,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: 44,
+              height: 36,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: active ? const Color(0xFFFFFFFF) : Colors.transparent,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Icon(icon, size: 20, color: active ? const Color(0xFF0E0C0D) : const Color(0xFF8F8A8B)),
+            ),
+            if (badgeCount > 0)
+              Positioned(
+                right: -4,
+                top: -4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFF3B30),
+                    borderRadius: BorderRadius.all(Radius.circular(10)),
+                  ),
+                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                  child: Text(
+                    badgeCount > 99 ? '99+' : '$badgeCount',
+                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+    }
+
+    return SafeArea(
+      top: false,
+      bottom: true,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        decoration: const BoxDecoration(
+          color: Color(0xFF000000),
+          border: Border(top: BorderSide(color: Color(0xFF2B2627), width: 1)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            navItem(Icons.home_rounded, 0),
+            navItem(Icons.search_rounded, 1),
+            GestureDetector(
+              onTap: onCreate,
+              behavior: HitTestBehavior.opaque,
+              child: Container(
+                width: 48,
+                height: 48,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF6D001A),
+                  borderRadius: BorderRadius.all(Radius.circular(4)),
+                ),
+                child: const Icon(Icons.add, size: 24, color: Color(0xFFFFFFFF)),
+              ),
+            ),
+            navItem(Icons.mail_outline_rounded, 2, badgeCount: unreadCount),
+            navItem(Icons.person_outline_rounded, 3),
+          ],
         ),
       ),
     );

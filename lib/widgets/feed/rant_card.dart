@@ -35,8 +35,14 @@ class _RantCardState extends ConsumerState<RantCard> {
     final isOwnPost = authState is AuthAuthenticated && authState.user.userId == widget.rant.userId;
     final t = TribeThemeScope.of(context);
 
-    return NoteCard(
-      margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0E0C0D),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: const Color(0xFF2B2627), width: 1),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -156,7 +162,11 @@ class _RantCardState extends ConsumerState<RantCard> {
             child: MentionText(
               content: widget.rant.content,
               style: t.body(size: 14.5, weight: FontWeight.w500, color: t.ink),
-              mentionStyle: t.body(size: 14.5, weight: FontWeight.w600, color: t.gold),
+              mentionStyle: const TextStyle(
+                fontSize: 14.5,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFFFF3B30),
+              ),
               onMentionTap: (handle) async {
                 final users = await SearchService().searchUsers(handle);
                 final exactMatch = users.where((u) => u.handle?.toLowerCase() == handle.toLowerCase()).toList();
@@ -191,16 +201,24 @@ class _RantCardState extends ConsumerState<RantCard> {
           // Action row
           Row(
             children: [
-              ActionPill(
-                icon: Icons.chat_bubble_outline,
-                label: '${widget.rant.replyCount}',
-                onTap: () {
-                  GoRouter.of(context).push('/rant/${widget.rant.rantId}');
-                },
+              GestureDetector(
+                onTap: () => GoRouter.of(context).push('/rant/${widget.rant.rantId}'),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1B1819),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: const Color(0xFF2B2627), width: 1),
+                  ),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    const Icon(Icons.chat_bubble_outline, size: 15, color: Color(0xFF8F8A8B)),
+                    const SizedBox(width: 6),
+                    Text('${widget.rant.replyCount}', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5, color: Color(0xFFFFFFFF))),
+                  ]),
+                ),
               ),
               const SizedBox(width: 12),
-              ActionPill(
-                icon: Icons.thumb_up_outlined,
+              _V3LikePill(
                 label: '$karma',
                 liked: isLiked,
                 onTap: () async {
@@ -212,23 +230,20 @@ class _RantCardState extends ConsumerState<RantCard> {
                     Toast.warning(context, "You can't like your own post");
                     return;
                   }
-                  if (_processingLikes.contains(widget.rant.rantId)) {
-                    return;
-                  }
+                  if (_processingLikes.contains(widget.rant.rantId)) return;
+
                   _processingLikes.add(widget.rant.rantId);
                   final optimisticRant = widget.rant.copyWith(
                     voterIds: isLiked
-                      ? widget.rant.voterIds.where((id) => id != currentUserId).toList()
-                      : [...widget.rant.voterIds, currentUserId],
+                        ? widget.rant.voterIds.where((id) => id != currentUserId).toList()
+                        : [...widget.rant.voterIds, currentUserId],
                   );
                   ref.read(feedProvider.notifier).updateRant(optimisticRant);
                   try {
                     await RantService().toggleVote(widget.rant.rantId, currentUserId);
                   } catch (e) {
                     ref.read(feedProvider.notifier).updateRant(widget.rant);
-                    if (context.mounted) {
-                      Toast.error(context, 'Failed to like: $e');
-                    }
+                    if (context.mounted) Toast.error(context, 'Failed to like: $e');
                   } finally {
                     _processingLikes.remove(widget.rant.rantId);
                   }
@@ -241,4 +256,50 @@ class _RantCardState extends ConsumerState<RantCard> {
     );
   }
 
+}
+
+class _V3LikePill extends StatelessWidget {
+  final String label;
+  final bool liked;
+  final VoidCallback onTap;
+  const _V3LikePill({required this.label, required this.liked, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedScale(
+        scale: 0.95,
+        duration: const Duration(milliseconds: 100),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1B1819),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(
+              color: liked ? const Color(0xFFFF3B30) : const Color(0xFF2B2627),
+              width: 1,
+            ),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(
+              liked ? Icons.thumb_up : Icons.thumb_up_outlined,
+              size: 15,
+              color: liked ? const Color(0xFFFF3B30) : const Color(0xFF8F8A8B),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 12.5,
+                color: liked ? const Color(0xFFFF3B30) : const Color(0xFFFFFFFF),
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
 }
