@@ -533,15 +533,11 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
             ? '🌐 Other'
             : '${CountryConstants.isoToFlag[_selectedCountryIso] ?? ''} '
               '${CountryConstants.isoToName[_selectedCountryIso] ?? ''}';
-    return TribeChip(
-      label: label,
-      active: _selectedCountryIso != 'ALL',
-      trailing: Icon(
-        Icons.expand_more,
-        size: 12,
-        color: _selectedCountryIso != 'ALL' ? t.gold : t.inkDim,
-      ),
-      onTap: () => _openCountrySheet(context),
+
+    return _buildV3CountryChip(
+      label,
+      _selectedCountryIso != 'ALL',
+      () => _openCountrySheet(context),
     );
   }
 
@@ -596,11 +592,11 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        _countryOption(ctx, t, 'ALL', '🌍', 'All Countries'),
+                        _countryOption(ctx, 'ALL', '🌍', 'All Countries'),
                         ...CountryConstants.nameToIso.entries.map((e) =>
-                          _countryOption(ctx, t, e.value,
+                          _countryOption(ctx, e.value,
                             CountryConstants.isoToFlag[e.value] ?? '', e.key)),
-                        _countryOption(ctx, t, 'OTHER', '🌐', 'Other / Not listed'),
+                        _countryOption(ctx, 'OTHER', '🌐', 'Other / Not listed'),
                         const SizedBox(height: 12),
                       ],
                     ),
@@ -615,8 +611,7 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
     );
   }
 
-  Widget _countryOption(BuildContext sheetCtx, TribeTheme t, String iso,
-      String flag, String name) {
+  Widget _countryOption(BuildContext sheetCtx, String iso, String flag, String name) {
     final selected = _selectedCountryIso == iso;
     return GestureDetector(
       onTap: () {
@@ -626,18 +621,20 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
       behavior: HitTestBehavior.opaque,
       child: Container(
         decoration: BoxDecoration(
-          color: selected ? t.goldTint : Colors.transparent,
-          border: Border(bottom: BorderSide(color: t.line, width: 1)),
+          color: selected ? const Color(0xFF1B1819) : Colors.transparent,
+          border: Border(bottom: BorderSide(color: const Color(0xFF2B2627), width: 1)),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         child: Row(children: [
           Text(flag, style: const TextStyle(fontSize: 20)),
           const SizedBox(width: 12),
           Expanded(child: Text(name,
-            style: t.body(size: 14,
-              weight: selected ? FontWeight.w700 : FontWeight.w600,
-              color: t.ink))),
-          if (selected) Icon(Icons.check_circle, size: 18, color: t.gold),
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+              color: const Color(0xFFFFFFFF),
+            ))),
+          if (selected) const Icon(Icons.check, size: 18, color: Color(0xFFE8A33D)),
         ]),
       ),
     );
@@ -663,7 +660,10 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
             body: 'Remove "${current.name}" and set your university to "${target.name}"?',
             confirmLabel: 'Change',
             onClose: () => Navigator.of(ctx).pop(),
-            onConfirm: () { shouldSwap = true; },
+            onConfirm: () {
+              shouldSwap = true;
+              Navigator.of(ctx).pop();
+            },
           ),
         );
       },
@@ -840,6 +840,25 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
             color: Color(0xFF0E0C0D),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildV3CountryChip(String label, bool isActive, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive ? const Color(0xFFFFFFFF) : const Color(0xFF1B1819),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: isActive ? const Color(0xFFFFFFFF) : const Color(0xFF2B2627), width: 1),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Color(0xFF0E0C0D))),
+          const SizedBox(width: 5),
+          Icon(Icons.expand_more, size: 12, color: isActive ? const Color(0xFFE8A33D) : const Color(0xFF8F8A8B)),
+        ]),
       ),
     );
   }
