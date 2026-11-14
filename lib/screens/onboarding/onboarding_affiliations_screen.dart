@@ -527,13 +527,14 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
   }
 
   Widget _buildCountryChip(TribeTheme t) {
-    final label = _selectedCountryIso == 'ALL'
-        ? '🌍 All Countries'
-        : _selectedCountryIso == 'OTHER'
-            ? '🌐 Other'
-            : '${CountryConstants.isoToFlag[_selectedCountryIso] ?? ''} '
-              '${CountryConstants.isoToName[_selectedCountryIso] ?? ''}';
-
+    final String label;
+    if (_selectedCountryIso == 'ALL') {
+      label = 'All Countries';
+    } else if (_selectedCountryIso == 'OTHER') {
+      label = 'Other';
+    } else {
+      label = CountryConstants.isoToName[_selectedCountryIso] ?? 'Country';
+    }
     return _buildV3CountryChip(
       label,
       _selectedCountryIso != 'ALL',
@@ -547,52 +548,57 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (ctx) {
-        final isDark = Theme.of(ctx).brightness == Brightness.dark;
-        final t = TribeTheme(isDark);
-        return TribeThemeScope(
-          theme: t,
-        child: Container(
-          decoration: BoxDecoration(
-            color: t.bg1,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            border: Border(top: BorderSide(color: t.lineStrong)),
+        return Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFF000000),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(4)),
+            border: Border(top: BorderSide(color: Color(0xFF2B2627), width: 1)),
           ),
           child: SafeArea(
             top: false,
+            bottom: true,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Drag handle
-                Container(
-                  width: 40, height: 4,
-                  margin: const EdgeInsets.only(top: 16, bottom: 12),
-                  decoration: BoxDecoration(
-                    color: t.line,
-                    borderRadius: BorderRadius.circular(4),
+                // HEADER
+                Padding(
+                  padding: EdgeInsets.fromLTRB(20, MediaQuery.of(ctx).padding.top + 40, 16, 16),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('05.1 / FILTER',
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500,
+                                letterSpacing: 2.0, color: Color(0xFF8F8A8B))),
+                            const SizedBox(height: 12),
+                            const Text('SELECT COUNTRY',
+                              style: TextStyle(fontSize: 36, fontWeight: FontWeight.w400,
+                                height: 1.0, color: Color(0xFFFFFFFF))),
+                          ],
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => Navigator.of(ctx).pop(),
+                        behavior: HitTestBehavior.opaque,
+                        child: const Padding(
+                          padding: EdgeInsets.all(10),
+                          child: Icon(Icons.close, size: 24, color: Color(0xFFFFFFFF)),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                // Header
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                  child: Row(children: [
-                    Expanded(child: Text('Select country',
-                      style: t.display(size: 16, color: t.milk))),
-                    IconBtn(icon: Icons.close, size: 18,
-                      onTap: () => Navigator.of(ctx).pop()),
-                  ]),
-                ),
-                Divider(
-                  height: 1,
-                  thickness: 1,
-                  color: t.line,
-                ),
-                // Options (scrollable if screen is short)
+                const Divider(height: 1, thickness: 1, color: Color(0xFF2B2627)),
+                // OPTIONS
                 Flexible(
                   child: SingleChildScrollView(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        _countryOption(ctx, 'ALL', '🌍', 'All Countries'),
+                        _countryOption(ctx, 'ALL', '', 'All Countries'),
                         ...CountryConstants.nameToIso.entries.map((e) =>
                           _countryOption(ctx, e.value,
                             CountryConstants.isoToFlag[e.value] ?? '', e.key)),
@@ -605,7 +611,6 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
               ],
             ),
           ),
-        ),
         );
       },
     );
@@ -622,19 +627,22 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
       child: Container(
         decoration: BoxDecoration(
           color: selected ? const Color(0xFF1B1819) : Colors.transparent,
-          border: Border(bottom: BorderSide(color: const Color(0xFF2B2627), width: 1)),
+          border: const Border(bottom: BorderSide(color: Color(0xFF2B2627), width: 1)),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         child: Row(children: [
-          Text(flag, style: const TextStyle(fontSize: 20)),
-          const SizedBox(width: 12),
+          if (iso == 'ALL')
+            const Icon(Icons.language, size: 24, color: Color(0xFFF4F1F0))
+          else
+            Text(flag, style: const TextStyle(fontSize: 24)),
+          const SizedBox(width: 14),
           Expanded(child: Text(name,
             style: TextStyle(
-              fontSize: 14,
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+              fontSize: 16,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
               color: const Color(0xFFFFFFFF),
             ))),
-          if (selected) const Icon(Icons.check, size: 18, color: Color(0xFFE8A33D)),
+          if (selected) const Icon(Icons.check, size: 22, color: Color(0xFFFFFFFF)),
         ]),
       ),
     );
@@ -655,7 +663,7 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
         final isDark = Theme.of(ctx).brightness == Brightness.dark;
         return TribeThemeScope(
           theme: TribeTheme(isDark),
-          child: ConfirmModal(
+          child: _V3ConfirmDialog(
             title: 'Change affiliation?',
             body: 'Remove "${current.name}" and set your university to "${target.name}"?',
             confirmLabel: 'Change',
@@ -834,10 +842,10 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
         ),
         child: Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w500,
-            color: Color(0xFF0E0C0D),
+            color: isActive ? const Color(0xFF0E0C0D) : const Color(0xFFF4F1F0),
           ),
         ),
       ),
@@ -852,14 +860,111 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
         decoration: BoxDecoration(
           color: isActive ? const Color(0xFFFFFFFF) : const Color(0xFF1B1819),
           borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: isActive ? const Color(0xFFFFFFFF) : const Color(0xFF2B2627), width: 1),
+          border: Border.all(
+            color: isActive ? const Color(0xFFFFFFFF) : const Color(0xFF2B2627),
+            width: 1,
+          ),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Color(0xFF0E0C0D))),
+          Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+              color: isActive ? const Color(0xFF0E0C0D) : const Color(0xFFF4F1F0),
+            ),
+          ),
           const SizedBox(width: 5),
-          Icon(Icons.expand_more, size: 12, color: isActive ? const Color(0xFFE8A33D) : const Color(0xFF8F8A8B)),
+          Icon(Icons.expand_more, size: 12,
+            color: isActive ? const Color(0xFFE8A33D) : const Color(0xFF8F8A8B)),
         ]),
       ),
     );
   }
 }
+
+class _V3ConfirmDialog extends StatelessWidget {
+  final String title;
+  final String body;
+  final String confirmLabel;
+  final VoidCallback onClose;
+  final VoidCallback onConfirm;
+  const _V3ConfirmDialog({
+    required this.title,
+    required this.body,
+    required this.confirmLabel,
+    required this.onClose,
+    required this.onConfirm,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onClose,
+      child: Container(
+        color: Colors.black.withValues(alpha: 0.55),
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: GestureDetector(
+          onTap: () {},
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0E0C0D),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: const Color(0xFF2B2627), width: 1),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFFFFFFFF))),
+                const SizedBox(height: 10),
+                Text(body, style: const TextStyle(
+                  fontSize: 14, fontWeight: FontWeight.w400,
+                  height: 1.46, color: Color(0xFFF4F1F0))),
+                const SizedBox(height: 20),
+                Row(children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: onClose,
+                      child: Container(
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1B1819),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: const Color(0xFF2B2627), width: 1),
+                        ),
+                        child: const Center(child: Text('Cancel', style: TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w500,
+                          color: Color(0xFF8F8A8B)))),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: onConfirm,
+                      child: Container(
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFFFFF),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Center(child: Text(confirmLabel, style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w500,
+                          color: Color(0xFF0E0C0D)))),
+                      ),
+                    ),
+                  ),
+                ]),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
