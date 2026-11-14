@@ -7,9 +7,7 @@ import '../../design/tribe_design.dart';
 import '../../models/affiliation_model.dart';
 import '../../providers/onboarding_provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../utils/affiliation_sort.dart';
 import '../../utils/custom_interest_utils.dart';
-import '../../widgets/onboarding/onboarding_page_indicator.dart';
 
 class OnboardingAffiliationsScreen extends ConsumerStatefulWidget {
   const OnboardingAffiliationsScreen({super.key});
@@ -150,7 +148,6 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
   Widget build(BuildContext context) {
     final state = ref.watch(onboardingProvider);
     final selectedAffiliations = state.selectedAffiliations;
-    final sortedSelected = sortAffiliationsByType(selectedAffiliations);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final t = TribeTheme(isDark);
 
@@ -163,15 +160,9 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
 
     // Listen for auth state changes to navigate to home after onboarding completion
     ref.listen<AuthState>(authProvider, (previous, next) {
-      // ignore: unnecessary_null_comparison
       if (next is AuthAuthenticated &&
-          next.user.handle != null &&
-          // ignore: unnecessary_non_null_assertion
-          next.user.handle!.isNotEmpty &&
-          // ignore: unnecessary_null_comparison
-          next.user.displayName != null &&
-          // ignore: unnecessary_non_null_assertion
-          next.user.displayName!.isNotEmpty &&
+          next.user.handle != null && next.user.handle!.isNotEmpty &&
+          next.user.displayName != null && next.user.displayName!.isNotEmpty &&
           context.mounted) {
         context.go('/home');
       }
@@ -180,350 +171,357 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
     return TribeThemeScope(
       theme: t,
       child: Scaffold(
-        backgroundColor: t.bg1,
-        body: SafeArea(
-          child: Column(
-            children: [
-              // 1. HEADER ROW FIRST
-              Padding(
-                padding: const EdgeInsets.fromLTRB(18, 16, 18, 6),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    IconBtn(icon: Icons.arrow_back, onTap: () => context.go('/onboarding/4')),
-                    const OnboardingPageIndicator(activeIndex: 4),
-                    const SizedBox(width: 20),
-                  ],
-                ),
+      backgroundColor: const Color(0xFF000000),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // 1. HEADER (Fixed)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Color(0xFF8F8A8B), size: 24),
+                    onPressed: () => context.go('/onboarding/4'),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    '05 / AFFILIATIONS',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, letterSpacing: 2.0, color: Color(0xFF8F8A8B), height: 1.4),
+                  ),
+                ],
               ),
-              // 2. CONTENT
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 4, 24, 4),
-                  child: Column(
-                    children: [
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Icon(Icons.location_on_outlined, size: 22, color: t.gold),
+            ),
+
+            // 2. SCROLLABLE CONTENT
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Headline
+                    const Text(
+                      'FIND YOUR PEOPLE.',
+                      style: TextStyle(fontSize: 40, fontWeight: FontWeight.w800, color: Color(0xFFFFFFFF), height: 1.05),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Search Field (V3)
+                    Container(
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1B1819),
+                        border: Border.all(color: const Color(0xFF2B2627), width: 1),
+                        borderRadius: BorderRadius.circular(4),
                       ),
-                      const SizedBox(height: 8),
-                      Center(
-                        child: Text(
-                          'Find your people',
-                          style: t.display(size: 18, color: t.milk),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ClayInput(
-                        hint: 'Search schools, cities, interests…',
-                        controller: _searchController,
-                        suffix: _searchQuery.isNotEmpty
-                            ? GestureDetector(
-                                onTap: () {
-                                  _searchController.clear();
-                                },
-                                child: Icon(Icons.close, size: 18, color: t.inkFaint),
-                              )
-                            : null,
-                      ),
-                      const SizedBox(height: 10),
-                      // filter chips — REAL category logic
-                      SizedBox(
-                        height: 34,
-                        child: ListView(
-                          scrollDirection: Axis.horizontal,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: _buildCountryChip(t),
+                      child: Row(
+                        children: [
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: TextField(
+                              controller: _searchController,
+                              decoration: const InputDecoration(
+                                border: InputBorder.none,
+                                hintText: 'Search schools, cities, interests...',
+                                hintStyle: TextStyle(color: Color(0xFF8F8A8B), fontSize: 15),
+                              ),
+                              style: const TextStyle(color: Color(0xFFFFFFFF), fontSize: 15),
                             ),
-                            ...['All', 'Universities', 'Cities', 'Interests'].map((cat) {
-                              final isSelected = _selectedCategory == cat;
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: TribeChip(
-                                  label: cat,
-                                  active: isSelected,
-                                  onTap: () {
-                                    setState(() {
-                                      _selectedCategory = cat;
-                                      if (cat == 'Interests') _selectedCountryIso = 'ALL';
-                                    });
-                                  },
-                                ),
-                              );
-                            }).toList(),
+                          ),
+                          if (_searchQuery.isNotEmpty)
+                            GestureDetector(
+                              onTap: () {
+                                _searchController.clear();
+                              },
+                              child: const Padding(
+                                padding: EdgeInsets.only(right: 16),
+                                child: Icon(Icons.close, size: 20, color: Color(0xFF8F8A8B)),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Chip Row (Existing horizontal ListView, swapped to V3 chips)
+                    SizedBox(
+                      height: 34,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: _buildCountryChip(t),
+                          ),
+                          ...['All', 'Universities', 'Cities', 'Interests'].map((cat) {
+                            final isSelected = _selectedCategory == cat;
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: _buildV3FilterChip(
+                                cat,
+                                isSelected,
+                                () {
+                                  setState(() {
+                                    _selectedCategory = cat;
+                                    if (cat == 'Interests') _selectedCountryIso = 'ALL';
+                                  });
+                                },
+                              ),
+                            );
+                          }).toList(),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Counter (D4: Tracked caps)
+                    Builder(
+                      builder: (context) {
+                        final interestCount = selectedAffiliations.where((s) => s.type == 'interest').length;
+                        return Text(
+                          'INTERESTS $interestCount/6 SELECTED',
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, letterSpacing: 2.0, color: Color(0xFF8F8A8B)),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // D3: V3 "OTHER" EMPTY STATE
+                    if (_selectedCountryIso == 'OTHER' && _filteredAffiliations.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 72,
+                              height: 72,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1B1819),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: const Color(0xFF2B2627), width: 1),
+                              ),
+                              child: const Icon(Icons.public, size: 32, color: Color(0xFFE8A33D)),
+                            ),
+                            const SizedBox(height: 18),
+                            const Text(
+                              'TRIBE IS EXPANDING SOON',
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFFFFFFFF), height: 1.2),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              "We're growing across Southeast Asia. In the meantime, add your interests to connect with students nearby.",
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF8F8A8B)),
+                              textAlign: TextAlign.center,
+                            ),
                           ],
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Interests ${selectedAffiliations.where((a) => a.type == 'interest').length}/6 selected',
-                          style: t.caption(size: 11.5),
-                        ),
-                      ),
-                      // selected chips horizontal scroll (only when selections exist)
-                      if (selectedAffiliations.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          height: 36,
-                          child: ListView(
-                            scrollDirection: Axis.horizontal,
-                            children: sortedSelected.map((a) {
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 6),
-                                child: TribeChip(
-                                  label: a.name,
-                                  active: true,
-                                  trailing: a.id.startsWith('custom_')
-                                    ? Row(mainAxisSize: MainAxisSize.min, children: [
-                                        Icon(Icons.edit, size: 10, color: t.gold),
-                                        const SizedBox(width: 4),
-                                        Icon(Icons.close, size: 11, color: t.gold),
-                                      ])
-                                    : Icon(Icons.close, size: 11, color: t.gold),
-                                  onTap: () {
+                      )
+                    else
+                      // LIST VIEW
+                      ListView(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        padding: const EdgeInsets.only(bottom: 24),
+                        children: _filteredAffiliations.map((a) {
+                          final isSelected = selectedAffiliations.any((s) => s.id == a.id);
+                          final icon = _getIconForType(a.type);
+
+                          // EXISTING LIMIT LOGIC (DO NOT CHANGE)
+                          final universityCount = selectedAffiliations.where((s) => s.type == 'university').length;
+                          final cityCount = selectedAffiliations.where((s) => s.type == 'city').length;
+                          final interestCount = selectedAffiliations.where((s) => s.type == 'interest').length;
+                          final isAtTypeLimit = !isSelected && (
+                            (a.type == 'university' && universityCount >= 1) ||
+                            (a.type == 'city' && cityCount >= 1) ||
+                            (a.type == 'interest' && interestCount >= 6)
+                          );
+
+                          if (a.id == 'independent') {
+                            return Opacity(
+                              opacity: isAtTypeLimit ? 0.4 : 1.0,
+                              child: GestureDetector(
+                                onTap: () {
+                                  final hasUni = _selectedAffiliationsOrState.any(
+                                    (aff) => aff.type == 'university' && aff.id != 'independent');
+                                  if (hasUni) {
+                                    _confirmSwap(a);
+                                  } else {
                                     ref.read(onboardingProvider.notifier).toggleAffiliation(a);
-                                  },
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 8),
-                      // 3. LIST — REAL SEED DATA
-                      Expanded(
-                        child: Stack(
-                          children: [
-                            Positioned.fill(
-                              child: _selectedCountryIso == 'OTHER' && _filteredAffiliations.isEmpty
-                                  ? Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Container(
-                                            width: 72, height: 72,
-                                            decoration: BoxDecoration(
-                                              color: t.bg2,
-                                              borderRadius: BorderRadius.circular(24),
-                                              border: Border.all(color: t.line),
-                                              boxShadow: t.clayOutSm,
-                                            ),
-                                            child: Icon(Icons.public, size: 32, color: t.gold),
-                                          ),
-                                          const SizedBox(height: 18),
-                                          Text(
-                                            'TRIBE is expanding soon',
-                                            style: t.display(size: 16, color: t.milk),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            "We're growing across Southeast Asia. In the meantime, add your interests to connect with students nearby.",
-                                            style: t.body(size: 13, weight: FontWeight.w500, color: t.inkDim),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ],
-                                      ),
-                                    )
-                                  : ListView(
-                                      padding: const EdgeInsets.only(bottom: 64),
-                                      children: _filteredAffiliations.map((a) {
-                                        final isSelected = selectedAffiliations.any((s) => s.id == a.id);
-                                        final icon = _getIconForType(a.type);
-                                        final universityCount = selectedAffiliations.where((s) => s.type == 'university').length;
-                                        final cityCount = selectedAffiliations.where((s) => s.type == 'city').length;
-                                        final interestCount = selectedAffiliations.where((s) => s.type == 'interest').length;
-                                        final isAtTypeLimit = !isSelected && (
-                                          (a.type == 'university' && universityCount >= 1) ||
-                                          (a.type == 'city' && cityCount >= 1) ||
-                                          (a.type == 'interest' && interestCount >= 6)
-                                        );
-
-                                        if (a.id == 'independent') {
-                                          return Opacity(
-                                            opacity: isAtTypeLimit ? 0.4 : 1.0,
-                                            child: GestureDetector(
-                                              onTap: () {
-                                                final hasUni = _selectedAffiliationsOrState.any(
-                                                  (aff) => aff.type == 'university' && aff.id != 'independent');
-                                                if (hasUni) {
-                                                  _confirmSwap(a);
-                                                } else {
-                                                  ref.read(onboardingProvider.notifier).toggleAffiliation(a);
-                                                }
-                                              },
-                                              behavior: HitTestBehavior.opaque,
-                                              child: Padding(
-                                                padding: const EdgeInsets.symmetric(vertical: 6),
-                                                child: NoteCard(
-                                                  margin: EdgeInsets.zero,
-                                                  child: Row(
-                                                    children: [
-                                                      Icon(
-                                                        Icons.person_outline,
-                                                        size: 24,
-                                                        color: isSelected ? t.gold : t.inkDim,
-                                                      ),
-                                                      const SizedBox(width: 12),
-                                                      Expanded(
-                                                        child: Column(
-                                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                                          children: [
-                                                            Text(
-                                                              a.name,
-                                                              style: t.body(
-                                                                size: 13.5,
-                                                                weight: FontWeight.w700,
-                                                                color: t.ink,
-                                                              ),
-                                                            ),
-                                                            const SizedBox(height: 2),
-                                                            Text(
-                                                              'Studying at a university not listed?',
-                                                              style: t.caption(size: 11, color: t.inkFaint),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                      if (isSelected)
-                                                        Icon(Icons.check_circle, size: 18, color: t.gold)
-                                                      else
-                                                        MiniCheckbox(checked: isSelected),
-                                                    ],
-                                                  ),
-                                                ),
+                                  }
+                                },
+                                behavior: HitTestBehavior.opaque,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF0E0C0D),
+                                      border: Border.all(color: const Color(0xFF2B2627), width: 1),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.person_outline,
+                                          size: 24,
+                                          color: isSelected ? const Color(0xFFFFFFFF) : const Color(0xFF8F8A8B),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                a.name,
+                                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFFFFFFFF)),
                                               ),
-                                            ),
-                                          );
-                                        }
-
-                                        return Opacity(
-                                          opacity: isAtTypeLimit ? 0.4 : 1.0,
-                                          child: GestureDetector(
-                                            onTap: () {
-                                              if (a.id == 'independent') {
-                                                final hasUni = _selectedAffiliationsOrState.any(
-                                                  (aff) => aff.type == 'university' && aff.id != 'independent');
-                                                if (hasUni) {
-                                                  _confirmSwap(a);
-                                                } else {
-                                                  ref.read(onboardingProvider.notifier).toggleAffiliation(a);
-                                                }
-                                                return;
-                                              }
-                                              if (isAtTypeLimit && a.type == 'university') {
-                                                _confirmSwap(a);
-                                                return;
-                                              }
-                                              if (isAtTypeLimit) return;
-                                              ref.read(onboardingProvider.notifier).toggleAffiliation(a);
-                                            },
-                                            child: Container(
-                                              decoration: BoxDecoration(
-                                                border: Border(bottom: BorderSide(color: t.line, width: 1)),
+                                              const SizedBox(height: 2),
+                                              const Text(
+                                                'Studying at a university not listed?',
+                                                style: TextStyle(fontSize: 13, color: Color(0xFF8F8A8B)),
                                               ),
-                                              child: Padding(
-                                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                                child: Row(
-                                                  children: [
-                                                    Icon(icon, size: 18, color: t.inkDim),
-                                                    const SizedBox(width: 10),
-                                                    Expanded(
-                                                      child: Column(
-                                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                                        children: [
-                                                          Text(
-                                                            a.name,
-                                                            style: t.body(size: 13.5, weight: FontWeight.w600, color: t.ink),
-                                                          ),
-                                                          Text(
-                                                            a.type,
-                                                            style: t.caption(size: 11),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                    MiniCheckbox(checked: isSelected),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
+                                            ],
                                           ),
-                                        );
-                                      }).toList(),
+                                        ),
+                                        _buildV3AffCheckbox(isSelected),
+                                      ],
                                     ),
                                   ),
-                                if (_selectedCategory == 'Interests')
-                                  Positioned(
-                                    right: 16,
-                                    bottom: 32,
-                                    child: GestureDetector(
-                                      onTap: _openAddCustomInterestSheet,
-                                      behavior: HitTestBehavior.opaque,
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                        decoration: BoxDecoration(
-                                          color: t.bg2,
-                                          borderRadius: BorderRadius.circular(100),
-                                          border: Border.all(color: t.gold.withValues(alpha: 0.45)),
-                                          boxShadow: t.clayOutSm,
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
+                                ),
+                              ),
+                            );
+                          }
+
+                          return Opacity(
+                            opacity: isAtTypeLimit ? 0.4 : 1.0,
+                            child: GestureDetector(
+                              onTap: () {
+                                if (a.id == 'independent') {
+                                  final hasUni = _selectedAffiliationsOrState.any(
+                                    (aff) => aff.type == 'university' && aff.id != 'independent');
+                                  if (hasUni) {
+                                    _confirmSwap(a);
+                                  } else {
+                                    ref.read(onboardingProvider.notifier).toggleAffiliation(a);
+                                  }
+                                  return;
+                                }
+                                if (isAtTypeLimit && a.type == 'university') {
+                                  _confirmSwap(a);
+                                  return;
+                                }
+                                if (isAtTypeLimit) return;
+                                ref.read(onboardingProvider.notifier).toggleAffiliation(a);
+                              },
+                              child: Container(
+                                decoration: const BoxDecoration(
+                                  border: Border(bottom: BorderSide(color: Color(0xFF2B2627), width: 1)),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                                  child: Row(
+                                    children: [
+                                      Icon(icon, size: 20, color: const Color(0xFF8F8A8B)),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            Icon(Icons.add, size: 16, color: t.gold),
-                                            const SizedBox(width: 8),
-                                            Text('Add your own',
-                                              style: t.body(size: 13, weight: FontWeight.w700, color: t.gold)),
+                                            Text(
+                                              a.name,
+                                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: Color(0xFFFFFFFF)),
+                                            ),
+                                            Text(
+                                              a.type,
+                                              style: const TextStyle(fontSize: 12, color: Color(0xFF8F8A8B)),
+                                            ),
                                           ],
                                         ),
                                       ),
-                                    ),
+                                      _buildV3AffCheckbox(isSelected),
+                                    ],
                                   ),
-                              ],
+                                ),
+                              ),
                             ),
-                          ),
-                      // 4. BUTTONS PINNED BOTTOM
-                      const SizedBox(height: 6),
-                      ClayButtonPrimary(
-                        label: 'Join TRIBE',
-                        onTap: state.saving
-                            ? null
-                            : () async {
-                                await ref.read(onboardingProvider.notifier).finish(ref, selectedAffiliations);
-                                final currentState = ref.read(onboardingProvider);
-                                if (currentState.errorMsg == null && context.mounted) {
-                                  context.go('/home');
-                                }
-                              },
+                          );
+                        }).toList(),
                       ),
-                      const SizedBox(height: 6),
-                      ClayButtonSecondary(
-                        label: 'Skip for now',
-                        plain: true,
-                        textColor: t.inkFaint,
-                        onTap: state.saving
-                            ? null
-                            : () async {
-                                await ref.read(onboardingProvider.notifier).skipAffiliations(ref);
-                                final currentState = ref.read(onboardingProvider);
-                                if (currentState.errorMsg == null && context.mounted) {
-                                  context.go('/home');
-                                }
-                              },
-                      ),
-                    ],
-                  ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+
+            // 3. PINNED BOTTOM ACTIONS
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Join TRIBE Button
+                  GestureDetector(
+                    onTap: state.saving
+                        ? null
+                        : () async {
+                            await ref.read(onboardingProvider.notifier).finish(ref, selectedAffiliations);
+                            final currentState = ref.read(onboardingProvider);
+                            if (currentState.errorMsg == null && context.mounted) {
+                              context.go('/home');
+                            }
+                          },
+                    child: Container(
+                      width: double.infinity,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: state.saving ? const Color(0xFF1B1819) : const Color(0xFFFFFFFF),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Center(
+                        child: state.saving
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(color: Color(0xFF8F8A8B), strokeWidth: 2),
+                              )
+                            : const Text(
+                                'JOIN TRIBE',
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, letterSpacing: 1.4, color: Color(0xFF0E0C0D)),
+                              ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Skip for now Button
+                  GestureDetector(
+                    onTap: state.saving
+                        ? null
+                        : () async {
+                            await ref.read(onboardingProvider.notifier).skipAffiliations(ref);
+                            final currentState = ref.read(onboardingProvider);
+                            if (currentState.errorMsg == null && context.mounted) {
+                              context.go('/home');
+                            }
+                          },
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      width: double.infinity,
+                      height: 44,
+                      alignment: Alignment.center,
+                      child: const Text(
+                        'SKIP FOR NOW',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, letterSpacing: 1.4, color: Color(0xFF8F8A8B)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
+      ),
       ),
     );
   }
@@ -801,5 +799,48 @@ class _OnboardingAffiliationsScreenState extends ConsumerState<OnboardingAffilia
       default:
         return Icons.label;
     }
+  }
+
+  Widget _buildV3AffCheckbox(bool isSelected) {
+    return Container(
+      width: 24,
+      height: 24,
+      decoration: BoxDecoration(
+        color: isSelected ? const Color(0xFFFFFFFF) : const Color(0xFF1B1819),
+        border: Border.all(
+          color: isSelected ? const Color(0xFFFFFFFF) : const Color(0xFF2B2627),
+          width: 1,
+        ),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: isSelected
+          ? const Icon(Icons.check, size: 16, color: Color(0xFF0E0C0D))
+          : null,
+    );
+  }
+
+  Widget _buildV3FilterChip(String label, bool isActive, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive ? const Color(0xFFFFFFFF) : const Color(0xFF1B1819),
+          border: Border.all(
+            color: isActive ? const Color(0xFFFFFFFF) : const Color(0xFF2B2627),
+            width: 1,
+          ),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF0E0C0D),
+          ),
+        ),
+      ),
+    );
   }
 }
